@@ -9,9 +9,12 @@
     let CONFIG = {};
     let radarrProfiles = [];
     let sonarrProfiles = [];
-    let currentPage = 1;
+
+    let currentPageFilm = 1;
+    let currentPageSerie = 1;
     const resultsPerPage = 6;
-    let searchResults = [];
+    let searchResultsFilm = [];
+    let searchResultsSerie = [];
 
     async function loadConfig() {
       try {
@@ -36,54 +39,63 @@
 
     async function searchContent() {
       let query = document.getElementById("searchQuery").value;
-      let searchType = document.getElementById("searchType").value;
       if (!query) return;
 
       // Afficher l'indicateur de chargement
       document.getElementById("loadingIndicator").classList.remove("hidden");
 
-      let apiUrl = searchType === "film"
-        ? `${CONFIG.radarr.baseURL}/api/v3/movie/lookup?term=${query}&apikey=${CONFIG.radarr.apiKey}&language=fr`
-        : `${CONFIG.sonarr.baseURL}/api/v3/series/lookup?term=${query}&apikey=${CONFIG.sonarr.apiKey}&language=fr`;
+      let filmApiUrl = `${CONFIG.radarr.baseURL}/api/v3/movie/lookup?term=${query}&apikey=${CONFIG.radarr.apiKey}&language=fr`;
+      let serieApiUrl = `${CONFIG.sonarr.baseURL}/api/v3/series/lookup?term=${query}&apikey=${CONFIG.sonarr.apiKey}&language=fr`;
 
-      let response = await fetch(apiUrl);
-      searchResults = await response.json(); // Stocker les résultats
-      currentPage = 1; // Réinitialiser à la première page
-      displayResults(); // Afficher la première page
+      try {
+        let [filmResponse, serieResponse] = await Promise.all([
+            fetch(filmApiUrl),
+            fetch(serieApiUrl)
+        ]);
+
+        searchResultsFilm = await filmResponse.json();
+        searchResultsSerie = await serieResponse.json();
+
+        currentPageFilm = 1; // Réinitialiser la pagination
+        currentPageSerie = 1;
+
+        displayResults(searchResultsFilm, "filmResults", "filmPagination", currentPageFilm);
+        displayResults(searchResultsSerie, "serieResults", "seriePagination", currentPageSerie);
+      } catch (error) {
+        console.error("Erreur lors de la recherche :", error);
+      }
 
       // Cacher l'indicateur après le chargement
       document.getElementById("loadingIndicator").classList.add("hidden");
     }
 
-    function displayResults() {
-      let resultsDiv = document.getElementById("results");
+    function displayResults(results, containerId, paginationId, currentPage) {
+      let resultsDiv = document.getElementById(containerId);
       resultsDiv.innerHTML = "";
 
-      if (searchResults.length === 0) {
+      if (results.length === 0) {
         resultsDiv.innerHTML = "<p>Aucun résultat trouvé.</p>";
         return;
       }
 
       let start = (currentPage - 1) * resultsPerPage;
       let end = start + resultsPerPage;
-      let paginatedResults = searchResults.slice(start, end);
+      let paginatedResults = results.slice(start, end);
 
       paginatedResults.forEach(item => {
-        let searchType = document.getElementById("searchType").value;
+        let isFilm = containerId === "filmResults";
         let poster = item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image";
-
-        // Vérifier si l'ID est valide
-        let id = searchType === "film" ? item.tmdbId : item.tvdbId;
-        let qualityOptions = (searchType === "film" ? radarrProfiles : sonarrProfiles)
+        let id = isFilm ? item.tmdbId : item.tvdbId;
+        let qualityOptions = (isFilm ? radarrProfiles : sonarrProfiles)
             .map(p => `<option value="${p.id}">${p.name}</option>`).join("");
 
-        let addFunction = `addToLibrary('${id}', '${searchType}')`;
+        let addFunction = `addToLibrary('${id}', '${isFilm ? "film" : "serie"}')`;
 
         resultsDiv.innerHTML += `
           <div class='card'>
             <img src='${poster}' alt='Affiche'>
             <div class='info'>
-              <h3>${searchType === "film" ? "[Film]" : "[Série]"} ${item.title} (${item.year})</h3>
+              <h3>${isFilm ? "[Film]" : "[Série]"} ${item.title} (${item.year})</h3>
               <p>${item.overview || "Synopsis non disponible."}</p>
               <select id="quality-${id}">${qualityOptions}</select>
               <button onclick="${addFunction}">Ajouter</button>
@@ -91,20 +103,19 @@
           </div>`;
       });
 
-      displayPaginationControls();
+      displayPaginationControls(results.length, paginationId, currentPage, containerId);
     }
 
-
-    function displayPaginationControls() {
-      let paginationDiv = document.getElementById("pagination");
+    function displayPaginationControls(totalResults, paginationId, currentPage, containerId) {
+      let paginationDiv = document.getElementById(paginationId);
       paginationDiv.innerHTML = "";
 
-      if (searchResults.length <= resultsPerPage) return; // Pas besoin de pagination
+      if (totalResults <= resultsPerPage) return; // Pas besoin de pagination
 
-      let totalPages = Math.ceil(searchResults.length / resultsPerPage);
+      let totalPages = Math.ceil(totalResults / resultsPerPage);
 
-      let prevButton = `<button onclick="changePage(-1)" ${currentPage === 1 ? "disabled" : ""}>⬅️ Précédent</button>`;
-      let nextButton = `<button onclick="changePage(1)" ${currentPage === totalPages ? "disabled" : ""}>Suivant ➡️</button>`;
+      let prevButton = `<button onclick="changePage('${containerId}', -1)" ${currentPage === 1 ? "disabled" : ""}>⬅️ Précédent</button>`;
+      let nextButton = `<button onclick="changePage('${containerId}', 1)" ${currentPage === totalPages ? "disabled" : ""}>Suivant ➡️</button>`;
 
       paginationDiv.innerHTML = `
         <div class="pagination-controls">
@@ -115,14 +126,20 @@
       `;
     }
 
-    function changePage(direction) {
-      let totalPages = Math.ceil(searchResults.length / resultsPerPage);
-      currentPage += direction;
-
-      if (currentPage < 1) currentPage = 1;
-      if (currentPage > totalPages) currentPage = totalPages;
-
-      displayResults();
+    function changePage(containerId, direction) {
+      if (containerId === "filmResults") {
+        let totalPages = Math.ceil(searchResultsFilm.length / resultsPerPage);
+        currentPageFilm += direction;
+        if (currentPageFilm < 1) currentPageFilm = 1;
+        if (currentPageFilm > totalPages) currentPageFilm = totalPages;
+        displayResults(searchResultsFilm, "filmResults", "filmPagination", currentPageFilm);
+      } else {
+        let totalPages = Math.ceil(searchResultsSerie.length / resultsPerPage);
+        currentPageSerie += direction;
+        if (currentPageSerie < 1) currentPageSerie = 1;
+        if (currentPageSerie > totalPages) currentPageSerie = totalPages;
+        displayResults(searchResultsSerie, "serieResults", "seriePagination", currentPageSerie);
+      }
     }
 
     async function addToLibrary(id, type) {
@@ -134,11 +151,8 @@
         return;
       }
 
-      // Afficher l'indicateur de chargement
-      document.getElementById("loadingIndicator").classList.remove("hidden");
-
-      let qualityProfileId = parseInt(qualitySelect.value);
-      let apiUrl, data, apiKey;
+      // Vérifier si c'est un film ou une série et utiliser le bon tableau
+      let searchResults = type === "film" ? searchResultsFilm : searchResultsSerie;
 
       // Trouver l'élément correspondant dans `searchResults`
       let item = searchResults.find(el => (type === "film" ? el.tmdbId == id : el.tvdbId == id));
@@ -148,6 +162,8 @@
           return;
       }
 
+      let qualityProfileId = parseInt(qualitySelect.value);
+      let apiUrl, data, apiKey;
       let itemTitle = item.title || "Titre inconnu"; // On s'assure que Title est toujours présent
       let itemYear = item.year || new Date().getFullYear(); // On met l'année actuelle si absente
 
@@ -174,6 +190,9 @@
           monitored: true
         };
       }
+
+      // Afficher l'indicateur de chargement
+      document.getElementById("loadingIndicator").classList.remove("hidden");
 
       let response = await fetch(apiUrl, {
         method: "POST",
@@ -209,13 +228,6 @@
       // Déclenche la recherche automatiquement après 3 caractères saisis
       document.getElementById("searchQuery").addEventListener("input", function() {
         if (this.value.length >= 3) {
-          searchContent();
-        }
-      });
-
-      // Relancer la recherche si l'utilisateur change le type (Film / Série)
-      document.getElementById("searchType").addEventListener("change", function() {
-        if (document.getElementById("searchQuery").value.length >= 3) {
           searchContent();
         }
       });
@@ -275,6 +287,28 @@
         color: #ff8c00;
         margin-top: 20px;
       }
+
+      .results-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        max-width: 1200px;
+        margin: 20px auto;
+      }
+
+      .results-column {
+        flex: 1;
+        background: #2a2a3a;
+        padding: 15px;
+        border-radius: 10px;
+      }
+
+      .category-title {
+        text-align: center;
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
   </style>
 </head>
 <body>
@@ -282,16 +316,22 @@
     <h1 class="text-3xl font-bold mb-4">Recherche de Film ou Série</h1>
     <div class="search-box">
       <input type="text" id="searchQuery" placeholder="Nom du film ou de la série">
-      <select id="searchType">
-        <option value="film">Film</option>
-        <option value="serie">Série</option>
-      </select>
     </div>
     <div id="loadingIndicator" class="hidden">
       <p>🔄 Recherche en cours...</p>
     </div>
-    <div id="pagination" class="pagination"></div>
-    <div id="results"></div>
+    <div class="results-container">
+      <div class="results-column">
+        <h2 class="category-title">🎬 Films</h2>
+        <div id="filmResults"></div>
+        <div id="filmPagination" class="pagination"></div>
+      </div>
+      <div class="results-column">
+        <h2 class="category-title">📺 Séries</h2>
+        <div id="serieResults"></div>
+        <div id="seriePagination" class="pagination"></div>
+      </div>
+    </div>
   </div>
 </body>
 </html>
