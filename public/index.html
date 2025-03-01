@@ -65,10 +65,13 @@
       paginatedResults.forEach(item => {
         let searchType = document.getElementById("searchType").value;
         let poster = item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image";
+
+        // Vérifier si l'ID est valide
+        let id = searchType === "film" ? item.tmdbId : item.tvdbId;
         let qualityOptions = (searchType === "film" ? radarrProfiles : sonarrProfiles)
             .map(p => `<option value="${p.id}">${p.name}</option>`).join("");
 
-        let addFunction = searchType === "film" ? `addToRadarr(${item.tmdbId})` : `addToSonarr(${item.tvdbId})`;
+        let addFunction = `addToLibrary('${id}', '${searchType}')`;
 
         resultsDiv.innerHTML += `
           <div class='card'>
@@ -76,7 +79,7 @@
             <div class='info'>
               <h3>${searchType === "film" ? "[Film]" : "[Série]"} ${item.title} (${item.year})</h3>
               <p>${item.overview || "Synopsis non disponible."}</p>
-              <select id="quality-${item.tmdbId || item.tvdbId}">${qualityOptions}</select>
+              <select id="quality-${id}">${qualityOptions}</select>
               <button onclick="${addFunction}">Ajouter</button>
             </div>
           </div>`;
@@ -84,6 +87,7 @@
 
       displayPaginationControls();
     }
+
 
     function displayPaginationControls() {
       let paginationDiv = document.getElementById("pagination");
@@ -115,58 +119,74 @@
       displayResults();
     }
 
-    async function addToRadarr(tmdbId) {
-      let qualityProfileId = document.getElementById(`quality-${tmdbId}`).value;
-      let url = `${CONFIG.radarr.baseURL}/api/v3/movie`;
-      let data = {
-          tmdbId: tmdbId,
-          qualityProfileId: parseInt(qualityProfileId),
+    async function addToLibrary(id, type) {
+      let qualitySelect = document.getElementById(`quality-${id}`);
+
+      if (!qualitySelect) {
+        alert("Erreur : Impossible de récupérer le profil de qualité.");
+        console.error(`Élément non trouvé : quality-${id}`);
+        return;
+      }
+
+      let qualityProfileId = parseInt(qualitySelect.value);
+      let apiUrl, data, apiKey;
+
+      // Trouver l'élément correspondant dans `searchResults`
+      let item = searchResults.find(el => (type === "film" ? el.tmdbId == id : el.tvdbId == id));
+      if (!item) {
+          alert("Erreur : Impossible de récupérer les informations du contenu.");
+          console.error("Élément introuvable dans searchResults", id);
+          return;
+      }
+
+      let itemTitle = item.title || "Titre inconnu"; // On s'assure que Title est toujours présent
+      let itemYear = item.year || new Date().getFullYear(); // On met l'année actuelle si absente
+
+      if (type === "film") {
+        apiUrl = `${CONFIG.radarr.baseURL}/api/v3/movie`;
+        apiKey = CONFIG.radarr.apiKey;
+        data = {
+          tmdbId: id,
+          title: itemTitle, // Ajout du titre
+          year: itemYear,
+          qualityProfileId: qualityProfileId,
           rootFolderPath: "/movies",
           monitored: true
-      };
-
-      let response = await fetch(url, {
-          method: "POST",
-          headers: { "X-Api-Key": CONFIG.radarr.apiKey, "Content-Type": "application/json" },
-          body: JSON.stringify(data)
-      });
-
-      if (response.ok) {
-        let movie = await response.json();
-        alert("Film ajouté ! Recherche en cours...");
-
-        await fetch(`${CONFIG.radarr.baseURL}/api/v3/command`, {
-            method: "POST",
-            headers: { "X-Api-Key": CONFIG.radarr.apiKey, "Content-Type": "application/json" },
-            body: JSON.stringify({ name: "MoviesSearch", movieIds: [movie.id] })
-        });
-
-        alert("Recherche lancée !");
+        };
       } else {
-          alert("Erreur : " + await response.text());
-      }
-    }
-
-    async function addToSonarr(tvdbId) {
-      let qualityProfileId = document.getElementById(`quality-${tvdbId}`).value;
-      let url = `${CONFIG.sonarr.baseURL}/api/v3/series`;
-      let data = {
-          tvdbId: tvdbId,
-          qualityProfileId: parseInt(qualityProfileId),
+        apiUrl = `${CONFIG.sonarr.baseURL}/api/v3/series`;
+        apiKey = CONFIG.sonarr.apiKey;
+        data = {
+          tvdbId: id,
+          title: itemTitle, // Ajout du titre
+          year: itemYear,
+          qualityProfileId: qualityProfileId,
           rootFolderPath: "/tv",
           monitored: true
-      };
+        };
+      }
 
-      let response = await fetch(url, {
-          method: "POST",
-          headers: { "X-Api-Key": CONFIG.sonarr.apiKey, "Content-Type": "application/json" },
-          body: JSON.stringify(data)
+      let response = await fetch(apiUrl, {
+        method: "POST",
+        headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify(data)
       });
 
       if (response.ok) {
-          alert("Série ajoutée !");
+        alert(`${type === "film" ? "Film" : "Série"} ajouté(e) avec succès !`);
+
+        // Lancer la recherche dans Radarr (pas nécessaire pour Sonarr)
+        if (type === "film") {
+          let movie = await response.json();
+          await fetch(`${CONFIG.radarr.baseURL}/api/v3/command`, {
+            method: "POST",
+            headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
+            body: JSON.stringify({ name: "MoviesSearch", movieIds: [movie.id] })
+          });
+          //alert("Recherche du film lancée !");
+        }
       } else {
-          alert("Erreur : " + await response.text());
+        alert("Erreur : " + await response.text());
       }
     }
 
