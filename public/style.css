@@ -1,0 +1,126 @@
+body { background-color: #1e1e2e; color: #ffffff; font-family: Arial, sans-serif; }
+.container { max-width: 800px; margin: 50px auto; text-align: center; }
+.search-box { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+.search-box input, .search-box select { padding: 12px; border: none; font-size: 16px; border-radius: 5px; }
+.search-box input { width: 60%; background-color: #fff; color: black; }
+.search-box select { background-color: #ff8c00; color: white; font-weight: bold; cursor: pointer; }
+.search-box button { padding: 12px 20px; background: #ff8c00; border: none; border-radius: 5px; color: white; cursor: pointer; font-size: 16px; }
+.card { display: flex; align-items: center; background: #2a2a3a; padding: 15px; margin: 10px 0; border-radius: 10px; }
+.card img { width: 80px; height: 120px; border-radius: 5px; }
+.card .info { margin-left: 15px; text-align: left; }
+.card h3 { margin: 0; font-size: 18px; }
+.card p { font-size: 14px; color: #bbbbbb; }
+.card select, .card button { background: #ff8c00; border: none; padding: 8px 12px; margin-top: 5px; color: white; border-radius: 5px; cursor: pointer; font-size: 14px; }
+.pagination {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.pagination-controls {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  align-items: center;
+}
+
+.pagination-controls button {
+  background: #ff8c00;
+  color: white;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.pagination-controls button:disabled {
+  background: #555;
+  cursor: not-allowed;
+}
+
+.hidden {
+  display: none;
+}
+
+#loadingIndicator {
+  text-align: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #ff8c00;
+  margin-top: 20px;
+}
+
+.results-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  max-width: 1200px;
+  margin: 20px auto;
+}
+
+.results-column {
+  flex: 1;
+  background: #2a2a3a;
+  padding: 15px;
+  border-radius: 10px;
+}
+
+.category-title {
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.results-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  max-width: 1200px;
+  margin: 20px auto;
+  align-items: stretch; /* Aligne les colonnes à la même hauteur */
+}
+
+.results-column {
+  flex: 1;
+  background: #2a2a3a;
+  padding: 15px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column; /* Permet d'étirer le contenu */
+  min-height: 600px; /* Hauteur fixe */
+}
+
+#filmResults, #serieResults {
+  flex-grow: 1; /* Remplit l'espace disponible */
+  overflow-y: auto; /* Ajoute un scroll si nécessaire */
+}
+
+.category-title {
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.card .info p {
+  font-size: 14px;
+  color: #bbbbbb;
+  line-height: 1.4;
+  height: 60px; /* 🔹 Hauteur fixe */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 3; /* 🔹 Maximum 3 lignes */
+  -webkit-box-orient: vertical;
+}
+
+.card {
+  display: flex;
+  align-items: center;
+  background: #2a2a3a;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 10px;
+  min-height: 180px; /* 🔹 Ajuste selon le besoin */
+}
