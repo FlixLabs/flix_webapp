@@ -39,6 +39,9 @@
       let searchType = document.getElementById("searchType").value;
       if (!query) return;
 
+      // Afficher l'indicateur de chargement
+      document.getElementById("loadingIndicator").classList.remove("hidden");
+
       let apiUrl = searchType === "film"
         ? `${CONFIG.radarr.baseURL}/api/v3/movie/lookup?term=${query}&apikey=${CONFIG.radarr.apiKey}&language=fr`
         : `${CONFIG.sonarr.baseURL}/api/v3/series/lookup?term=${query}&apikey=${CONFIG.sonarr.apiKey}&language=fr`;
@@ -47,6 +50,9 @@
       searchResults = await response.json(); // Stocker les résultats
       currentPage = 1; // Réinitialiser à la première page
       displayResults(); // Afficher la première page
+
+      // Cacher l'indicateur après le chargement
+      document.getElementById("loadingIndicator").classList.add("hidden");
     }
 
     function displayResults() {
@@ -128,6 +134,9 @@
         return;
       }
 
+      // Afficher l'indicateur de chargement
+      document.getElementById("loadingIndicator").classList.remove("hidden");
+
       let qualityProfileId = parseInt(qualitySelect.value);
       let apiUrl, data, apiKey;
 
@@ -171,6 +180,9 @@
         headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
         body: JSON.stringify(data)
       });
+
+      // Cacher l'indicateur après la requête
+      document.getElementById("loadingIndicator").classList.add("hidden");
 
       if (response.ok) {
         alert(`${type === "film" ? "Film" : "Série"} ajouté(e) avec succès !`);
@@ -251,18 +263,32 @@
         background: #555;
         cursor: not-allowed;
       }
+
+      .hidden {
+        display: none;
+      }
+
+      #loadingIndicator {
+        text-align: center;
+        font-size: 18px;
+        font-weight: bold;
+        color: #ff8c00;
+        margin-top: 20px;
+      }
   </style>
 </head>
 <body>
   <div class="container">
     <h1 class="text-3xl font-bold mb-4">Recherche de Film ou Série</h1>
-
     <div class="search-box">
       <input type="text" id="searchQuery" placeholder="Nom du film ou de la série">
       <select id="searchType">
         <option value="film">Film</option>
         <option value="serie">Série</option>
       </select>
+    </div>
+    <div id="loadingIndicator" class="hidden">
+      <p>🔄 Recherche en cours...</p>
     </div>
     <div id="pagination" class="pagination"></div>
     <div id="results"></div>
