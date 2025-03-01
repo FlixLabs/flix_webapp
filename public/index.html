@@ -123,6 +123,20 @@
     async function init() {
       await loadConfig(); // Attendre que CONFIG soit chargé
       await loadQualityProfiles(); // Ensuite charger les profils de qualité
+
+      // Déclenche la recherche automatiquement après 3 caractères saisis
+      document.getElementById("searchQuery").addEventListener("input", function() {
+        if (this.value.length >= 3) {
+          searchContent();
+        }
+      });
+
+      // Relancer la recherche si l'utilisateur change le type (Film / Série)
+      document.getElementById("searchType").addEventListener("change", function() {
+        if (document.getElementById("searchQuery").value.length >= 3) {
+          searchContent();
+        }
+      });
     }
 
     init();
@@ -153,7 +167,6 @@
         <option value="film">Film</option>
         <option value="serie">Série</option>
       </select>
-      <button onclick="searchContent()">Rechercher</button>
     </div>
     <div id="results"></div>
   </div>
