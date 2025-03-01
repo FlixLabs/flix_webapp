@@ -96,7 +96,7 @@
             <img src='${poster}' alt='Affiche'>
             <div class='info'>
               <h3>${isFilm ? "[Film]" : "[Série]"} ${item.title} (${item.year})</h3>
-              <p>${truncateText(item.overview, 200)}</p>
+              <p>${truncateText(item.overview, 250)}</p>
               <select id="quality-${id}">${qualityOptions}</select>
               <button onclick="${addFunction}">Ajouter</button>
             </div>
@@ -347,16 +347,26 @@
         margin-bottom: 10px;
       }
 
-      .card p {
+      .card .info p {
         font-size: 14px;
         color: #bbbbbb;
         line-height: 1.4;
-        max-height: 80px; /* 🔹 Limite la hauteur de la description */
-        overflow: hidden; /* 🔹 Cache l’excédent */
-        text-overflow: ellipsis; /* 🔹 Ajoute "..." si besoin */
+        height: 60px; /* 🔹 Hauteur fixe */
+        overflow: hidden;
+        text-overflow: ellipsis;
         display: -webkit-box;
-        -webkit-line-clamp: 4; /* 🔹 Affiche max 4 lignes */
+        -webkit-line-clamp: 3; /* 🔹 Maximum 3 lignes */
         -webkit-box-orient: vertical;
+      }
+
+      .card {
+        display: flex;
+        align-items: center;
+        background: #2a2a3a;
+        padding: 15px;
+        margin: 10px 0;
+        border-radius: 10px;
+        min-height: 180px; /* 🔹 Ajuste selon le besoin */
       }
   </style>
 </head>
