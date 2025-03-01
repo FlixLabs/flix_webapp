@@ -4,7 +4,7 @@ let sonarrProfiles = [];
 
 let currentPageFilm = 1;
 let currentPageSerie = 1;
-const resultsPerPage = 6;
+let resultsPerPage = 6;
 let searchResultsFilm = [];
 let searchResultsSerie = [];
 
@@ -29,7 +29,16 @@ async function loadQualityProfiles() {
   }
 }
 
+async function adjustResultsPerPage() {
+  let availableHeight = window.innerHeight - document.querySelector(".header-container").offsetHeight - 100; // Ajuste selon les marges
+  let itemHeight = 200; // Estimation de la hauteur d'un élément (carte)
+  let maxItems = Math.floor(availableHeight / itemHeight); // Nombre d'éléments visibles
+  resultsPerPage = Math.max(2, maxItems); // Minimum 2 éléments affichés
+}
+
 async function searchContent() {
+  await adjustResultsPerPage();
+
   let query = document.getElementById("searchQuery").value;
   if (!query) return;
 
@@ -222,6 +231,9 @@ function truncateText(text, maxLength) {
 async function init() {
   await loadConfig(); // Attendre que CONFIG soit chargé
   await loadQualityProfiles(); // Ensuite charger les profils de qualité
+
+  // Ajoute un écouteur pour recalculer le nombre d'entrées si la fenêtre est redimensionnée
+  window.addEventListener("resize", adjustResultsPerPage);
 
   // Déclenche la recherche automatiquement après 3 caractères saisis
   document.getElementById("searchQuery").addEventListener("input", function() {
