@@ -96,7 +96,7 @@
             <img src='${poster}' alt='Affiche'>
             <div class='info'>
               <h3>${isFilm ? "[Film]" : "[Série]"} ${item.title} (${item.year})</h3>
-              <p>${item.overview || "Synopsis non disponible."}</p>
+              <p>${truncateText(item.overview, 200)}</p>
               <select id="quality-${id}">${qualityOptions}</select>
               <button onclick="${addFunction}">Ajouter</button>
             </div>
@@ -221,6 +221,12 @@
       }
     }
 
+    function truncateText(text, maxLength) {
+      if (!text) return "Synopsis non disponible.";
+      return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+    }
+
+
     async function init() {
       await loadConfig(); // Attendre que CONFIG soit chargé
       await loadQualityProfiles(); // Ensuite charger les profils de qualité
@@ -309,6 +315,49 @@
         font-weight: bold;
         margin-bottom: 10px;
       }
+
+      .results-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        max-width: 1200px;
+        margin: 20px auto;
+        align-items: stretch; /* Aligne les colonnes à la même hauteur */
+      }
+
+      .results-column {
+        flex: 1;
+        background: #2a2a3a;
+        padding: 15px;
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column; /* Permet d'étirer le contenu */
+        min-height: 600px; /* Hauteur fixe */
+      }
+
+      #filmResults, #serieResults {
+        flex-grow: 1; /* Remplit l'espace disponible */
+        overflow-y: auto; /* Ajoute un scroll si nécessaire */
+      }
+
+      .category-title {
+        text-align: center;
+        font-size: 22px;
+        font-weight: bold;
+        margin-bottom: 10px;
+      }
+
+      .card p {
+        font-size: 14px;
+        color: #bbbbbb;
+        line-height: 1.4;
+        max-height: 80px; /* 🔹 Limite la hauteur de la description */
+        overflow: hidden; /* 🔹 Cache l’excédent */
+        text-overflow: ellipsis; /* 🔹 Ajoute "..." si besoin */
+        display: -webkit-box;
+        -webkit-line-clamp: 4; /* 🔹 Affiche max 4 lignes */
+        -webkit-box-orient: vertical;
+      }
   </style>
 </head>
 <body>
@@ -323,13 +372,13 @@
     <div class="results-container">
       <div class="results-column">
         <h2 class="category-title">🎬 Films</h2>
-        <div id="filmResults"></div>
         <div id="filmPagination" class="pagination"></div>
+        <div id="filmResults"></div>
       </div>
       <div class="results-column">
         <h2 class="category-title">📺 Séries</h2>
-        <div id="serieResults"></div>
         <div id="seriePagination" class="pagination"></div>
+        <div id="serieResults"></div>
       </div>
     </div>
   </div>
