@@ -7,6 +7,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       let CONFIG = {};
+      let radarrProfiles = [];
+      let sonarrProfiles = [];
 
       async function loadConfig() {
           try {
@@ -17,9 +19,115 @@
           }
       }
 
-      loadConfig();
-    </script>
+      async function loadQualityProfiles() {
+          try {
+              let radarrResponse = await fetch(`${CONFIG.radarr.baseURL}/api/v3/qualityProfile?apikey=${CONFIG.radarr.apiKey}`);
+              radarrProfiles = await radarrResponse.json();
+              console.log(radarrProfiles);
 
+              let sonarrResponse = await fetch(`${CONFIG.sonarr.baseURL}/api/v3/qualityProfile?apikey=${CONFIG.sonarr.apiKey}`);
+              sonarrProfiles = await sonarrResponse.json();
+          } catch (error) {
+              console.error("Erreur lors du chargement des profils de qualité:", error);
+          }
+      }
+
+      async function searchContent() {
+          let query = document.getElementById("searchQuery").value;
+          let searchType = document.getElementById("searchType").value;
+          if (!query) return;
+
+          let apiUrl = searchType === "film"
+              ? `${CONFIG.radarr.baseURL}/api/v3/movie/lookup?term=${query}&apikey=${CONFIG.radarr.apiKey}&language=fr`
+              : `${CONFIG.sonarr.baseURL}/api/v3/series/lookup?term=${query}&apikey=${CONFIG.sonarr.apiKey}&language=fr`;
+
+          let response = await fetch(apiUrl);
+          let results = await response.json();
+          let resultsDiv = document.getElementById("results");
+          resultsDiv.innerHTML = "";
+
+          results.forEach(item => {
+              let poster = item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://via.placeholder.com/100";
+              let qualityOptions = (searchType === "film" ? radarrProfiles : sonarrProfiles)
+                  .map(p => `<option value="${p.id}">${p.name}</option>`).join("");
+
+              let addFunction = searchType === "film" ? `addToRadarr(${item.tmdbId})` : `addToSonarr(${item.tvdbId})`;
+
+              resultsDiv.innerHTML += `
+                  <div class='card'>
+                      <img src='${poster}' alt='Affiche'>
+                      <div class='info'>
+                          <h3>${searchType === "film" ? "[Film]" : "[Série]"} ${item.title} (${item.year})</h3>
+                          <p>${item.overview || "Synopsis non disponible."}</p>
+                          <select id="quality-${item.tmdbId || item.tvdbId}">${qualityOptions}</select>
+                          <button onclick="${addFunction}">Ajouter</button>
+                      </div>
+                  </div>`;
+          });
+      }
+
+      async function addToRadarr(tmdbId) {
+          let qualityProfileId = document.getElementById(`quality-${tmdbId}`).value;
+          let url = `${CONFIG.radarr.baseURL}/api/v3/movie`;
+          let data = {
+              tmdbId: tmdbId,
+              qualityProfileId: parseInt(qualityProfileId),
+              rootFolderPath: "/movies",
+              monitored: true
+          };
+
+          let response = await fetch(url, {
+              method: "POST",
+              headers: { "X-Api-Key": CONFIG.radarr.apiKey, "Content-Type": "application/json" },
+              body: JSON.stringify(data)
+          });
+
+          if (response.ok) {
+              let movie = await response.json();
+              alert("Film ajouté ! Recherche en cours...");
+
+              await fetch(`${CONFIG.radarr.baseURL}/api/v3/command`, {
+                  method: "POST",
+                  headers: { "X-Api-Key": CONFIG.radarr.apiKey, "Content-Type": "application/json" },
+                  body: JSON.stringify({ name: "MoviesSearch", movieIds: [movie.id] })
+              });
+
+              alert("Recherche lancée !");
+          } else {
+              alert("Erreur : " + await response.text());
+          }
+      }
+
+      async function addToSonarr(tvdbId) {
+          let qualityProfileId = document.getElementById(`quality-${tvdbId}`).value;
+          let url = `${CONFIG.sonarr.baseURL}/api/v3/series`;
+          let data = {
+              tvdbId: tvdbId,
+              qualityProfileId: parseInt(qualityProfileId),
+              rootFolderPath: "/tv",
+              monitored: true
+          };
+
+          let response = await fetch(url, {
+              method: "POST",
+              headers: { "X-Api-Key": CONFIG.sonarr.apiKey, "Content-Type": "application/json" },
+              body: JSON.stringify(data)
+          });
+
+          if (response.ok) {
+              alert("Série ajoutée !");
+          } else {
+              alert("Erreur : " + await response.text());
+          }
+      }
+
+      async function init() {
+        await loadConfig(); // Attendre que CONFIG soit chargé
+        await loadQualityProfiles(); // Ensuite charger les profils de qualité
+      }
+
+      init();
+    </script>
     <style>
         body { background-color: #1e1e2e; color: #ffffff; font-family: Arial, sans-serif; }
         .container { max-width: 800px; margin: 50px auto; text-align: center; }
@@ -36,126 +144,19 @@
         .card select, .card button { background: #ff8c00; border: none; padding: 8px 12px; margin-top: 5px; color: white; border-radius: 5px; cursor: pointer; font-size: 14px; }
     </style>
 </head>
-<body onload="loadQualityProfiles()">
-    <div class="container">
-        <h1 class="text-3xl font-bold mb-4">Recherche de Film ou Série</h1>
+<body>
+  <div class="container">
+    <h1 class="text-3xl font-bold mb-4">Recherche de Film ou Série</h1>
 
-        <div class="search-box">
-            <input type="text" id="searchQuery" placeholder="Nom du film ou de la série">
-            <select id="searchType">
-                <option value="film">Film</option>
-                <option value="serie">Série</option>
-            </select>
-            <button onclick="searchContent()">Rechercher</button>
-        </div>
-
-        <div id="results"></div>
+    <div class="search-box">
+      <input type="text" id="searchQuery" placeholder="Nom du film ou de la série">
+      <select id="searchType">
+        <option value="film">Film</option>
+        <option value="serie">Série</option>
+      </select>
+      <button onclick="searchContent()">Rechercher</button>
     </div>
-
-    <script>
-        let radarrProfiles = [];
-        let sonarrProfiles = [];
-
-        async function loadQualityProfiles() {
-            try {
-                let radarrResponse = await fetch(`${CONFIG.radarr.baseURL}/api/v3/qualityProfile?apikey=${CONFIG.radarr.apiKey}`);
-                radarrProfiles = await radarrResponse.json();
-
-                let sonarrResponse = await fetch(`${CONFIG.sonarr.baseURL}/api/v3/qualityProfile?apikey=${CONFIG.sonarr.apiKey}`);
-                sonarrProfiles = await sonarrResponse.json();
-            } catch (error) {
-                console.error("Erreur lors du chargement des profils de qualité:", error);
-            }
-        }
-
-        async function searchContent() {
-            let query = document.getElementById("searchQuery").value;
-            let searchType = document.getElementById("searchType").value;
-            if (!query) return;
-
-            let apiUrl = searchType === "film"
-                ? `${CONFIG.radarr.baseURL}/api/v3/movie/lookup?term=${query}&apikey=${CONFIG.radarr.apiKey}&language=fr`
-                : `${CONFIG.sonarr.baseURL}/api/v3/series/lookup?term=${query}&apikey=${CONFIG.sonarr.apiKey}&language=fr`;
-
-            let response = await fetch(apiUrl);
-            let results = await response.json();
-            let resultsDiv = document.getElementById("results");
-            resultsDiv.innerHTML = "";
-
-            results.forEach(item => {
-                let poster = item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://via.placeholder.com/100";
-                let qualityOptions = (searchType === "film" ? radarrProfiles : sonarrProfiles)
-                    .map(p => `<option value="${p.id}">${p.name}</option>`).join("");
-
-                let addFunction = searchType === "film" ? `addToRadarr(${item.tmdbId})` : `addToSonarr(${item.tvdbId})`;
-
-                resultsDiv.innerHTML += `
-                    <div class='card'>
-                        <img src='${poster}' alt='Affiche'>
-                        <div class='info'>
-                            <h3>${searchType === "film" ? "[Film]" : "[Série]"} ${item.title} (${item.year})</h3>
-                            <p>${item.overview || "Synopsis non disponible."}</p>
-                            <select id="quality-${item.tmdbId || item.tvdbId}">${qualityOptions}</select>
-                            <button onclick="${addFunction}">Ajouter</button>
-                        </div>
-                    </div>`;
-            });
-        }
-
-        async function addToRadarr(tmdbId) {
-            let qualityProfileId = document.getElementById(`quality-${tmdbId}`).value;
-            let url = `${CONFIG.radarr.baseURL}/api/v3/movie`;
-            let data = {
-                tmdbId: tmdbId,
-                qualityProfileId: parseInt(qualityProfileId),
-                rootFolderPath: "/movies",
-                monitored: true
-            };
-
-            let response = await fetch(url, {
-                method: "POST",
-                headers: { "X-Api-Key": CONFIG.radarr.apiKey, "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
-
-            if (response.ok) {
-                let movie = await response.json();
-                alert("Film ajouté ! Recherche en cours...");
-
-                await fetch(`${CONFIG.radarr.baseURL}/api/v3/command`, {
-                    method: "POST",
-                    headers: { "X-Api-Key": CONFIG.radarr.apiKey, "Content-Type": "application/json" },
-                    body: JSON.stringify({ name: "MoviesSearch", movieIds: [movie.id] })
-                });
-
-                alert("Recherche lancée !");
-            } else {
-                alert("Erreur : " + await response.text());
-            }
-        }
-
-        async function addToSonarr(tvdbId) {
-            let qualityProfileId = document.getElementById(`quality-${tvdbId}`).value;
-            let url = `${CONFIG.sonarr.baseURL}/api/v3/series`;
-            let data = {
-                tvdbId: tvdbId,
-                qualityProfileId: parseInt(qualityProfileId),
-                rootFolderPath: "/tv",
-                monitored: true
-            };
-
-            let response = await fetch(url, {
-                method: "POST",
-                headers: { "X-Api-Key": CONFIG.sonarr.apiKey, "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
-
-            if (response.ok) {
-                alert("Série ajoutée !");
-            } else {
-                alert("Erreur : " + await response.text());
-            }
-        }
-    </script>
+    <div id="results"></div>
+  </div>
 </body>
 </html>
