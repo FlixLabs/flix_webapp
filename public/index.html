@@ -60,7 +60,7 @@
             let searchType = document.getElementById("searchType").value;
             if (!query) return;
 
-            let apiUrl = searchType === "film" 
+            let apiUrl = searchType === "film"
                 ? `${CONFIG.radarr.baseURL}/api/v3/movie/lookup?term=${query}&apikey=${CONFIG.radarr.apiKey}&language=fr`
                 : `${CONFIG.sonarr.baseURL}/api/v3/series/lookup?term=${query}&apikey=${CONFIG.sonarr.apiKey}&language=fr`;
 

@@ -1,0 +1,15 @@
+{
+  "name": "flix_webapp",
+  "version": "1.0.0",
+  "main": "app.js",
+  "author": "Renaud Baivier, Eric Tomas",
+  "license": "MIT",
+  "scripts": {
+    "start": "node --env-file=.env app.js"
+  },
+  "type": "module",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
+}
