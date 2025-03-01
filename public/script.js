@@ -37,10 +37,13 @@ async function adjustResultsPerPage() {
 }
 
 async function searchContent() {
-  await adjustResultsPerPage();
-
   let query = document.getElementById("searchQuery").value;
   if (!query) return;
+
+  // Sauvegarde la recherche dans localStorage
+  localStorage.setItem("searchQuery", query);
+
+  await adjustResultsPerPage();
 
   // Afficher l'indicateur de chargement
   document.getElementById("loadingIndicator").classList.remove("hidden");
@@ -231,6 +234,15 @@ function truncateText(text, maxLength) {
 async function init() {
   await loadConfig(); // Attendre que CONFIG soit chargé
   await loadQualityProfiles(); // Ensuite charger les profils de qualité
+
+  // Charger la recherche stockée
+  let savedQuery = localStorage.getItem("searchQuery");
+  if (savedQuery) {
+    document.getElementById("searchQuery").value = savedQuery;
+    await searchContent(); // Relancer directement la recherche
+  } else {
+    await adjustResultsPerPage(); // Seulement si aucune recherche n'est en cours
+  }
 
   // Ajoute un écouteur pour recalculer le nombre d'entrées si la fenêtre est redimensionnée
   window.addEventListener("resize", adjustResultsPerPage);
