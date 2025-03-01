@@ -5,7 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recherche de Film ou Série</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="config.js"></script>
+    <script>
+      let CONFIG = {};
+
+      async function loadConfig() {
+          try {
+              let response = await fetch('/config');
+              CONFIG = await response.json();
+          } catch (error) {
+              console.error("Erreur lors du chargement de la configuration:", error);
+          }
+      }
+
+      loadConfig();
+    </script>
 
     <style>
         body { background-color: #1e1e2e; color: #ffffff; font-family: Arial, sans-serif; }
