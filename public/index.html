@@ -9,6 +9,9 @@
     let CONFIG = {};
     let radarrProfiles = [];
     let sonarrProfiles = [];
+    let currentPage = 1;
+    const resultsPerPage = 4;
+    let searchResults = [];
 
     async function loadConfig() {
       try {
@@ -41,11 +44,26 @@
         : `${CONFIG.sonarr.baseURL}/api/v3/series/lookup?term=${query}&apikey=${CONFIG.sonarr.apiKey}&language=fr`;
 
       let response = await fetch(apiUrl);
-      let results = await response.json();
+      searchResults = await response.json(); // Stocker les résultats
+      currentPage = 1; // Réinitialiser à la première page
+      displayResults(); // Afficher la première page
+    }
+
+    function displayResults() {
       let resultsDiv = document.getElementById("results");
       resultsDiv.innerHTML = "";
 
-      results.forEach(item => {
+      if (searchResults.length === 0) {
+        resultsDiv.innerHTML = "<p>Aucun résultat trouvé.</p>";
+        return;
+      }
+
+      let start = (currentPage - 1) * resultsPerPage;
+      let end = start + resultsPerPage;
+      let paginatedResults = searchResults.slice(start, end);
+
+      paginatedResults.forEach(item => {
+        let searchType = document.getElementById("searchType").value;
         let poster = item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image";
         let qualityOptions = (searchType === "film" ? radarrProfiles : sonarrProfiles)
             .map(p => `<option value="${p.id}">${p.name}</option>`).join("");
@@ -54,15 +72,47 @@
 
         resultsDiv.innerHTML += `
           <div class='card'>
-              <img src='${poster}' alt='Affiche'>
-              <div class='info'>
-                  <h3>${searchType === "film" ? "[Film]" : "[Série]"} ${item.title} (${item.year})</h3>
-                  <p>${item.overview || "Synopsis non disponible."}</p>
-                  <select id="quality-${item.tmdbId || item.tvdbId}">${qualityOptions}</select>
-                  <button onclick="${addFunction}">Ajouter</button>
-              </div>
+            <img src='${poster}' alt='Affiche'>
+            <div class='info'>
+              <h3>${searchType === "film" ? "[Film]" : "[Série]"} ${item.title} (${item.year})</h3>
+              <p>${item.overview || "Synopsis non disponible."}</p>
+              <select id="quality-${item.tmdbId || item.tvdbId}">${qualityOptions}</select>
+              <button onclick="${addFunction}">Ajouter</button>
+            </div>
           </div>`;
       });
+
+      displayPaginationControls();
+    }
+
+    function displayPaginationControls() {
+      let paginationDiv = document.getElementById("pagination");
+      paginationDiv.innerHTML = "";
+
+      if (searchResults.length <= resultsPerPage) return; // Pas besoin de pagination
+
+      let totalPages = Math.ceil(searchResults.length / resultsPerPage);
+
+      let prevButton = `<button onclick="changePage(-1)" ${currentPage === 1 ? "disabled" : ""}>⬅️ Précédent</button>`;
+      let nextButton = `<button onclick="changePage(1)" ${currentPage === totalPages ? "disabled" : ""}>Suivant ➡️</button>`;
+
+      paginationDiv.innerHTML = `
+        <div class="pagination-controls">
+          ${prevButton}
+          <span>Page ${currentPage} / ${totalPages}</span>
+          ${nextButton}
+        </div>
+      `;
+    }
+
+    function changePage(direction) {
+      let totalPages = Math.ceil(searchResults.length / resultsPerPage);
+      currentPage += direction;
+
+      if (currentPage < 1) currentPage = 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      displayResults();
     }
 
     async function addToRadarr(tmdbId) {
@@ -155,6 +205,32 @@
       .card h3 { margin: 0; font-size: 18px; }
       .card p { font-size: 14px; color: #bbbbbb; }
       .card select, .card button { background: #ff8c00; border: none; padding: 8px 12px; margin-top: 5px; color: white; border-radius: 5px; cursor: pointer; font-size: 14px; }
+      .pagination {
+        margin-top: 20px;
+        text-align: center;
+      }
+
+      .pagination-controls {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .pagination-controls button {
+        background: #ff8c00;
+        color: white;
+        padding: 8px 12px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .pagination-controls button:disabled {
+        background: #555;
+        cursor: not-allowed;
+      }
   </style>
 </head>
 <body>
@@ -169,6 +245,7 @@
       </select>
     </div>
     <div id="results"></div>
+    <div id="pagination" class="pagination"></div>
   </div>
 </body>
 </html>
