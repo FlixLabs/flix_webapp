@@ -37,16 +37,22 @@ async function adjustResultsPerPage() {
 }
 
 async function searchContent() {
-  let query = document.getElementById("searchQuery").value;
-  if (!query) return;
+  let query = document.getElementById("searchQuery").value.trim(); // Supprime les espaces inutiles
+  if (query.length < 3) { // Effacer les résultats si la recherche est trop courte
+    localStorage.removeItem("searchQuery"); // Supprimer la recherche enregistrée
+    clearResults(); // Effacer les résultats affichés
+    return; // Arrêter la recherche
+  }
 
   // Sauvegarde la recherche dans localStorage
   localStorage.setItem("searchQuery", query);
 
-  await adjustResultsPerPage();
+  // Afficher l'indicateur en haut à droite
+  let loadingIndicator = document.getElementById("loadingIndicator");
+  loadingIndicator.classList.remove("hidden");
+  loadingIndicator.classList.add("visible");
 
-  // Afficher l'indicateur de chargement
-  document.getElementById("loadingIndicator").classList.remove("hidden");
+  await adjustResultsPerPage();
 
   let filmApiUrl = `${CONFIG.radarr.baseURL}/api/v3/movie/lookup?term=${query}&apikey=${CONFIG.radarr.apiKey}&language=fr`;
   let serieApiUrl = `${CONFIG.sonarr.baseURL}/api/v3/series/lookup?term=${query}&apikey=${CONFIG.sonarr.apiKey}&language=fr`;
@@ -69,8 +75,11 @@ async function searchContent() {
     console.error("Erreur lors de la recherche :", error);
   }
 
-  // Cacher l'indicateur après le chargement
-  document.getElementById("loadingIndicator").classList.add("hidden");
+  // Masquer l'indicateur après la recherche
+  setTimeout(() => {
+    loadingIndicator.classList.add("hidden");
+    loadingIndicator.classList.remove("visible");
+  }, 500);
 }
 
 function displayResults(results, containerId, paginationId, currentPage) {
@@ -144,6 +153,13 @@ function changePage(containerId, direction) {
     if (currentPageSerie > totalPages) currentPageSerie = totalPages;
     displayResults(searchResultsSerie, "serieResults", "seriePagination", currentPageSerie);
   }
+}
+
+function clearResults() {
+  document.getElementById("filmResults").innerHTML = "";
+  document.getElementById("serieResults").innerHTML = "";
+  document.getElementById("filmPagination").innerHTML = "";
+  document.getElementById("seriePagination").innerHTML = "";
 }
 
 async function addToLibrary(id, type) {
@@ -237,11 +253,19 @@ async function init() {
 
   // Charger la recherche stockée
   let savedQuery = localStorage.getItem("searchQuery");
-  if (savedQuery) {
+  if (savedQuery && savedQuery.trim().length >= 3) { // Vérifie que la recherche fait au moins 3 caractères
     document.getElementById("searchQuery").value = savedQuery;
-    await searchContent(); // Relancer directement la recherche
+
+    // Afficher l'indicateur car une recherche est relancée après le refresh
+    let loadingIndicator = document.getElementById("loadingIndicator");
+    loadingIndicator.classList.remove("hidden");
+    loadingIndicator.classList.add("visible");
+
+    searchContent(); // Relancer directement la recherche
   } else {
-    await adjustResultsPerPage(); // Seulement si aucune recherche n'est en cours
+    localStorage.removeItem("searchQuery"); // Nettoyer localStorage si la valeur est vide
+    clearResults(); // Supprimer les résultats affichés
+    adjustResultsPerPage(); // Seulement si aucune recherche n'est en cours
   }
 
   // Ajoute un écouteur pour recalculer le nombre d'entrées si la fenêtre est redimensionnée
@@ -249,7 +273,10 @@ async function init() {
 
   // Déclenche la recherche automatiquement après 3 caractères saisis
   document.getElementById("searchQuery").addEventListener("input", function() {
-    if (this.value.length >= 3) {
+    if (this.value.length < 3) { // Vérifie si la recherche est trop courte
+      localStorage.removeItem("searchQuery"); // Supprime la recherche stockée
+      clearResults(); // Effacer les résultats affichés immédiatement
+    } else {
       searchContent();
     }
   });

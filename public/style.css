@@ -113,16 +113,28 @@ body {
   cursor: not-allowed;
 }
 
-.hidden {
-  display: none;
+.loading-indicator {
+  position: absolute;
+  top: 10px;
+  right: 20px;
+  background-color: rgba(255, 140, 0, 0.9); /* Couleur orange semi-transparente */
+  color: white;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-weight: bold;
+  font-size: 14px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: opacity 0.3s ease-in-out;
 }
 
-#loadingIndicator {
-  text-align: center;
-  font-size: 18px;
-  font-weight: bold;
-  color: #ff8c00;
-  margin-top: 20px;
+.hidden {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.visible {
+  opacity: 1;
+  visibility: visible;
 }
 
 .results-container {
