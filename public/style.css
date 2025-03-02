@@ -28,23 +28,6 @@ body {
   color: black;
 }
 
-.search-box select {
-  background-color: #ff8c00;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-.search-box button {
-  padding: 12px 20px;
-  background: #ff8c00;
-  border: none;
-  border-radius: 5px;
-  color: white;
-  cursor: pointer;
-  font-size: 16px;
-}
-
 .card {
   display: flex;
   align-items: center;
@@ -84,6 +67,11 @@ body {
   border-radius: 5px;
   cursor: pointer;
   font-size: 14px;
+}
+
+.card select {
+  border: 2px solid #ff8c00;
+  height: 37.5px;
 }
 
 .pagination {
