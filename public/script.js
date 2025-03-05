@@ -166,7 +166,7 @@ async function addToLibrary(id, type) {
   let qualitySelect = document.getElementById(`quality-${id}`);
 
   if (!qualitySelect) {
-    alert("Erreur : Impossible de récupérer le profil de qualité.");
+    customAlert("Erreur : Impossible de récupérer le profil de qualité.", "error");
     console.error(`Élément non trouvé : quality-${id}`);
     return;
   }
@@ -177,7 +177,7 @@ async function addToLibrary(id, type) {
   // Trouver l'élément correspondant dans `searchResults`
   let item = searchResults.find(el => (type === "film" ? el.tmdbId == id : el.tvdbId == id));
   if (!item) {
-      alert("Erreur : Impossible de récupérer les informations du contenu.");
+      customAlert("Erreur : Impossible de récupérer les informations du contenu.", "error");
       console.error("Élément introuvable dans searchResults", id);
       return;
   }
@@ -224,7 +224,7 @@ async function addToLibrary(id, type) {
   document.getElementById("loadingIndicator").classList.add("hidden");
 
   if (response.ok) {
-    alert(`${type === "film" ? "Film" : "Série"} ajouté(e) avec succès !`);
+    customAlert(`${type === "film" ? "Film" : "Série"} ajouté(e) avec succès !`, "success");
 
     // Lancer la recherche dans Radarr (pas nécessaire pour Sonarr)
     if (type === "film") {
@@ -234,10 +234,9 @@ async function addToLibrary(id, type) {
         headers: { "X-Api-Key": apiKey, "Content-Type": "application/json" },
         body: JSON.stringify({ name: "MoviesSearch", movieIds: [movie.id] })
       });
-      //alert("Recherche du film lancée !");
     }
   } else {
-    alert("Erreur : " + await response.text());
+    customAlert("Erreur : " + await response.text(), "error");
   }
 }
 
@@ -246,6 +245,63 @@ function truncateText(text, maxLength) {
   return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
 }
 
+function customAlert(message, type = 'info') {
+    // Vérifier si une alerte existe déjà et la supprimer
+    let existingAlert = document.querySelector('.custom-alert');
+    if (existingAlert) {
+        existingAlert.remove();
+    }
+
+    // Créer l'élément de l'alerte
+    let alertBox = document.createElement('div');
+    alertBox.classList.add('custom-alert', type);
+    alertBox.innerHTML = `
+        <span>${message}</span>
+        <button onclick="this.parentElement.remove()">&times;</button>
+    `;
+
+    // Ajouter l'alerte à la page
+    document.body.appendChild(alertBox);
+
+    // Supprimer automatiquement après quelques secondes
+    setTimeout(() => {
+        alertBox.remove();
+    }, 5000);
+}
+
+// Ajouter du style avec CSS
+document.head.insertAdjacentHTML('beforeend', `
+    <style>
+        .custom-alert {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            font-family: Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+            /*opacity: 0.9;*/
+        }
+        .custom-alert button {
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        .custom-alert.info { background: #2196F3; }
+        .custom-alert.success { background: #4CAF50; }
+        .custom-alert.warning { background: #FF9800; }
+        .custom-alert.error { background: #F44336; }
+    </style>
+`);
 
 async function init() {
   await loadConfig(); // Attendre que CONFIG soit chargé
