@@ -74,8 +74,8 @@ async function searchContent() {
 
   try {
     let [filmResponse, serieResponse] = await Promise.all([
-        fetch(filmApiUrl),
-        fetch(serieApiUrl)
+      fetch(filmApiUrl),
+      fetch(serieApiUrl)
     ]);
 
     searchResultsFilm = await filmResponse.json();
@@ -84,8 +84,10 @@ async function searchContent() {
     currentPageFilm = 1; // Réinitialiser la pagination
     currentPageSerie = 1;
 
-    await displayResults(searchResultsFilm, "filmResults", "filmPagination", currentPageFilm);
-    await displayResults(searchResultsSerie, "serieResults", "seriePagination", currentPageSerie);
+    await Promise.all([
+      displayResults(searchResultsFilm, "filmResults", "filmPagination", currentPageFilm),
+      displayResults(searchResultsSerie, "serieResults", "seriePagination", currentPageSerie)
+    ]);
   } catch (error) {
     console.error("Erreur lors de la recherche :", error);
   }
