@@ -36,6 +36,21 @@ async function adjustResultsPerPage() {
   resultsPerPage = Math.max(2, maxItems); // Minimum 2 éléments affichés
 }
 
+async function isAlreadyInLibrary(id, type) {
+  let apiUrl = type === "film"
+    ? `${CONFIG.radarr.baseURL}/api/v3/movie?apikey=${CONFIG.radarr.apiKey}`
+    : `${CONFIG.sonarr.baseURL}/api/v3/series?apikey=${CONFIG.sonarr.apiKey}`;
+
+  try {
+    let response = await fetch(apiUrl);
+    let items = await response.json();
+    return items.some(item => (type === "film" ? item.tmdbId : item.tvdbId) == id);
+  } catch (error) {
+    console.error("Erreur lors de la vérification de la bibliothèque:", error);
+    return false;
+  }
+}
+
 async function searchContent() {
   let query = document.getElementById("searchQuery").value.trim(); // Supprime les espaces inutiles
   if (query.length < 3) { // Effacer les résultats si la recherche est trop courte
@@ -82,7 +97,7 @@ async function searchContent() {
   }, 500);
 }
 
-function displayResults(results, containerId, paginationId, currentPage) {
+async function displayResults(results, containerId, paginationId, currentPage) {
   let resultsDiv = document.getElementById(containerId);
   resultsDiv.innerHTML = "";
 
@@ -95,7 +110,7 @@ function displayResults(results, containerId, paginationId, currentPage) {
   let end = start + resultsPerPage;
   let paginatedResults = results.slice(start, end);
 
-  paginatedResults.forEach(item => {
+  for (let item of paginatedResults) {
     let isFilm = containerId === "filmResults";
     let poster = item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image";
     let id = isFilm ? item.tmdbId : item.tvdbId;
@@ -103,6 +118,7 @@ function displayResults(results, containerId, paginationId, currentPage) {
         .map(p => `<option value="${p.id}">${p.name}</option>`).join("");
 
     let addFunction = `addToLibrary('${id}', '${isFilm ? "film" : "serie"}')`;
+    let alreadyInLibrary = await isAlreadyInLibrary(id, isFilm ? "film" : "serie");
 
     resultsDiv.innerHTML += `
       <div class='card'>
@@ -110,11 +126,11 @@ function displayResults(results, containerId, paginationId, currentPage) {
         <div class='info'>
           <h3>${isFilm ? "[Film]" : "[Série]"} ${item.title} (${item.year})</h3>
           <p>${truncateText(item.overview, 250)}</p>
-          <select id="quality-${id}">${qualityOptions}</select>
-          <button onclick="${addFunction}">Ajouter</button>
+          ${alreadyInLibrary ? "" : `<select id="quality-${id}">${qualityOptions}</select>`}
+          ${alreadyInLibrary ? "<p>Déjà ajouté</p>" : `<button onclick="${addFunction}">Ajouter</button>`}
         </div>
       </div>`;
-  });
+  }
 
   displayPaginationControls(results.length, paginationId, currentPage, containerId);
 }
