@@ -109,6 +109,7 @@ async function displayResults(results, containerId, paginationId, currentPage) {
   let start = (currentPage - 1) * resultsPerPage;
   let end = start + resultsPerPage;
   let paginatedResults = results.slice(start, end);
+  let htmlContent = "";
 
   for (let item of paginatedResults) {
     let isFilm = containerId === "filmResults";
@@ -120,7 +121,7 @@ async function displayResults(results, containerId, paginationId, currentPage) {
     let addFunction = `addToLibrary('${id}', '${isFilm ? "film" : "serie"}')`;
     let alreadyInLibrary = await isAlreadyInLibrary(id, isFilm ? "film" : "serie");
 
-    resultsDiv.innerHTML += `
+    htmlContent += `
       <div class='card'>
         <img src='${poster}' alt='Affiche'>
         <div class='info'>
@@ -131,6 +132,8 @@ async function displayResults(results, containerId, paginationId, currentPage) {
         </div>
       </div>`;
   }
+
+  resultsDiv.innerHTML = htmlContent;
 
   await displayPaginationControls(results.length, paginationId, currentPage, containerId);
 }
