@@ -55,7 +55,7 @@ async function searchContent() {
   let query = document.getElementById("searchQuery").value.trim(); // Supprime les espaces inutiles
   if (query.length < 3) { // Effacer les résultats si la recherche est trop courte
     localStorage.removeItem("searchQuery"); // Supprimer la recherche enregistrée
-    clearResults(); // Effacer les résultats affichés
+    await clearResults(); // Effacer les résultats affichés
     return; // Arrêter la recherche
   }
 
@@ -84,8 +84,8 @@ async function searchContent() {
     currentPageFilm = 1; // Réinitialiser la pagination
     currentPageSerie = 1;
 
-    displayResults(searchResultsFilm, "filmResults", "filmPagination", currentPageFilm);
-    displayResults(searchResultsSerie, "serieResults", "seriePagination", currentPageSerie);
+    await displayResults(searchResultsFilm, "filmResults", "filmPagination", currentPageFilm);
+    await displayResults(searchResultsSerie, "serieResults", "seriePagination", currentPageSerie);
   } catch (error) {
     console.error("Erreur lors de la recherche :", error);
   }
@@ -125,17 +125,17 @@ async function displayResults(results, containerId, paginationId, currentPage) {
         <img src='${poster}' alt='Affiche'>
         <div class='info'>
           <h3>${isFilm ? "[Film]" : "[Série]"} ${item.title} (${item.year})</h3>
-          <p>${truncateText(item.overview, 250)}</p>
-          ${alreadyInLibrary ? "" : `<select id="quality-${id}">${qualityOptions}</select>`}
-          ${alreadyInLibrary ? "<p>Déjà ajouté</p>" : `<button onclick="${addFunction}">Ajouter</button>`}
+          <p>${await truncateText(item.overview, 250)}</p>
+          ${alreadyInLibrary ? `` : `<select id="quality-${id}">${qualityOptions}</select>`}
+          ${alreadyInLibrary ? `<p class="orange-text">Déjà ajouté</p>` : `<button onclick="${addFunction}">Ajouter</button>`}
         </div>
       </div>`;
   }
 
-  displayPaginationControls(results.length, paginationId, currentPage, containerId);
+  await displayPaginationControls(results.length, paginationId, currentPage, containerId);
 }
 
-function displayPaginationControls(totalResults, paginationId, currentPage, containerId) {
+async function displayPaginationControls(totalResults, paginationId, currentPage, containerId) {
   let paginationDiv = document.getElementById(paginationId);
   paginationDiv.innerHTML = "";
 
@@ -155,23 +155,23 @@ function displayPaginationControls(totalResults, paginationId, currentPage, cont
   `;
 }
 
-function changePage(containerId, direction) {
+async function changePage(containerId, direction) {
   if (containerId === "filmResults") {
     let totalPages = Math.ceil(searchResultsFilm.length / resultsPerPage);
     currentPageFilm += direction;
     if (currentPageFilm < 1) currentPageFilm = 1;
     if (currentPageFilm > totalPages) currentPageFilm = totalPages;
-    displayResults(searchResultsFilm, "filmResults", "filmPagination", currentPageFilm);
+    await displayResults(searchResultsFilm, "filmResults", "filmPagination", currentPageFilm);
   } else {
     let totalPages = Math.ceil(searchResultsSerie.length / resultsPerPage);
     currentPageSerie += direction;
     if (currentPageSerie < 1) currentPageSerie = 1;
     if (currentPageSerie > totalPages) currentPageSerie = totalPages;
-    displayResults(searchResultsSerie, "serieResults", "seriePagination", currentPageSerie);
+    await displayResults(searchResultsSerie, "serieResults", "seriePagination", currentPageSerie);
   }
 }
 
-function clearResults() {
+async function clearResults() {
   document.getElementById("filmResults").innerHTML = "";
   document.getElementById("serieResults").innerHTML = "";
   document.getElementById("filmPagination").innerHTML = "";
@@ -182,7 +182,7 @@ async function addToLibrary(id, type) {
   let qualitySelect = document.getElementById(`quality-${id}`);
 
   if (!qualitySelect) {
-    customAlert("Erreur : Impossible de récupérer le profil de qualité.", "error");
+    await customAlert("Erreur : Impossible de récupérer le profil de qualité.", "error");
     console.error(`Élément non trouvé : quality-${id}`);
     return;
   }
@@ -193,7 +193,7 @@ async function addToLibrary(id, type) {
   // Trouver l'élément correspondant dans `searchResults`
   let item = searchResults.find(el => (type === "film" ? el.tmdbId == id : el.tvdbId == id));
   if (!item) {
-      customAlert("Erreur : Impossible de récupérer les informations du contenu.", "error");
+      await customAlert("Erreur : Impossible de récupérer les informations du contenu.", "error");
       console.error("Élément introuvable dans searchResults", id);
       return;
   }
@@ -240,7 +240,7 @@ async function addToLibrary(id, type) {
   document.getElementById("loadingIndicator").classList.add("hidden");
 
   if (response.ok) {
-    customAlert(`${type === "film" ? "Film" : "Série"} ajouté(e) avec succès !`, "success");
+    await customAlert(`${type === "film" ? "Film" : "Série"} ajouté(e) avec succès !`, "success");
 
     // Lancer la recherche dans Radarr (pas nécessaire pour Sonarr)
     if (type === "film") {
@@ -252,16 +252,16 @@ async function addToLibrary(id, type) {
       });
     }
   } else {
-    customAlert("Erreur : " + await response.text(), "error");
+    await customAlert("Erreur : " + await response.text(), "error");
   }
 }
 
-function truncateText(text, maxLength) {
+async function truncateText(text, maxLength) {
   if (!text) return "Synopsis non disponible.";
   return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
 }
 
-function customAlert(message, type = 'info') {
+async function customAlert(message, type = 'info') {
     // Vérifier si une alerte existe déjà et la supprimer
     let existingAlert = document.querySelector('.custom-alert');
     if (existingAlert) {
@@ -281,7 +281,7 @@ function customAlert(message, type = 'info') {
 
     // Supprimer automatiquement après quelques secondes
     setTimeout(() => {
-        alertBox.remove();
+      alertBox.remove();
     }, 5000);
 }
 
@@ -333,23 +333,23 @@ async function init() {
     loadingIndicator.classList.remove("hidden");
     loadingIndicator.classList.add("visible");
 
-    searchContent(); // Relancer directement la recherche
+    await searchContent(); // Relancer directement la recherche
   } else {
     localStorage.removeItem("searchQuery"); // Nettoyer localStorage si la valeur est vide
-    clearResults(); // Supprimer les résultats affichés
-    adjustResultsPerPage(); // Seulement si aucune recherche n'est en cours
+    await clearResults(); // Supprimer les résultats affichés
+    await adjustResultsPerPage(); // Seulement si aucune recherche n'est en cours
   }
 
   // Ajoute un écouteur pour recalculer le nombre d'entrées si la fenêtre est redimensionnée
   window.addEventListener("resize", adjustResultsPerPage);
 
   // Déclenche la recherche automatiquement après 3 caractères saisis
-  document.getElementById("searchQuery").addEventListener("input", function() {
+  document.getElementById("searchQuery").addEventListener("input", async function() {
     if (this.value.length < 3) { // Vérifie si la recherche est trop courte
       localStorage.removeItem("searchQuery"); // Supprime la recherche stockée
-      clearResults(); // Effacer les résultats affichés immédiatement
+      await clearResults(); // Effacer les résultats affichés immédiatement
     } else {
-      searchContent();
+      await searchContent();
     }
   });
 }

@@ -240,3 +240,7 @@ body {
   font-weight: bold;
   color: white;
 }
+
+.orange-text {
+  color: #ff8c00 !important;
+}
