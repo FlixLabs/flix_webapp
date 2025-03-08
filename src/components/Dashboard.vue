@@ -73,7 +73,7 @@ function getQualityProfileList(type) {
   if (type == 'movie') {
     url = import.meta.env.VITE_RADARR_BASE_URL + '/api/v3/qualityProfile?apikey=' + import.meta.env.VITE_RADARR_API_KEY;
   }
-  if (type == 'tv') {
+  if (type == 'series') {
     url = import.meta.env.VITE_SONARR_BASE_URL + '/api/v3/qualityProfile?apikey=' + import.meta.env.VITE_SONARR_API_KEY;
   }
 
@@ -92,7 +92,7 @@ function getQualityProfileList(type) {
       if (type == 'movie') {
         quality_movie_items.value = items;
       }
-      if (type == 'tv') {
+      if (type == 'series') {
         quality_serie_items.value = items;
       }
     })
@@ -101,18 +101,22 @@ function getQualityProfileList(type) {
     });
 }
 
-function getContent(type) {
-  let url = null;
+function getContent(type, keep_page = false) {
+  let base_url = null;
+  let api_key = null;
+
   if (type == 'movie') {
     is_loading_movie.value = true;
-    url = import.meta.env.VITE_RADARR_BASE_URL + '/api/v3/movie/lookup?term=' + search.value + '&apikey=' + import.meta.env.VITE_RADARR_API_KEY;
+    base_url = import.meta.env.VITE_RADARR_BASE_URL;
+    api_key = import.meta.env.VITE_RADARR_API_KEY;
   }
-  if (type == 'tv') {
+  if (type == 'series') {
     is_loading_serie.value = true;
-    url = import.meta.env.VITE_SONARR_BASE_URL + '/api/v3/series/lookup?term=' + search.value + '&apikey=' + import.meta.env.VITE_SONARR_API_KEY;
+    base_url = import.meta.env.VITE_SONARR_BASE_URL;
+    api_key = import.meta.env.VITE_SONARR_API_KEY;
   }
 
-  fetch(url)
+  fetch(base_url + '/api/v3/' + type + '/lookup?term=' + search.value + '&apikey=' + api_key)
     .then(async response => {
       const json_data = await response.json();
 
@@ -124,12 +128,13 @@ function getContent(type) {
         if (type == 'movie') {
           id = item.tmdbId;
         }
-        if (type == 'tv') {
+        if (type == 'series') {
           id = item.tvdbId;
         }
 
         items.push({
           id: id,
+          internalId: item.id,
           prependAvatar: item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
           title: item.title + ' (' + item.year + ')',
           overview: item.overview,
@@ -141,11 +146,15 @@ function getContent(type) {
 
       if (type == 'movie') {
         movie_items.value = items;
-        movie_page.value = 1;
+        if (!keep_page) {
+          movie_page.value = 1;
+        }
       }
-      if (type == 'tv') {
+      if (type == 'series') {
         serie_items.value = items;
-        serie_page.value = 1;
+        if (!keep_page) {
+          serie_page.value = 1;
+        }
       }
 
       isAlreadyInLibrary(type);
@@ -157,22 +166,26 @@ function getContent(type) {
       if (type == 'movie') {
         is_loading_movie.value = false;
       }
-      if (type == 'tv') {
+      if (type == 'series') {
         is_loading_serie.value = false;
       }
     });
 }
 
 function isAlreadyInLibrary(type) {
-  let url = null;
+  let base_url = null;
+  let api_key = null;
+
   if (type == 'movie') {
-    url = import.meta.env.VITE_RADARR_BASE_URL + '/api/v3/movie?apikey=' + import.meta.env.VITE_RADARR_API_KEY;
+    base_url = import.meta.env.VITE_RADARR_BASE_URL;
+    api_key = import.meta.env.VITE_RADARR_API_KEY;
   }
-  if (type == 'tv') {
-    url = import.meta.env.VITE_SONARR_BASE_URL + '/api/v3/series?apikey=' + import.meta.env.VITE_SONARR_API_KEY;
+  if (type == 'series') {
+    base_url = import.meta.env.VITE_SONARR_BASE_URL;
+    api_key = import.meta.env.VITE_SONARR_API_KEY;
   }
 
-  fetch(url)
+  fetch(base_url + '/api/v3/' + type + '?apikey=' + api_key)
     .then(async response => {
       const json_data = await response.json();
 
@@ -184,7 +197,7 @@ function isAlreadyInLibrary(type) {
         id_key = 'tmdbId';
       }
 
-      if (type == 'tv') {
+      if (type == 'series') {
         array_items = serie_items.value;
         id_key = 'tvdbId';
       }
@@ -209,12 +222,12 @@ function markAsAlreadyInLibrary(array_items, json_data, id_key) {
 }
 
 function addToList(type, item) {
-  let url = null;
+  let base_url = null;
   let api_key = null;
   let data = {};
 
   if (type == 'movie') {
-    url = import.meta.env.VITE_RADARR_BASE_URL + '/api/v3/movie';
+    base_url = import.meta.env.VITE_RADARR_BASE_URL;
     api_key = import.meta.env.VITE_RADARR_API_KEY;
     data = {
       tmdbId: item.id,
@@ -225,8 +238,8 @@ function addToList(type, item) {
       monitored: true
     }
   }
-  if (type == 'tv') {
-    url = import.meta.env.VITE_SONARR_BASE_URL + '/api/v3/series';
+  if (type == 'series') {
+    base_url = import.meta.env.VITE_SONARR_BASE_URL;
     api_key = import.meta.env.VITE_SONARR_API_KEY;
     data = {
       tvdbId: item.id,
@@ -238,7 +251,7 @@ function addToList(type, item) {
     }
   }
 
-  fetch(url, {
+  fetch(base_url + '/api/v3/' + type, {
 		method: 'POST',
     headers: {
       'Accept': 'application/json',
@@ -248,14 +261,47 @@ function addToList(type, item) {
     body: JSON.stringify(data)
 	})
   .then(async response => {
-    showSuccessAlert();
-
-    getContent('movie');
-    getContent('tv');
+    if (response.ok) {
+      showSuccessAlert("Ajouté avec succès");
+      getContent(type, true);
+    }
   })
 	.catch(error => {
-		showErrorAlert(error);
+		showErrorAlert("Échec de l'ajout");
+    console.error(error);
 	});
+}
+
+function deleteFromList(type, item) {
+  let base_url = null;
+  let api_key = null;
+
+  if (type == 'movie') {
+    base_url = import.meta.env.VITE_RADARR_BASE_URL;
+    api_key = import.meta.env.VITE_RADARR_API_KEY;
+  }
+  if (type == 'series') {
+    base_url = import.meta.env.VITE_SONARR_BASE_URL;
+    api_key = import.meta.env.VITE_SONARR_API_KEY;
+  }
+
+  fetch(base_url + '/api/v3/' + type + '/' + item.internalId + '?apikey=' + api_key + '&deleteFiles=true', {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json;charset=utf-8',
+    },
+  })
+  .then(async response => {
+    if (response.ok) {
+      showSuccessAlert("Supprimé avec succès");
+      getContent(type, true);
+    }
+  })
+  .catch(error => {
+    showErrorAlert("Échec de la suppression");
+    console.error(error);
+  });
 }
 
 function showSuccessAlert(text = 'L\'opération a été réussie !') {
@@ -287,7 +333,7 @@ watch(search, (newValue) => {
     localStorage.setItem("search_" + window.location.href, newValue);
 
     getContent('movie');
-    getContent('tv');
+    getContent('series');
   } else {
     localStorage.removeItem("search_" + window.location.href);
 
@@ -302,7 +348,7 @@ onMounted(() => {
   }
 
   getQualityProfileList('movie');
-  getQualityProfileList('tv');
+  getQualityProfileList('series');
 })
 
 </script>
@@ -370,7 +416,7 @@ onMounted(() => {
                 {{ item.overview }}
               </p>
               <v-row
-                class="control-options"
+                class="mt-4"
                 >
                 <v-col>
                   <v-select
@@ -378,20 +424,29 @@ onMounted(() => {
                     :items="quality_movie_items"
                     label="Qualité"
                     variant="outlined"
-                    class="select-box"
                     :disabled="item.already_in_library"
                     />
                 </v-col>
                 <v-col>
                   <v-btn
+                    v-if="!item.already_in_library"
                     color="primary"
-                    block
-                    height="55px"
-                    class="full-height"
+                    variant="outlined"
                     @click="addToList('movie', item)"
-                    :disabled="item.already_in_library"
+                    block
+                    style="height: 56px"
                     >
                     Ajouter
+                  </v-btn>
+                  <v-btn
+                    v-else
+                    color="error"
+                    variant="outlined"
+                    @click="deleteFromList('movie', item)"
+                    block
+                    style="height: 56px"
+                    >
+                    Supprimer
                   </v-btn>
                 </v-col>
               </v-row>
@@ -460,7 +515,7 @@ onMounted(() => {
                 {{ item.overview }}
               </p>
               <v-row
-                class="control-options"
+                class="mt-4"
                 >
                 <v-col>
                   <v-select
@@ -468,20 +523,29 @@ onMounted(() => {
                     :items="quality_serie_items"
                     label="Qualité"
                     variant="outlined"
-                    class="select-box"
                     :disabled="item.already_in_library"
                     />
                 </v-col>
                 <v-col>
                   <v-btn
+                    v-if="!item.already_in_library"
                     color="primary"
+                    variant="outlined"
+                    @click="addToList('series', item)"
                     block
-                    height="55px"
-                    class="full-height"
-                    @click="addToList('tv', item)"
-                    :disabled="item.already_in_library"
+                    style="height: 56px"
                     >
                     Ajouter
+                  </v-btn>
+                  <v-btn
+                    v-else
+                    color="error"
+                    variant="outlined"
+                    @click="deleteFromList('series', item)"
+                    block
+                    style="height: 56px"
+                    >
+                    Supprimer
                   </v-btn>
                 </v-col>
               </v-row>
@@ -552,10 +616,6 @@ onMounted(() => {
   margin-left: 15px;
 }
 
-.control-options {
-  margin-top: 5px;
-}
-
 .fixed-alert {
   position: fixed;
   top: 10px;
@@ -587,4 +647,5 @@ onMounted(() => {
   opacity: 0;
   transform: translateY(-20px);
 }
+
 </style>
