@@ -384,7 +384,9 @@ onMounted(() => {
       </v-row>
     </v-form>
     <v-row>
-      <v-col>
+      <v-col
+        cols="6"
+        >
         <h3>Films</h3>
         <v-list
           v-if="paginated_movies.length"
@@ -483,7 +485,9 @@ onMounted(() => {
           rounded
           />
       </v-col>
-      <v-col>
+      <v-col
+        cols="6"
+        >
         <h3>Séries</h3>
         <v-list
           v-if="paginated_series.length"
