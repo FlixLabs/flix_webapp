@@ -132,11 +132,18 @@ function getContent(type, keep_page = false) {
           id = item.tvdbId;
         }
 
+        let title = item.title;
+        const year_str = '(' + item.year + ')';
+
+        if (title.includes(year_str)) {
+          title = title.replace(year_str, '').trim();
+        }
+
         items.push({
           id: id,
           internalId: item.id,
           prependAvatar: item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
-          title: item.title,
+          title: title,
           year: item.year,
           overview: item.overview,
           // passer par une var pour quality
