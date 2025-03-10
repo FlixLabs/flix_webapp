@@ -44,8 +44,6 @@ function getContent(type) {
     .then(async (response) => {
       const json_data = await response.json();
 
-      console.log(json_data);
-
       let items = [];
       for (let item of json_data) {
         let id = null;
