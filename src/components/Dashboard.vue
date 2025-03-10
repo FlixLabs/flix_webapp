@@ -89,11 +89,19 @@ function getQualityProfileList(type) {
         });
       }
 
+      const any_profile = items.find(i => i.title.toLowerCase() == 'any');
+
+      if (!any_profile) {
+        showErrorAlert("Le profil 'Any' n'existe pas. Veuillez le créer dans Radarr et Sonarr.");
+      }
+
       if (type == 'movie') {
         quality_movie_items.value = items;
+        quality_movie.value = any_profile.id;
       }
       if (type == 'series') {
         quality_serie_items.value = items;
+        quality_serie.value = any_profile.id;
       }
     })
     .catch(error => {
