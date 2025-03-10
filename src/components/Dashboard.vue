@@ -136,7 +136,8 @@ function getContent(type, keep_page = false) {
           id: id,
           internalId: item.id,
           prependAvatar: item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
-          title: item.title + ' (' + item.year + ')',
+          title: item.title,
+          year: item.year,
           overview: item.overview,
           // passer par une var pour quality
           selected_quality: 1,
@@ -410,7 +411,7 @@ onMounted(() => {
             </template>
             <v-list-item-content>
               <v-list-item-title>
-                {{ item.title }}
+                {{ item.title }} ({{ item.year }})
               </v-list-item-title>
               <p
                 class="truncate-overview"
@@ -511,7 +512,7 @@ onMounted(() => {
             </template>
             <v-list-item-content>
               <v-list-item-title>
-                {{ item.title }}
+                {{ item.title }} ({{ item.year }})
               </v-list-item-title>
               <p
                 class="truncate-overview"

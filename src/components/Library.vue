@@ -62,7 +62,8 @@ function getContent(type) {
           id: id,
           internalId: item.id,
           prependAvatar: item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
-          title: item.title + ' (' + item.year + ')',
+          title: item.title,
+          year: item.year,
           overview: item.overview,
           // passer par une var pour quality
           selected_quality: 1
@@ -170,16 +171,19 @@ onMounted(() => {
           lg="2"
           class="mb-4"
           >
-          <v-card
-            >
+          <v-card>
             <v-img
               :src="item.prependAvatar"
               />
-            <v-card-title class="title-line">
+            <v-card-title
+              class="title-line text-center"
+              >
               {{ item.title }}
             </v-card-title>
-            <v-card-text class="truncate-overview px-3">
-              {{ item.overview }}
+            <v-card-text
+              class="text-center"
+              >
+              ({{ item.year }})
             </v-card-text>
           </v-card>
         </v-col>
@@ -219,16 +223,19 @@ onMounted(() => {
           lg="2"
           class="mb-4"
           >
-          <v-card
-            >
+          <v-card>
             <v-img
               :src="item.prependAvatar"
               />
-            <v-card-title class="title-line">
-              {{ item.title }} ({{ item.year }})
+            <v-card-title
+              class="title-line text-center"
+              >
+              {{ item.title }}
             </v-card-title>
-            <v-card-text class="truncate-overview px-3">
-              {{ item.overview }}
+            <v-card-text
+              class="text-center"
+              >
+              ({{ item.year }})
             </v-card-text>
           </v-card>
         </v-col>
@@ -238,46 +245,10 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.fade-enter-from {
-  opacity: 0;
-  transform: translateY(-20px);
-}
-
-.fade-enter-to {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.fade-leave-from {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-20px);
-}
-
 .title-line {
   font-size: 1rem;
   line-height: 1.2;
-}
-
-.truncate-overview {
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  max-width: 100%;
-  color: gray;
-  font-size: 0.9em;
-  margin-top: 5px;
-  margin-left: 15px;
+  font-weight: bold;
 }
 
 </style>
