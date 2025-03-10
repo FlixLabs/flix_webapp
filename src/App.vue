@@ -19,6 +19,11 @@ const initial_drawer_options = [
     title: 'Dashboard',
     icon: 'mdi-view-dashboard-outline',
     value: 'dashboard'
+  },
+  {
+    title: 'Library',
+    icon: 'mdi-movie-open-outline',
+    value: 'library'
   }
 ];
 const drawer_options = ref(initial_drawer_options);

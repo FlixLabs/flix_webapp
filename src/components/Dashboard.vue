@@ -377,7 +377,7 @@ onMounted(() => {
             label="Search"
             variant="outlined"
             v-model="search"
-            prepend-icon="mdi-search-web"
+            prepend-icon="mdi-magnify"
             clearable
             />
         </v-col>
