@@ -26,8 +26,8 @@ const reset_serie_items = () => {
 const selected_view = ref<'movie' | 'series'>('movie');
 
 function getContent(type) {
-  const api_key = '0d1dc24ae91481452ec415924333e3e9';
-  const base_url = 'https://api.themoviedb.org/3';
+  const api_key = import.meta.env.VITE_IMDB_API_KEY;
+  const base_url = import.meta.env.VITE_IMDB_BASE_URL;
   let url_type = null;
   let url_request = null;
 
