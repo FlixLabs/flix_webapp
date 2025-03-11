@@ -24,6 +24,11 @@ const initial_drawer_options = [
     title: 'Library',
     icon: 'mdi-movie-open-outline',
     value: 'library'
+  },
+  {
+    title: 'Outings',
+    icon: 'mdi-filmstrip-box',
+    value: 'outings'
   }
 ];
 const drawer_options = ref(initial_drawer_options);
