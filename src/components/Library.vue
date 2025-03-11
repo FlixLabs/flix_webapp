@@ -25,6 +25,42 @@ const reset_serie_items = () => {
 
 const selected_view = ref<'movie' | 'series'>('movie');
 
+const items_per_page = 12;
+const movie_page = ref(1);
+const serie_page = ref(1);
+
+const filtered_movies = computed(() => {
+  if (!search.value) return movie_items.value;
+  return movie_items.value.filter((movie) =>
+    movie.title.toLowerCase().includes(search.value.toLowerCase())
+  );
+});
+
+const filtered_series = computed(() => {
+  if (!search.value) return serie_items.value;
+  return serie_items.value.filter((serie) =>
+    serie.title.toLowerCase().includes(search.value.toLowerCase())
+  );
+});
+
+const movies_total_pages = computed(() =>
+  Math.ceil(filtered_movies.value.length / items_per_page)
+);
+
+const series_total_pages = computed(() =>
+  Math.ceil(filtered_series.value.length / items_per_page)
+);
+
+const paginated_movies = computed(() => {
+  const start = (movie_page.value - 1) * items_per_page;
+  return filtered_movies.value.slice(start, start + items_per_page);
+});
+
+const paginated_series = computed(() => {
+  const start = (serie_page.value - 1) * items_per_page;
+  return filtered_series.value.slice(start, start + items_per_page);
+});
+
 function getContent(type) {
   let base_url = null;
   let api_key = null;
@@ -94,20 +130,6 @@ function getContent(type) {
     });
 }
 
-const filteredMovies = computed(() => {
-  if (!search.value) return movie_items.value;
-  return movie_items.value.filter(movie =>
-    movie.title.toLowerCase().includes(search.value.toLowerCase())
-  );
-});
-
-const filteredSeries = computed(() => {
-  if (!search.value) return serie_items.value;
-  return serie_items.value.filter(serie =>
-    serie.title.toLowerCase().includes(search.value.toLowerCase())
-  );
-});
-
 onMounted(() => {
   getContent('movie');
   getContent('series');
@@ -160,12 +182,12 @@ onMounted(() => {
         </span>
       </v-row>
       <v-row
-        v-else-if="filteredMovies.length"
+        v-else-if="filtered_movies.length"
         class="mt-2"
         dense
         >
         <v-col
-          v-for="(item, index) in filteredMovies"
+          v-for="(item, index) in paginated_movies"
           :key="index"
           cols="6"
           sm="4"
@@ -200,6 +222,14 @@ onMounted(() => {
         >
         Aucun film trouvé
       </v-alert>
+      <v-pagination
+        v-if="filtered_movies.length > 0"
+        v-model="movie_page"
+        :length="movies_total_pages"
+        class="mt-4"
+        total-visible="7"
+        rounded
+        />
     </div>
     <div
       v-else-if="selected_view == 'series'"
@@ -222,12 +252,12 @@ onMounted(() => {
         </span>
       </v-row>
       <v-row
-        v-else-if="filteredSeries.length"
+        v-else-if="filtered_series.length"
         class="mt-2"
         dense
         >
         <v-col
-          v-for="(item, index) in filteredSeries"
+          v-for="(item, index) in paginated_series"
           :key="index"
           cols="6"
           sm="4"
@@ -262,6 +292,14 @@ onMounted(() => {
         >
         Aucune série trouvée
       </v-alert>
+      <v-pagination
+        v-if="filtered_series.length > 0"
+        v-model="serie_page"
+        :length="series_total_pages"
+        class="mt-4"
+        total-visible="7"
+        rounded
+        />
     </div>
   </v-container>
 </template>
