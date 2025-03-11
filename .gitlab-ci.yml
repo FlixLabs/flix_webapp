@@ -1,0 +1,47 @@
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  variables:
+    DEPLOY_NAME: "flix_webapp"
+    DEPLOY_PATH: "docker/flix"
+    ENV_FILE: ".env"
+    VITE_HTTP_PROTOCOL: "http"
+    VITE_HOST_NAME: "192.168.2.202"
+    VITE_RADARR_BASE_URL: "http://62.210.136.137:7878"
+    VITE_RADARR_API_KEY: "325d724593e2427a9c085df1e5905788"
+    VITE_SONARR_BASE_URL: "http://62.210.136.137:8989"
+    VITE_SONARR_API_KEY: "86df9c927b744a74a4a4dbed9c6e8768"
+    VITE_IMDB_BASE_URL: "https://api.themoviedb.org/3"
+    VITE_IMDB_API_KEY: "0d1dc24ae91481452ec415924333e3e9"
+  script:
+    - cp .env.dist $ENV_FILE
+    - export RSYNC_PASSWORD="$SSH_PASSWORD"
+    - rsync -az . $SSH_USER@$SSH_HOST::$RSYNC_MODULE/$DEPLOY_NAME/
+    - |
+      sshpass -p "$SSH_PASSWORD" ssh -T -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" -p "$SSH_PORT" \
+      "
+      DEPLOY_NAME='$DEPLOY_NAME' \
+      DEPLOY_PATH='$DEPLOY_PATH' \
+      ENV_FILE='$ENV_FILE' \
+      VITE_HTTP_PROTOCOL='$VITE_HTTP_PROTOCOL' \
+      VITE_HOST_NAME='$VITE_HOST_NAME' \
+      bash -s
+      " << 'EOF'
+
+      cd "$DEPLOY_PATH"/"$DEPLOY_NAME"
+
+      sed -i "s|^VITE_HTTP_PROTOCOL=.*|VITE_HTTP_PROTOCOL=\"$VITE_HTTP_PROTOCOL\"|" "$ENV_FILE"
+      sed -i "s|^VITE_HOST_NAME=.*|VITE_HOST_NAME=\"$VITE_HOST_NAME\"|" "$ENV_FILE"
+      sed -i "s|^VITE_RADARR_BASE_URL=.*|VITE_RADARR_BASE_URL=\"$VITE_RADARR_BASE_URL\"|" "$ENV_FILE"
+      sed -i "s|^VITE_RADARR_API_KEY=.*|VITE_RADARR_API_KEY=\"$VITE_RADARR_API_KEY\"|" "$ENV_FILE"
+      sed -i "s|^VITE_SONARR_BASE_URL=.*|VITE_SONARR_BASE_URL=\"$VITE_SONARR_BASE_URL\"|" "$ENV_FILE"
+      sed -i "s|^VITE_SONARR_API_KEY=.*|VITE_SONARR_API_KEY=\"$VITE_SONARR_API_KEY\"|" "$ENV_FILE"
+      sed -i "s|^VITE_IMDB_BASE_URL=.*|VITE_IMDB_BASE_URL=\"$VITE_IMDB_BASE_URL\"|" "$ENV_FILE"
+      sed -i "s|^VITE_IMDB_API_KEY=.*|VITE_IMDB_API_KEY=\"$VITE_IMDB_API_KEY\"|" "$ENV_FILE"
+
+      ./restart.sh
+      EOF
+  only:
+    - master
