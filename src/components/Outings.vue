@@ -26,56 +26,58 @@ const reset_serie_items = () => {
 const selected_view = ref<'movie' | 'series'>('movie');
 
 function getContent(type) {
-  let base_url = null;
-  let api_key = null;
+  const api_key = '0d1dc24ae91481452ec415924333e3e9';
+  const base_url = 'https://api.themoviedb.org/3';
+  let url_type = null;
+  let url_request = null;
 
   if (type == 'movie') {
     is_loading_movie.value = true;
-    base_url = import.meta.env.VITE_RADARR_BASE_URL;
-    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    url_type = 'movie',
+    url_request = 'upcoming';
   }
   if (type == 'series') {
     is_loading_serie.value = true;
-    base_url = import.meta.env.VITE_SONARR_BASE_URL;
-    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    url_type = 'tv',
+    url_request = 'on_the_air';
   }
 
-  fetch(base_url + '/api/v3/' + type + '?apikey=' + api_key)
+  fetch(base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key + '&language=fr-FR')
     .then(async (response) => {
       const json_data = await response.json();
 
       let items = [];
-      for (let item of json_data) {
-        let id = null;
-        let alreadyInLibrary = null;
+      for (const item of json_data.results) {
+        let poster_full = "https://placehold.co/100x150?text=No+Image&font=roboto";
+        if (item.poster_path) {
+          poster_full = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
+        }
 
+        let release_date = null;
         if (type == 'movie') {
-          id = item.tmdbId;
+          release_date = item.release_date;
         }
         if (type == 'series') {
-          id = item.tvdbId;
+          release_date = item.first_air_date;
         }
 
-        let title = item.title;
-        const year_str = '(' + item.year + ')';
-
-        if (title.includes(year_str)) {
-          title = title.replace(year_str, '').trim();
+        let title = null;
+        if (type == 'movie') {
+          title = item.title;
+        }
+        if (type == 'series') {
+          title = item.name;
         }
 
         items.push({
-          id: id,
-          internalId: item.id,
-          prependAvatar: item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
-          title: title,
-          year: item.year,
-          overview: item.overview,
-          // passer par une var pour quality
-          selected_quality: 1
+          id: item.id,
+          poster: poster_full,
+          title,
+          release_date
         });
       }
 
-      items.sort((a, b) => a.title.localeCompare(b.title));
+      items.sort((a, b) => a.release_date.localeCompare(b.release_date));
 
       if (type == 'movie') {
         movie_items.value = items;
@@ -121,7 +123,7 @@ onMounted(() => {
   <v-container>
     <v-text-field
       v-model="search"
-      label="Search"
+      label="Recherche"
       variant="outlined"
       prepend-icon="mdi-magnify"
       clearable
@@ -143,8 +145,7 @@ onMounted(() => {
       </v-btn>
     </v-btn-toggle>
     <div
-      v-if="selected_view == 'movie'"
-      >
+      v-if="selected_view == 'movie'">
       <v-row
         v-if="is_loading_movie"
         justify="center"
@@ -178,7 +179,8 @@ onMounted(() => {
           >
           <v-card>
             <v-img
-              :src="item.prependAvatar"
+              :src="item.poster"
+              aspect-ratio="0.66"
               />
             <v-card-title
               class="title-line text-center"
@@ -188,7 +190,7 @@ onMounted(() => {
             <v-card-text
               class="text-center"
               >
-              ({{ item.year }})
+              {{ item.release_date }}
             </v-card-text>
           </v-card>
         </v-col>
@@ -198,7 +200,7 @@ onMounted(() => {
         type="info"
         class="mt-4"
         >
-        Aucun film trouvé
+        Aucun film à venir trouvé
       </v-alert>
     </div>
     <div
@@ -237,7 +239,8 @@ onMounted(() => {
           >
           <v-card>
             <v-img
-              :src="item.prependAvatar"
+              :src="item.poster"
+              aspect-ratio="0.66"
               />
             <v-card-title
               class="title-line text-center"
@@ -247,7 +250,7 @@ onMounted(() => {
             <v-card-text
               class="text-center"
               >
-              ({{ item.year }})
+              {{ item.release_date }}
             </v-card-text>
           </v-card>
         </v-col>
