@@ -68,10 +68,7 @@ function getContent(type) {
           internalId: item.id,
           prependAvatar: item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
           title: title,
-          year: item.year,
-          overview: item.overview,
-          // passer par une var pour quality
-          selected_quality: 1
+          year: item.year
         });
       }
 
@@ -179,6 +176,9 @@ onMounted(() => {
           <v-card>
             <v-img
               :src="item.prependAvatar"
+              class="w-100"
+              height="250"
+              cover
               />
             <v-card-title
               class="title-line text-center"
@@ -238,6 +238,9 @@ onMounted(() => {
           <v-card>
             <v-img
               :src="item.prependAvatar"
+              class="w-100"
+              height="250"
+              cover
               />
             <v-card-title
               class="title-line text-center"

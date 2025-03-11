@@ -42,7 +42,7 @@ function getContent(type) {
     url_request = 'on_the_air';
   }
 
-  fetch(base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key + '&language=fr-FR')
+  fetch(base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key + '&language=fr-FR&region=FR')
     .then(async (response) => {
       const json_data = await response.json();
 
@@ -72,8 +72,8 @@ function getContent(type) {
         items.push({
           id: item.id,
           poster: poster_full,
-          title,
-          release_date
+          title: title,
+          release_date: release_date
         });
       }
 
@@ -180,7 +180,9 @@ onMounted(() => {
           <v-card>
             <v-img
               :src="item.poster"
-              aspect-ratio="0.66"
+              class="w-100"
+              height="250"
+              cover
               />
             <v-card-title
               class="title-line text-center"
@@ -240,7 +242,9 @@ onMounted(() => {
           <v-card>
             <v-img
               :src="item.poster"
-              aspect-ratio="0.66"
+              class="w-100"
+              height="250"
+              cover
               />
             <v-card-title
               class="title-line text-center"
