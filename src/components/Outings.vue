@@ -77,7 +77,7 @@ function getContent(type) {
         });
       }
 
-      items.sort((a, b) => a.release_date.localeCompare(b.release_date));
+      items.sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime());
 
       if (type == 'movie') {
         movie_items.value = items;
