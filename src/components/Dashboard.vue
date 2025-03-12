@@ -2,12 +2,12 @@
 
 import { ref, watch, computed, onMounted } from "vue";
 
-const initial_alert({
+const initial_alert = {
   visible: false,
   type: null,
   icon: null,
   text: ''
-});
+};
 const alert = ref(initial_alert);
 const reset_alert = () => {
   alert.value = structuredClone(initial_alert);
@@ -31,10 +31,10 @@ const reset_delete_confirmation_dialog = () => {
   delete_confirmation_dialog.value = structuredClone(initial_is_loading_serie);
 };
 
-const initial_item_to_delete = ref({
+const initial_item_to_delete = {
   type: null,
   item: null
-});
+};
 const item_to_delete = ref(initial_item_to_delete);
 const reset_item_to_delete = () => {
   item_to_delete.value = structuredClone(initial_item_to_delete);
