@@ -61,6 +61,9 @@ const paginated_series = computed(() => {
   return filtered_series.value.slice(start, start + items_per_page);
 });
 
+const total_movies = computed(() => movie_items.value.length);
+const total_series = computed(() => serie_items.value.length);
+
 function getContent(type) {
   let base_url = null;
   let api_key = null;
@@ -138,29 +141,57 @@ onMounted(() => {
 
 <template>
   <v-container>
-    <v-text-field
-      v-model="search"
-      label="Search"
-      variant="outlined"
-      prepend-icon="mdi-magnify"
-      clearable
-      />
-    <v-btn-toggle
-      v-model="selected_view"
-      mandatory
-      rounded="xl"
-      >
-      <v-btn
-        value="movie"
+    <v-row>
+      <v-col>
+        <v-text-field
+          v-model="search"
+          label="Search"
+          variant="outlined"
+          prepend-icon="mdi-magnify"
+          clearable
+          />
+      </v-col>
+      <v-col
+        cols="2"
         >
-        Films
-      </v-btn>
-      <v-btn
-        value="series"
-        >
-        Séries
-      </v-btn>
-    </v-btn-toggle>
+        <v-text-field
+          v-if="selected_view == 'movie'"
+          label="Number"
+          variant="outlined"
+          v-model="total_movies"
+          :disabled="true"
+          prepend-icon="mdi-information-outline"
+          />
+        <v-text-field
+          v-if="selected_view == 'series'"
+          label="Number"
+          variant="outlined"
+          v-model="total_series"
+          :disabled="true"
+          prepend-icon="mdi-information-outline"
+          />
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col>
+        <v-btn-toggle
+          v-model="selected_view"
+          mandatory
+          rounded="xl"
+          >
+          <v-btn
+            value="movie"
+            >
+            Films
+          </v-btn>
+          <v-btn
+            value="series"
+            >
+            Séries
+          </v-btn>
+        </v-btn-toggle>
+      </v-col>
+    </v-row>
     <div
       v-if="selected_view == 'movie'"
       >
