@@ -426,15 +426,32 @@ onMounted(() => {
       @click="show_alert = false"
       />
   </transition>
-  <v-dialog v-model="delete_confirmation_dialog" max-width="400px">
+  <v-dialog
+    v-model="delete_confirmation_dialog"
+    max-width="400px"
+    >
     <v-card>
-      <v-card-title class="headline">Confirmer la suppression</v-card-title>
+      <v-card-title
+        class="headline"
+        >
+        Confirmer la suppression
+      </v-card-title>
       <v-card-text>
         Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.
       </v-card-text>
       <v-card-actions>
-        <v-btn @click="reset_delete_confirmation_dialog()" color="secondary">Annuler</v-btn>
-        <v-btn @click="confirmDelete" color="primary">Confirmer</v-btn>
+        <v-btn
+          @click="reset_delete_confirmation_dialog()"
+          color="secondary"
+          >
+          Annuler
+        </v-btn>
+        <v-btn
+          @click="confirmDelete"
+          color="primary"
+          >
+          Confirmer
+        </v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
