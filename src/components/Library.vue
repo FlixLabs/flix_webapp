@@ -14,6 +14,15 @@ const reset_is_loading_serie = () => {
   is_loading_serie.value = structuredClone(initial_is_loading_serie);
 };
 
+const selected_serie_id = ref<number | null>(null);
+const serie_episodes = ref<any[]>([]);
+
+const initial_episodes_dialog = false;
+const episodes_dialog = ref(initial_episodes_dialog);
+const reset_episodes_dialog = () => {
+  episodes_dialog.value = structuredClone(initial_episodes_dialog);
+};
+
 const initial_search = '';
 const search = ref(initial_search);
 const reset_search = () => {
@@ -140,6 +149,40 @@ function getContent(type) {
         reset_is_loading_serie();
       }
     });
+}
+
+function getSerieEpisodes(serie_id: number) {
+  episodes_dialog.value = true;
+
+  serie_episodes.value = [];
+
+  const base_url = import.meta.env.VITE_SONARR_BASE_URL;
+  const api_key = import.meta.env.VITE_SONARR_API_KEY;
+
+  console.log(base_url + '/api/v3/episode?apikey=' + api_key + '&seriesId=' + serie_id);
+  fetch(base_url + '/api/v3/episode?apikey=' + api_key + '&seriesId=' + serie_id)
+    .then(async (response) => {
+      const json_data = await response.json();
+
+      console.log(json_data);
+
+      serie_episodes.value = json_data.map((episode) => ({
+        title: episode.title,
+        season: episode.seasonNumber,
+        episode: episode.episodeNumber,
+        airDate: episode.airDate
+      }));
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+}
+
+function handleSerieClick(serie_id: number) {
+  const selected_serie = serie_items.value.find(serie => serie.internalId === serie_id);
+  if (selected_serie) {
+    getSerieEpisodes(selected_serie.internalId);
+  }
 }
 
 onMounted(() => {
@@ -305,7 +348,9 @@ onMounted(() => {
           lg="2"
           class="mb-4"
           >
-          <v-card>
+          <v-card
+            @click="handleSerieClick(item.internalId)"
+            >
             <v-img
               :src="item.prependAvatar"
               class="w-100"
@@ -341,6 +386,50 @@ onMounted(() => {
         rounded
         />
     </div>
+    <v-dialog
+      v-model="episodes_dialog"
+      max-width="600px"
+      >
+      <v-card>
+        <v-card-title>
+          Episodes
+        </v-card-title>
+        <v-card-text>
+          <v-list>
+            <v-list-item-group
+              v-if="serie_episodes.length"
+              >
+              <v-list-item
+                v-for="(episode, index) in serie_episodes"
+                :key="index"
+                >
+                <v-list-item-content>
+                  <v-list-item-title>
+                    {{ episode.title }}
+                  </v-list-item-title>
+                  <v-list-item-subtitle>
+                    Saison {{ episode.season }} - Épisode {{ episode.episode }} (Air Date: {{ episode.airDate }})
+                  </v-list-item-subtitle>
+                </v-list-item-content>
+              </v-list-item>
+            </v-list-item-group>
+            <v-alert
+              v-else
+              >
+              Pas d'épisode trouvé
+            </v-alert>
+          </v-list>
+        </v-card-text>
+        <v-card-actions>
+          <v-btn
+            @click="reset_episodes_dialog()"
+            color="secondary"
+            >
+            Fermer
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
