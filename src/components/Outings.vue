@@ -2,8 +2,17 @@
 
 import { ref, computed, onMounted } from 'vue';
 
-const is_loading_movie = ref(false);
-const is_loading_serie = ref(false);
+const initial_is_loading_movie = false;
+const is_loading_movie = ref(initial_is_loading_movie);
+const reset_is_loading_movie = () => {
+  is_loading_movie.value = structuredClone(initial_is_loading_movie);
+};
+
+const initial_is_loading_serie = false;
+const is_loading_serie = ref(initial_is_loading_serie);
+const reset_is_loading_serie = () => {
+  is_loading_serie.value = structuredClone(initial_is_loading_serie);
+};
 
 const initial_search = '';
 const search = ref(initial_search);
@@ -91,10 +100,10 @@ function getContent(type) {
     })
     .finally(() => {
       if (type == 'movie') {
-        is_loading_movie.value = false;
+        reset_is_loading_movie();
       }
       if (type == 'series') {
-        is_loading_serie.value = false;
+        reset_is_loading_serie();
       }
     });
 }

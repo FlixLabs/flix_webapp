@@ -9,8 +9,32 @@ const alert = ref({
   text: ''
 });
 
-const is_loading_movie = ref(false);
-const is_loading_serie = ref(false);
+const initial_is_loading_movie = false;
+const is_loading_movie = ref(initial_is_loading_movie);
+const reset_is_loading_movie = () => {
+  is_loading_movie.value = structuredClone(initial_is_loading_movie);
+};
+
+const initial_is_loading_serie = false;
+const is_loading_serie = ref(initial_is_loading_serie);
+const reset_is_loading_serie = () => {
+  is_loading_serie.value = structuredClone(initial_is_loading_serie);
+};
+
+const initial_delete_confirmation_dialog = false;
+const delete_confirmation_dialog = ref(initial_delete_confirmation_dialog);
+const reset_delete_confirmation_dialog = () => {
+  delete_confirmation_dialog.value = structuredClone(initial_is_loading_serie);
+};
+
+const initial_item_to_delete = ref({
+  type: null,
+  item: null
+});
+const item_to_delete = ref(initial_item_to_delete);
+const reset_item_to_delete = () => {
+  item_to_delete.value = structuredClone(initial_item_to_delete);
+};
 
 const initial_search = '';
 const search = ref(initial_search);
@@ -180,10 +204,10 @@ function getContent(type, keep_page = false) {
     })
     .finally(() => {
       if (type == 'movie') {
-        is_loading_movie.value = false;
+        reset_is_loading_movie();
       }
       if (type == 'series') {
-        is_loading_serie.value = false;
+        reset_is_loading_serie();
       }
     });
 }
@@ -344,6 +368,23 @@ function showErrorAlert(text = 'Une erreur est survenue !') {
   }, 5000);
 }
 
+function openDeleteConfirmationDialog(type, item) {
+  item_to_delete.value = {
+    type: type,
+    item: item
+  };
+  delete_confirmation_dialog.value = true;
+}
+
+function confirmDelete() {
+  if (item_to_delete.value) {
+    const { type, item } = item_to_delete.value;
+    deleteFromList(type, item);
+    reset_delete_confirmation_dialog();
+    reset_item_to_delete();
+  }
+}
+
 watch(search, (newValue) => {
   if (newValue && newValue.length >= 3) {
     localStorage.setItem("search_" + window.location.href, newValue);
@@ -385,6 +426,18 @@ onMounted(() => {
       @click="show_alert = false"
       />
   </transition>
+  <v-dialog v-model="delete_confirmation_dialog" max-width="400px">
+    <v-card>
+      <v-card-title class="headline">Confirmer la suppression</v-card-title>
+      <v-card-text>
+        Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.
+      </v-card-text>
+      <v-card-actions>
+        <v-btn @click="reset_delete_confirmation_dialog()" color="secondary">Annuler</v-btn>
+        <v-btn @click="confirmDelete" color="primary">Confirmer</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
   <v-container>
     <v-form>
       <v-row>
@@ -460,7 +513,7 @@ onMounted(() => {
                     v-else
                     color="error"
                     variant="outlined"
-                    @click="deleteFromList('movie', item)"
+                    @click="openDeleteConfirmationDialog('movie', item)"
                     block
                     style="height: 56px"
                     >
