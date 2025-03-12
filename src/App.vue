@@ -29,6 +29,11 @@ const initial_drawer_options = [
     title: 'Outings',
     icon: 'mdi-filmstrip-box',
     value: 'outings'
+  },
+  {
+    title: 'System',
+    icon: 'mdi-cog-outline',
+    value: 'system'
   }
 ];
 const drawer_options = ref(initial_drawer_options);
