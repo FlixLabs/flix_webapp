@@ -432,12 +432,10 @@ onMounted(() => {
   </transition>
   <v-dialog
     v-model="delete_confirmation_dialog"
-    max-width="400px"
+    max-width="600px"
     >
     <v-card>
-      <v-card-title
-        class="headline"
-        >
+      <v-card-title>
         Confirmer la suppression
       </v-card-title>
       <v-card-text>
