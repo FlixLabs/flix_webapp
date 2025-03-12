@@ -2,12 +2,16 @@
 
 import { ref, watch, computed, onMounted } from "vue";
 
-const alert = ref({
+const initial_alert({
   visible: false,
   type: null,
   icon: null,
   text: ''
 });
+const alert = ref(initial_alert);
+const reset_alert = () => {
+  alert.value = structuredClone(initial_alert);
+};
 
 const initial_is_loading_movie = false;
 const is_loading_movie = ref(initial_is_loading_movie);
@@ -352,7 +356,7 @@ function showSuccessAlert(text = 'L\'opération a été réussie !') {
     text: text
   };
   setTimeout(() => {
-    alert.value.visible = false;
+    reset_alert();
   }, 5000);
 }
 
@@ -364,7 +368,7 @@ function showErrorAlert(text = 'Une erreur est survenue !') {
     text: text
   };
   setTimeout(() => {
-    alert.value.visible = false;
+    reset_alert();
   }, 5000);
 }
 
