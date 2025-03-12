@@ -170,7 +170,8 @@ function getSerieEpisodes(serie_id: number) {
         title: episode.title,
         season: episode.seasonNumber,
         episode: episode.episodeNumber,
-        airDate: episode.airDate
+        airDate: episode.airDate,
+        hasFile: episode.hasFile
       }));
     })
     .catch((error) => {
@@ -184,6 +185,16 @@ function handleSerieClick(serie_id: number) {
     getSerieEpisodes(selected_serie.internalId);
   }
 }
+
+const groupedEpisodes = computed(() => {
+  return serie_episodes.value.reduce((acc, episode) => {
+    if (!acc[episode.season]) {
+      acc[episode.season] = [];
+    }
+    acc[episode.season].push(episode);
+    return acc;
+  }, {} as Record<number, any[]>);
+});
 
 onMounted(() => {
   getContent('movie');
@@ -394,31 +405,55 @@ onMounted(() => {
         <v-card-title>
           Episodes
         </v-card-title>
-        <v-card-text>
-          <v-list>
-            <v-list-item-group
-              v-if="serie_episodes.length"
+        <v-card-text
+          v-if="Object.keys(groupedEpisodes).length"
+          >
+          <v-expansion-panels>
+            <v-expansion-panel
+              v-for="(episodes, season) in groupedEpisodes"
+              :key="season"
               >
-              <v-list-item
-                v-for="(episode, index) in serie_episodes"
-                :key="index"
-                >
-                <v-list-item-content>
-                  <v-list-item-title>
-                    {{ episode.title }}
-                  </v-list-item-title>
-                  <v-list-item-subtitle>
-                    Saison {{ episode.season }} - Épisode {{ episode.episode }} (Air Date: {{ episode.airDate }})
-                  </v-list-item-subtitle>
-                </v-list-item-content>
-              </v-list-item>
-            </v-list-item-group>
-            <v-alert
-              v-else
-              >
-              Pas d'épisode trouvé
-            </v-alert>
-          </v-list>
+              <v-expansion-panel-title>
+                Saison {{ season }}
+              </v-expansion-panel-title>
+              <v-expansion-panel-text>
+                <v-list>
+                  <v-list-item
+                    v-for="(episode, index) in episodes"
+                    :key="index"
+                    >
+                    <v-list-item-content>
+                      <v-list-item-title>
+                        {{ episode.title }}
+                      </v-list-item-title>
+                      <v-list-item-subtitle>
+                        Épisode {{ episode.episode }} - {{ episode.airDate || "Date inconnue" }}
+                      </v-list-item-subtitle>
+                      <v-list-item-action>
+                        <v-chip
+                          v-if="episode.hasFile"
+                          color="green"
+                          small
+                          >
+                          Disponible
+                        </v-chip>
+                        <v-chip
+                          v-else
+                          color="red"
+                          small
+                          >
+                          Manquant
+                        </v-chip>
+                      </v-list-item-action>
+                    </v-list-item-content>
+                  </v-list-item>
+                </v-list>
+              </v-expansion-panel-text>
+            </v-expansion-panel>
+          </v-expansion-panels>
+        </v-card-text>
+        <v-card-text v-else>
+          Pas d'épisode trouvé
         </v-card-text>
         <v-card-actions>
           <v-btn
