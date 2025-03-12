@@ -400,6 +400,7 @@ onMounted(() => {
     <v-dialog
       v-model="episodes_dialog"
       max-width="600px"
+      max-height="600px"
       >
       <v-card>
         <v-card-title>
