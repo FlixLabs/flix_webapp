@@ -121,29 +121,37 @@ onMounted(() => {
 
 <template>
   <v-container>
-    <v-text-field
-      v-model="search"
-      label="Recherche"
-      variant="outlined"
-      prepend-icon="mdi-magnify"
-      clearable
-      />
-    <v-btn-toggle
-      v-model="selected_view"
-      mandatory
-      rounded="xl"
-      >
-      <v-btn
-        value="movie"
-        >
-        Films
-      </v-btn>
-      <v-btn
-        value="series"
-        >
-        Séries
-      </v-btn>
-    </v-btn-toggle>
+    <v-row>
+      <v-col>
+        <v-text-field
+          v-model="search"
+          label="Recherche"
+          variant="outlined"
+          prepend-icon="mdi-magnify"
+          clearable
+          />
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col>
+        <v-btn-toggle
+          v-model="selected_view"
+          mandatory
+          rounded="xl"
+          >
+          <v-btn
+            value="movie"
+            >
+            Films
+          </v-btn>
+          <v-btn
+            value="series"
+            >
+            Séries
+          </v-btn>
+        </v-btn-toggle>
+      </v-col>
+    </v-row>
     <div
       v-if="selected_view == 'movie'">
       <v-row
