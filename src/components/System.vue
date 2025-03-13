@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 
 const initial_is_loading = false;
 const is_loading = ref(initial_is_loading);
@@ -17,6 +17,10 @@ const disk_data = ref(initial_disk_data);
 const reset_disk_data = () => {
   disk_data.value = structuredClone(initial_disk_data);
 };
+
+const progress_color = computed(() => {
+  return disk_data.value.ratio >= import.meta.env.VITE_SYSTEM_STORAGE_SPACE_TRESHOLD ? 'red' : 'blue';
+});
 
 function getDiskSpace() {
   const base_url = import.meta.env.VITE_RADARR_BASE_URL;
@@ -74,11 +78,12 @@ onMounted(() => {
             <td>
               <v-progress-linear
                 :model-value="disk_data.ratio"
-                color="blue"
-                height="10"
+                 :color="progress_color"
+                height="20"
                 rounded
-                />
+                >
                 {{ disk_data.ratio }} %
+              </v-progress-linear>
             </td>
           </tr>
         </tbody>
