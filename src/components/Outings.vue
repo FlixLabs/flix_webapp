@@ -134,7 +134,7 @@ onMounted(() => {
       <v-col>
         <v-text-field
           v-model="search"
-          label="Recherche"
+          label="Search"
           variant="outlined"
           prepend-icon="mdi-magnify"
           clearable
