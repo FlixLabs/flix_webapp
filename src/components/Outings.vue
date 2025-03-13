@@ -108,14 +108,14 @@ function getContent(type) {
     });
 }
 
-const filteredMovies = computed(() => {
+const filtered_movies = computed(() => {
   if (!search.value) return movie_items.value;
   return movie_items.value.filter(movie =>
     movie.title.toLowerCase().includes(search.value.toLowerCase())
   );
 });
 
-const filteredSeries = computed(() => {
+const filtered_series = computed(() => {
   if (!search.value) return serie_items.value;
   return serie_items.value.filter(serie =>
     serie.title.toLowerCase().includes(search.value.toLowerCase())
@@ -181,12 +181,12 @@ onMounted(() => {
         </span>
       </v-row>
       <v-row
-        v-else-if="filteredMovies.length"
+        v-else-if="filtered_movies.length"
         class="mt-2"
         dense
         >
         <v-col
-          v-for="(item, index) in filteredMovies"
+          v-for="(item, index) in filtered_movies"
           :key="index"
           cols="6"
           sm="4"
@@ -215,7 +215,7 @@ onMounted(() => {
         </v-col>
       </v-row>
       <v-alert
-        v-else-if="search.length > 0 && !movie_items.length"
+        v-else-if="!filtered_movies.length && !is_loading_movie"
         type="info"
         class="mt-4"
         >
@@ -243,12 +243,12 @@ onMounted(() => {
         </span>
       </v-row>
       <v-row
-        v-else-if="filteredSeries.length"
+        v-else-if="filtered_series.length"
         class="mt-2"
         dense
         >
         <v-col
-          v-for="(item, index) in filteredSeries"
+          v-for="(item, index) in filtered_series"
           :key="index"
           cols="6"
           sm="4"
@@ -277,7 +277,7 @@ onMounted(() => {
         </v-col>
       </v-row>
       <v-alert
-        v-else-if="search.length > 0 && !serie_items.length"
+        v-else-if="!filtered_series.length && !is_loading_serie"
         type="info"
         class="mt-4"
         >

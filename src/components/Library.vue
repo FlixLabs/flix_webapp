@@ -310,7 +310,7 @@ onMounted(() => {
         </v-col>
       </v-row>
       <v-alert
-        v-else-if="search.length > 0 && !movie_items.length"
+        v-else-if="!filtered_movies.length && !is_loading_movie"
         type="info"
         class="mt-4"
         >
@@ -382,7 +382,7 @@ onMounted(() => {
         </v-col>
       </v-row>
       <v-alert
-        v-else-if="search.length > 0 && !serie_items.length"
+        v-else-if="!filtered_series.length && !is_loading_serie"
         type="info"
         class="mt-4"
         >
