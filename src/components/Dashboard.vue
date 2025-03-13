@@ -120,7 +120,7 @@ function getQualityProfileList(type) {
       const any_profile = items.find(i => i.title.toLowerCase() == 'any');
 
       if (!any_profile) {
-        showErrorAlert("Le profil 'Any' n'existe pas. Veuillez le créer dans Radarr et Sonarr.");
+        showErrorAlert("The profile 'Any' does not exist. Please create it in Radarr and Sonarr.");
       }
 
       if (type == 'movie') {
@@ -309,12 +309,12 @@ function addToList(type, item) {
 	})
   .then(async response => {
     if (response.ok) {
-      showSuccessAlert("Ajouté avec succès");
+      showSuccessAlert("Added successfully");
       getContent(type, true);
     }
   })
 	.catch(error => {
-		showErrorAlert("Échec de l'ajout");
+		showErrorAlert("Adding failed");
     console.error(error);
 	});
 }
@@ -341,17 +341,17 @@ function deleteFromList(type, item) {
   })
   .then(async response => {
     if (response.ok) {
-      showSuccessAlert("Supprimé avec succès");
+      showSuccessAlert("Deleted successfully");
       getContent(type, true);
     }
   })
   .catch(error => {
-    showErrorAlert("Échec de la suppression");
+    showErrorAlert("Deletion failed");
     console.error(error);
   });
 }
 
-function showSuccessAlert(text = 'L\'opération a été réussie !') {
+function showSuccessAlert(text = 'The operation was successful !') {
   alert.value = {
     visible: true,
     type: 'success',
@@ -363,7 +363,7 @@ function showSuccessAlert(text = 'L\'opération a été réussie !') {
   }, 5000);
 }
 
-function showErrorAlert(text = 'Une erreur est survenue !') {
+function showErrorAlert(text = 'An error has occurred !') {
   alert.value = {
     visible: true,
     type: 'error',
@@ -439,23 +439,23 @@ onMounted(() => {
     >
     <v-card>
       <v-card-title>
-        Confirmer la suppression
+        Confirm deletion
       </v-card-title>
       <v-card-text>
-        Êtes-vous sûr de vouloir supprimer cet élément ? Cette action est irréversible.
+        Are you sure you want to delete this item ? This action cannot be undone.
       </v-card-text>
       <v-card-actions>
         <v-btn
           @click="reset_delete_confirmation_dialog()"
           color="secondary"
           >
-          Annuler
+          Cancel
         </v-btn>
         <v-btn
           @click="confirmDelete"
           color="primary"
           >
-          Confirmer
+          Confirm
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -478,7 +478,7 @@ onMounted(() => {
       <v-col
         cols="6"
         >
-        <h3>Films</h3>
+        <h3>Movies</h3>
         <v-list
           v-if="paginated_movies.length"
           class="custom-list"
@@ -515,7 +515,7 @@ onMounted(() => {
                   <v-select
                     v-model="item.selected_quality"
                     :items="quality_movie_items"
-                    label="Qualité"
+                    label="Quality"
                     variant="outlined"
                     :disabled="item.already_in_library"
                     />
@@ -529,7 +529,7 @@ onMounted(() => {
                     block
                     style="height: 56px"
                     >
-                    Ajouter
+                    Add
                   </v-btn>
                   <v-btn
                     v-else
@@ -539,7 +539,7 @@ onMounted(() => {
                     block
                     style="height: 56px"
                     >
-                    Supprimer
+                    Remove
                   </v-btn>
                 </v-col>
               </v-row>
@@ -560,14 +560,14 @@ onMounted(() => {
           <span
             class="ml-2"
             >
-            Recherche en cours...
+            Research in progress...
           </span>
         </v-row>
         <v-alert
           v-else-if="!paginated_movies.length && !is_loading_movie"
           type="info"
           >
-          Aucun film trouvé
+          No movies found
         </v-alert>
         <v-pagination
           v-if="movie_items.length > items_per_page"
@@ -579,7 +579,7 @@ onMounted(() => {
       <v-col
         cols="6"
         >
-        <h3>Séries</h3>
+        <h3>Series</h3>
         <v-list
           v-if="paginated_series.length"
           class="custom-list"
@@ -616,7 +616,7 @@ onMounted(() => {
                   <v-select
                     v-model="item.selected_quality"
                     :items="quality_serie_items"
-                    label="Qualité"
+                    label="Quality"
                     variant="outlined"
                     :disabled="item.already_in_library"
                     />
@@ -630,7 +630,7 @@ onMounted(() => {
                     block
                     style="height: 56px"
                     >
-                    Ajouter
+                    Add
                   </v-btn>
                   <v-btn
                     v-else
@@ -640,7 +640,7 @@ onMounted(() => {
                     block
                     style="height: 56px"
                     >
-                    Supprimer
+                    Remove
                   </v-btn>
                 </v-col>
               </v-row>
@@ -661,14 +661,14 @@ onMounted(() => {
           <span
             class="ml-2"
             >
-            Recherche en cours...
+            Research in progress...
           </span>
         </v-row>
         <v-alert
           v-else-if="!paginated_series.length && !is_loading_serie"
           type="info"
           >
-          Aucune série trouvée
+          No series found
         </v-alert>
         <v-pagination
           v-if="serie_items.length > items_per_page"

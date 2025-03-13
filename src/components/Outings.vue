@@ -151,12 +151,12 @@ onMounted(() => {
           <v-btn
             value="movie"
             >
-            Films
+            Movies
           </v-btn>
           <v-btn
             value="series"
             >
-            Séries
+            Series
           </v-btn>
         </v-btn-toggle>
       </v-col>
@@ -177,7 +177,7 @@ onMounted(() => {
         <span
           class="ml-2"
           >
-          Recherche en cours...
+          Research in progress...
         </span>
       </v-row>
       <v-row
@@ -219,7 +219,7 @@ onMounted(() => {
         type="info"
         class="mt-4"
         >
-        Aucun film à venir trouvé
+        No upcoming movies found
       </v-alert>
     </div>
     <div
@@ -239,7 +239,7 @@ onMounted(() => {
         <span
           class="ml-2"
           >
-          Recherche en cours...
+          Research in progress...
         </span>
       </v-row>
       <v-row
@@ -281,7 +281,7 @@ onMounted(() => {
         type="info"
         class="mt-4"
         >
-        Aucune série trouvée
+        No upcoming series found
       </v-alert>
     </div>
   </v-container>

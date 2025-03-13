@@ -186,7 +186,7 @@ function handleSerieClick(serie_id: number) {
   }
 }
 
-const groupedEpisodes = computed(() => {
+const grouped_episodes = computed(() => {
   return serie_episodes.value.reduce((acc, episode) => {
     if (!acc[episode.season]) {
       acc[episode.season] = [];
@@ -245,12 +245,12 @@ onMounted(() => {
           <v-btn
             value="movie"
             >
-            Films
+            Movies
           </v-btn>
           <v-btn
             value="series"
             >
-            Séries
+            Series
           </v-btn>
         </v-btn-toggle>
       </v-col>
@@ -272,7 +272,7 @@ onMounted(() => {
         <span
           class="ml-2"
           >
-          Recherche en cours...
+          Research in progress...
         </span>
       </v-row>
       <v-row
@@ -314,7 +314,7 @@ onMounted(() => {
         type="info"
         class="mt-4"
         >
-        Aucun film trouvé
+        No movies found
       </v-alert>
       <v-pagination
         v-if="filtered_movies.length > 0"
@@ -342,7 +342,7 @@ onMounted(() => {
         <span
           class="ml-2"
           >
-          Recherche en cours...
+          Research in progress...
         </span>
       </v-row>
       <v-row
@@ -386,7 +386,7 @@ onMounted(() => {
         type="info"
         class="mt-4"
         >
-        Aucune série trouvée
+        No series found
       </v-alert>
       <v-pagination
         v-if="filtered_series.length > 0"
@@ -407,15 +407,15 @@ onMounted(() => {
           Episodes
         </v-card-title>
         <v-card-text
-          v-if="Object.keys(groupedEpisodes).length"
+          v-if="Object.keys(grouped_episodes).length"
           >
           <v-expansion-panels>
             <v-expansion-panel
-              v-for="(episodes, season) in groupedEpisodes"
+              v-for="(episodes, season) in grouped_episodes"
               :key="season"
               >
               <v-expansion-panel-title>
-                Saison {{ season }}
+                Season {{ season }}
               </v-expansion-panel-title>
               <v-expansion-panel-text>
                 <v-list>
@@ -428,7 +428,7 @@ onMounted(() => {
                         {{ episode.title }}
                       </v-list-item-title>
                       <v-list-item-subtitle>
-                        Épisode {{ episode.episode }} - {{ episode.airDate || "Date inconnue" }}
+                        Episode {{ episode.episode }} - {{ episode.airDate || "Date unknown" }}
                       </v-list-item-subtitle>
                       <v-list-item-action>
                         <v-chip
@@ -436,14 +436,14 @@ onMounted(() => {
                           color="green"
                           small
                           >
-                          Disponible
+                          Available
                         </v-chip>
                         <v-chip
                           v-else
                           color="red"
                           small
                           >
-                          Manquant
+                          Missing
                         </v-chip>
                       </v-list-item-action>
                     </v-list-item-content>
@@ -454,14 +454,14 @@ onMounted(() => {
           </v-expansion-panels>
         </v-card-text>
         <v-card-text v-else>
-          Pas d'épisode trouvé
+          No episode found
         </v-card-text>
         <v-card-actions>
           <v-btn
             @click="reset_episodes_dialog()"
             color="secondary"
             >
-            Fermer
+            Close
           </v-btn>
         </v-card-actions>
       </v-card>

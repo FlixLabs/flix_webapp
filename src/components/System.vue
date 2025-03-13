@@ -88,7 +88,7 @@ onMounted(() => {
       v-else-if="!is_loading"
       type="info"
       >
-      Aucune information sur le système trouvée.
+      No system information found
     </v-alert>
     <p
       v-if="is_loading"
@@ -104,7 +104,7 @@ onMounted(() => {
       <span
         class="ml-2"
         >
-        Chargement des données...
+        Loading data...
       </span>
     </p>
   </v-container>
