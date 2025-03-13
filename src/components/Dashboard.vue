@@ -564,7 +564,7 @@ onMounted(() => {
           </span>
         </v-row>
         <v-alert
-          v-else-if="search.length > 0 && !movie_items.length"
+          v-else-if="!paginated_movies.length && !is_loading_movie"
           type="info"
           >
           Aucun film trouvé
@@ -665,7 +665,7 @@ onMounted(() => {
           </span>
         </v-row>
         <v-alert
-          v-else-if="search.length > 0 && !serie_items.length"
+          v-else-if="!paginated_series.length && !is_loading_serie"
           type="info"
           >
           Aucune série trouvée
