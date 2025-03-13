@@ -125,15 +125,15 @@ function getQualityProfileList(type) {
 
       if (type == 'movie') {
         quality_movie_items.value = items;
-        quality_movie.value = any_profile.id;
+        quality_movie.value = any_profile.value;
       }
       if (type == 'series') {
         quality_serie_items.value = items;
-        quality_serie.value = any_profile.id;
+        quality_serie.value = any_profile.value;
       }
     })
     .catch(error => {
-      showErrorAlert(error);
+      //showErrorAlert(error);
     });
 }
 
@@ -160,12 +160,15 @@ function getContent(type, keep_page = false) {
       for (let item of json_data) {
         let id = null;
         let alreadyInLibrary = null;
+        let quality = null;
 
         if (type == 'movie') {
           id = item.tmdbId;
+          quality = quality_movie;
         }
         if (type == 'series') {
           id = item.tvdbId;
+          quality = quality_serie;
         }
 
         let title = item.title;
@@ -183,7 +186,7 @@ function getContent(type, keep_page = false) {
           year: item.year,
           overview: item.overview,
           // passer par une var pour quality
-          selected_quality: 1,
+          selected_quality: quality,
           already_in_library: false
         });
       }
