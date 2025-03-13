@@ -453,8 +453,15 @@ onMounted(() => {
             </v-expansion-panel>
           </v-expansion-panels>
         </v-card-text>
-        <v-card-text v-else>
-          No episode found
+        <v-card-text
+          v-else
+          >
+          <v-alert
+            type="info"
+            class="mt-4"
+            >
+            No episode found
+          </v-alert>
         </v-card-text>
         <v-card-actions>
           <v-btn
