@@ -2,6 +2,12 @@
 
 import { ref, onMounted } from 'vue';
 
+const initial_is_loading = false;
+const is_loading = ref(initial_is_loading);
+const reset_is_loading = () => {
+  is_loading.value = structuredClone(initial_is_loading);
+};
+
 const initial_disk_data = {
   free_space: 0,
   total_space: 0,
@@ -16,27 +22,32 @@ function getDiskSpace() {
   const base_url = import.meta.env.VITE_RADARR_BASE_URL;
   const api_key = import.meta.env.VITE_RADARR_API_KEY;
 
+  is_loading.value = true;
+
   fetch(base_url + '/api/v3/' + 'diskspace' + '?apikey=' + api_key)
     .then(async (response) => {
       const json_data = await response.json();
 
-      const root_disk = json_data.find((disk: any) => disk.path == '/');
+      let root_disk = json_data.find((disk: any) => disk.path === '/') ||
+                      json_data.find((disk: any) => disk.path === '/config');
 
-      const free_space = Number((root_disk.freeSpace / 1048576 / 1024).toFixed(2));
-      const total_space = Number((root_disk.totalSpace / 1048576 / 1024).toFixed(2));
-      const ratio = Number(((1 - free_space / total_space) * 100).toFixed(2));
+      if (root_disk) {
+        const free_space = Number((root_disk.freeSpace / 1048576 / 1024).toFixed(2));
+        const total_space = Number((root_disk.totalSpace / 1048576 / 1024).toFixed(2));
+        const ratio = Number(((1 - free_space / total_space) * 100).toFixed(2));
 
-      disk_data.value = {
-        free_space: free_space,
-        total_space: total_space,
-        ratio: ratio
-      };
+        disk_data.value = {
+          free_space: free_space,
+          total_space: total_space,
+          ratio: ratio
+        };
+      }
     })
     .catch((error) => {
       console.error(error);
     })
     .finally(() => {
-
+      reset_is_loading();
     });
 }
 
@@ -73,8 +84,29 @@ onMounted(() => {
         </tbody>
       </v-table>
     </v-card>
-
-    <p v-else>Chargement des données...</p>
+    <v-alert
+      v-else-if="!is_loading"
+      type="info"
+      >
+      Aucune information sur le système trouvée.
+    </v-alert>
+    <p
+      v-if="is_loading"
+      justify="center"
+      align="center"
+      class="mt-4"
+      >
+      <v-progress-circular
+        indeterminate
+        color="primary"
+        size="50"
+        />
+      <span
+        class="ml-2"
+        >
+        Chargement des données...
+      </span>
+    </p>
   </v-container>
 </template>
 
