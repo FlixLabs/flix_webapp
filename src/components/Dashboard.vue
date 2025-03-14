@@ -282,7 +282,10 @@ function addToList(type, item) {
       year: item.year,
       qualityProfileId: item.selected_quality,
       rootFolderPath: "/movies",
-      monitored: true
+      monitored: true,
+      addOptions: {
+        searchForMovie: true
+      }
     }
   }
   if (type == 'series') {
@@ -294,7 +297,10 @@ function addToList(type, item) {
       year: item.year,
       qualityProfileId: item.selected_quality,
       rootFolderPath: "/tv",
-      monitored: true
+      monitored: true,
+      addOptions: {
+        searchForMissingEpisodes: true
+      }
     }
   }
 
