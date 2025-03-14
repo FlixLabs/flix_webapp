@@ -125,7 +125,9 @@ function getContent(type) {
           internalId: item.id,
           prependAvatar: item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
           title: title,
-          year: item.year
+          year: item.year,
+          hasFile: item.hasFile,
+          status: item.status
         });
       }
 
@@ -159,12 +161,9 @@ function getSerieEpisodes(serie_id: number) {
   const base_url = import.meta.env.VITE_SONARR_BASE_URL;
   const api_key = import.meta.env.VITE_SONARR_API_KEY;
 
-  console.log(base_url + '/api/v3/episode?apikey=' + api_key + '&seriesId=' + serie_id);
   fetch(base_url + '/api/v3/episode?apikey=' + api_key + '&seriesId=' + serie_id)
     .then(async (response) => {
       const json_data = await response.json();
-
-      console.log(json_data);
 
       serie_episodes.value = json_data.map((episode) => ({
         title: episode.title,
@@ -306,6 +305,31 @@ onMounted(() => {
               >
               ({{ item.year }})
             </v-card-text>
+            <v-card-action
+              class="d-flex justify-center pb-2"
+              >
+              <v-chip
+                v-if="item.hasFile"
+                color="green"
+                small
+                >
+                Existing
+              </v-chip>
+              <v-chip
+                v-else
+                color="red"
+                small
+                >
+                Missing
+              </v-chip>
+              <v-chip
+                color="blue"
+                small
+                class="ml-1"
+                >
+                {{ item.status.charAt(0).toUpperCase() + item.status.slice(1) }}
+              </v-chip>
+            </v-card-action>
           </v-card>
         </v-col>
       </v-row>
@@ -378,6 +402,17 @@ onMounted(() => {
               >
               ({{ item.year }})
             </v-card-text>
+            <v-card-action
+              class="d-flex justify-center pb-2"
+              >
+              <v-chip
+                color="blue"
+                small
+                class="ml-1"
+                >
+                {{ item.status.charAt(0).toUpperCase() + item.status.slice(1) }}
+              </v-chip>
+            </v-card-action>
           </v-card>
         </v-col>
       </v-row>
@@ -430,13 +465,15 @@ onMounted(() => {
                       <v-list-item-subtitle>
                         Episode {{ episode.episode }} - {{ episode.airDate || "Date unknown" }}
                       </v-list-item-subtitle>
-                      <v-list-item-action>
+                      <v-list-item-action
+                        class="pt-2"
+                        >
                         <v-chip
                           v-if="episode.hasFile"
                           color="green"
                           small
                           >
-                          Available
+                          Existing
                         </v-chip>
                         <v-chip
                           v-else
