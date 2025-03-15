@@ -55,7 +55,8 @@ function getData(key) {
         showErrorAlert(error);
       })
       .finally(() => {
-        reset_is_loading();
+        //reset_is_loading(); Not working
+        is_loading.value = false;
       });
   } else {
     showErrorAlert('Username and password cannot be empty');
