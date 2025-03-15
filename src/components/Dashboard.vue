@@ -487,7 +487,7 @@ onMounted(() => {
         <h3>Movies</h3>
         <v-list
           v-if="paginated_movies.length"
-          class="custom-list"
+          class="custom-list mt-4"
           >
           <v-list-item
             v-for="(item, index) in paginated_movies" :key="index"
@@ -588,7 +588,7 @@ onMounted(() => {
         <h3>Series</h3>
         <v-list
           v-if="paginated_series.length"
-          class="custom-list"
+          class="custom-list mt-4"
           >
           <v-list-item
             v-for="(item, index) in paginated_series" :key="index"
