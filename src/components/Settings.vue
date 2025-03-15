@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
 import { ref, onMounted, watch } from 'vue';
+import CryptoJS from 'crypto-js';
 
 const initial_alert = {
   visible: false,
@@ -62,6 +63,7 @@ function setData(key) {
   is_loading.value = true;
 
   if (auth_data.value.username && auth_data.value.password) {
+    auth_data.value.password = CryptoJS.AES.encrypt(auth_data.value.password, import.meta.env.VITE_CRYPT_KEY).toString();
     const json_encoded = encodeURIComponent(JSON.stringify(auth_data.value));
 
     fetch(base_url + '/JSON.SET/' + key + '/$/' + json_encoded)

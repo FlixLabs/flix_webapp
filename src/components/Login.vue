@@ -2,6 +2,7 @@
 
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import CryptoJS from 'crypto-js';
 
 const router = useRouter();
 
@@ -42,8 +43,10 @@ function getData(key) {
         const json_data = await response.json();
 
         if (json_data && json_data['JSON.GET']) {
+          const decrypted_password = CryptoJS.AES.decrypt(JSON.parse(json_data['JSON.GET']).password, import.meta.env.VITE_CRYPT_KEY);
+
           if (auth_data.value.username == JSON.parse(json_data['JSON.GET']).username &&
-              auth_data.value.password == JSON.parse(json_data['JSON.GET']).password) {
+              auth_data.value.password == decrypted_password.toString(CryptoJS.enc.Utf8)) {
             localStorage.setItem('flix_webapp_is_authenticated', 'true');
             router.push('/dashboard');
           } else {
