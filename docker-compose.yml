@@ -7,3 +7,37 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+
+  redis:
+    image: redis/redis-stack-server:latest
+    restart: unless-stopped
+    command: >
+      redis-server
+      --save 20 1
+      --loglevel warning
+      --requirepass ${REDIS_PASSWORD}
+      --loadmodule /opt/redis-stack/lib/rejson.so
+    ports:
+      - ${REDIS_PORT}:6379
+    volumes:
+      - ./redis:/data
+
+  webdis:
+    image: nicolas/webdis
+    restart: unless-stopped
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - WEBDIS_HTTP_AUTH_USER=${WEBDIS_HTTP_AUTH_USER}
+      - WEBDIS_HTTP_AUTH_PASSWORD=${WEBDIS_HTTP_AUTH_PASSWORD}
+    command: >
+      /bin/sh -c "
+      echo '{
+        \"redis_host\": \"redis\",
+        \"redis_port\": 6379,
+        \"redis_auth\": \"${REDIS_PASSWORD}\",
+        \"http_basic_auth\": \"${WEBDIS_HTTP_AUTH_USER}:${WEBDIS_HTTP_AUTH_PASSWORD}\"
+      }' > /webdis.json && webdis /webdis.json"
+    ports:
+      - ${WEBDIS_PORT}:7379
+    depends_on:
+      - redis

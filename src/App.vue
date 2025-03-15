@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { RouterView } from 'vue-router'
+import { RouterView, useRouter } from 'vue-router'
 import { ref } from "vue";
+
+const router = useRouter();
 
 const initial_drawer = false;
 const drawer = ref(initial_drawer);
@@ -31,9 +33,19 @@ const initial_drawer_options = [
     value: 'outings'
   },
   {
-    title: 'System',
+    title: 'Settings',
     icon: 'mdi-cog-outline',
+    value: 'settings'
+  },
+  {
+    title: 'System',
+    icon: 'mdi-server-outline',
     value: 'system'
+  },
+  {
+    title: 'Sign Out',
+    icon: 'mdi-logout',
+    value: 'signout'
   }
 ];
 const drawer_options = ref(initial_drawer_options);
@@ -42,8 +54,14 @@ const reset_drawer_options = () => {
 };
 
 const drawer_select_option = (option) => {
-  drawer_selected.value = option;
-  reset_drawer();
+  if (option == 'signout') {
+    localStorage.removeItem('flix_webapp_is_authenticated');
+    router.push('/login');
+    reset_drawer();
+  } else {
+    drawer_selected.value = option;
+    reset_drawer();
+  }
 };
 </script>
 
@@ -76,7 +94,7 @@ const drawer_select_option = (option) => {
           :key="option.value"
           :prepend-icon="option.icon"
           :title="option.title"
-          :to="'/' + option.value"
+          :to="option.value != 'signout' ? '/' + option.value : undefined"
           :class="{ 'bg-blue-lighten-4': $route.path === '/' + option.value }"
           @click="drawer_select_option(option.value)"
           />
