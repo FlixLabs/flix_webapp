@@ -321,7 +321,6 @@ function addToList(type, item) {
   })
 	.catch(error => {
 		showErrorAlert("Adding failed");
-    console.error(error);
 	});
 }
 
@@ -353,7 +352,6 @@ function deleteFromList(type, item) {
   })
   .catch(error => {
     showErrorAlert("Deletion failed");
-    console.error(error);
   });
 }
 
@@ -419,8 +417,7 @@ onMounted(() => {
 
   getQualityProfileList('movie');
   getQualityProfileList('series');
-})
-
+});
 </script>
 
 <template>
@@ -748,5 +745,4 @@ onMounted(() => {
   opacity: 0;
   transform: translateY(-20px);
 }
-
 </style>

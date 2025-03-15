@@ -293,5 +293,4 @@ onMounted(() => {
   line-height: 1.2;
   font-weight: bold;
 }
-
 </style>
