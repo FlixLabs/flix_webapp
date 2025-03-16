@@ -136,9 +136,17 @@ function getData(type, endpoint) {
       if (endpoint == 'system/status') {
         if (type == 'movie') {
           system_status_movie.value = json_data;
+          system_status_movie.value.uptime = null;
+          if (system_status_movie.value.startTime) {
+            system_status_movie.value.uptime = calculateUptime(system_status_movie.value.startTime);
+          }
         }
         if (type == 'series') {
           system_status_serie.value = json_data;
+          system_status_serie.value.uptime = null;
+          if (system_status_serie.value.startTime) {
+            system_status_serie.value.uptime = calculateUptime(system_status_serie.value.startTime);
+          }
         }
       }
     })
@@ -155,6 +163,22 @@ function getData(type, endpoint) {
     });
 }
 
+function calculateUptime(startTimeStr) {
+  const startTime = new Date(startTimeStr);
+  const now = new Date();
+  const diff = now.getTime() - startTime.getTime();
+
+  const totalSeconds = Math.floor(diff / 1000);
+  const seconds = totalSeconds % 60;
+  const totalMinutes = Math.floor(totalSeconds / 60);
+  const minutes = totalMinutes % 60;
+  const totalHours = Math.floor(totalMinutes / 60);
+  const hours = totalHours % 24;
+  const days = Math.floor(totalHours / 24);
+
+  return days + ' days, ' + hours + ' hours, ' + minutes + ' minutes, ' + seconds + ' seconds';
+}
+
 onMounted(() => {
   getData('movie', 'diskspace');
   getData('series', 'diskspace');
@@ -165,6 +189,15 @@ onMounted(() => {
   getData('movie', 'system/status');
   getData('series', 'system/status');
 });
+
+setInterval(() => {
+  if (system_status_movie.value.startTime) {
+    system_status_movie.value.uptime = calculateUptime(system_status_movie.value.startTime);
+  }
+  if (system_status_serie.value.startTime) {
+    system_status_serie.value.uptime = calculateUptime(system_status_serie.value.startTime);
+  }
+}, 1000);
 </script>
 
 <template>
@@ -278,6 +311,12 @@ onMounted(() => {
                     Branch:
                   </strong>
                   {{ system_status_movie.branch }}
+                </p>
+                <p>
+                  <strong>
+                    Uptime:
+                  </strong>
+                  {{ system_status_movie.uptime }}
                 </p>
               </v-card-text>
             </v-card>
@@ -489,6 +528,12 @@ onMounted(() => {
                     Branch:
                   </strong>
                   {{ system_status_serie.branch }}
+                </p>
+                <p>
+                  <strong>
+                    Uptime:
+                  </strong>
+                  {{ system_status_serie.uptime }}
                 </p>
               </v-card-text>
             </v-card>
