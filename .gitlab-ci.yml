@@ -16,6 +16,7 @@ deploy:
     VITE_SONARR_API_KEY: "86df9c927b744a74a4a4dbed9c6e8768"
     VITE_IMDB_BASE_URL: "https://api.themoviedb.org/3"
     VITE_IMDB_API_KEY: "0d1dc24ae91481452ec415924333e3e9"
+    VITE_CRYPT_KEY: "zmSKMpnF2cH5XZB3ufb6CA"
   script:
     - cp .env.dist $ENV_FILE
     - export RSYNC_PASSWORD="$SSH_PASSWORD"
@@ -37,6 +38,7 @@ deploy:
       VITE_SONARR_API_KEY='$VITE_SONARR_API_KEY' \
       VITE_IMDB_BASE_URL='$VITE_IMDB_BASE_URL' \
       VITE_IMDB_API_KEY='$VITE_IMDB_API_KEY' \
+      VITE_CRYPT_KEY='$VITE_CRYPT_KEY' \
       bash -s
       " << 'EOF'
 
@@ -53,6 +55,7 @@ deploy:
       sed -i "s|^VITE_SONARR_API_KEY=.*|VITE_SONARR_API_KEY=\"$VITE_SONARR_API_KEY\"|" "$ENV_FILE"
       sed -i "s|^VITE_IMDB_BASE_URL=.*|VITE_IMDB_BASE_URL=\"$VITE_IMDB_BASE_URL\"|" "$ENV_FILE"
       sed -i "s|^VITE_IMDB_API_KEY=.*|VITE_IMDB_API_KEY=\"$VITE_IMDB_API_KEY\"|" "$ENV_FILE"
+      sed -i "s|^VITE_CRYPT_KEY=.*|VITE_CRYPT_KEY=\"$VITE_CRYPT_KEY\"|" "$ENV_FILE"
 
       ./restart.sh
       EOF
