@@ -351,34 +351,34 @@ onMounted(() => {
                 </v-list-item>
               </v-list>
             </v-card>
-          </v-col>
-          <v-alert
-            v-if="!is_loading_movie &&
-                  !disk_list_movie.length &&
-                  !health_list_movie.length &&
-                  !config_host_movie &&
-                  !system_status_movie"
-            type="info"
-            >
-            No system information found
-          </v-alert>
-          <p
-            v-if="is_loading_movie"
-            justify="center"
-            align="center"
-            class="mt-4"
-            >
-            <v-progress-circular
-              indeterminate
-              color="primary"
-              size="50"
-              />
-            <span
-              class="ml-2"
+            <v-alert
+              v-if="!is_loading_movie &&
+                    !disk_list_movie.length &&
+                    !health_list_movie.length &&
+                    !config_host_movie &&
+                    !system_status_movie"
+              type="info"
               >
-              Loading data...
-            </span>
-          </p>
+              No system information found
+            </v-alert>
+            <p
+              v-if="is_loading_movie"
+              justify="center"
+              align="center"
+              class="mt-4"
+              >
+              <v-progress-circular
+                indeterminate
+                color="primary"
+                size="50"
+                />
+              <span
+                class="ml-2"
+                >
+                Loading data...
+              </span>
+            </p>
+          </v-col>
         </v-row>
       </v-col>
       <v-col>
@@ -550,35 +550,35 @@ onMounted(() => {
                 </v-list-item>
               </v-list>
             </v-card>
+            <v-alert
+              v-if="!is_loading_serie &&
+                    !disk_list_serie.length &&
+                    !health_list_serie.length &&
+                    !config_host_serie &&
+                    !system_status_serie"
+              type="info"
+              >
+              No system information found
+            </v-alert>
+            <p
+              v-if="is_loading_serie"
+              justify="center"
+              align="center"
+              class="mt-4"
+              >
+              <v-progress-circular
+                indeterminate
+                color="primary"
+                size="50"
+                />
+              <span
+                class="ml-2"
+                >
+                Loading data...
+              </span>
+            </p>
           </v-col>
         </v-row>
-        <v-alert
-          v-if="!is_loading_serie &&
-                !disk_list_serie.length &&
-                !health_list_serie.length &&
-                !config_host_serie &&
-                !system_status_serie"
-          type="info"
-          >
-          No system information found
-        </v-alert>
-        <p
-          v-if="is_loading_serie"
-          justify="center"
-          align="center"
-          class="mt-4"
-          >
-          <v-progress-circular
-            indeterminate
-            color="primary"
-            size="50"
-            />
-          <span
-            class="ml-2"
-            >
-            Loading data...
-          </span>
-        </p>
       </v-col>
     </v-row>
   </v-container>
