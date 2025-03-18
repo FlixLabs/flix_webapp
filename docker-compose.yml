@@ -7,6 +7,9 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+    depends_on:
+      - redis
+      - webdis
 
   redis:
     image: redis/redis-stack-server:latest
