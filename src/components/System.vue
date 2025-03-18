@@ -351,10 +351,13 @@ setInterval(() => {
                       <v-progress-linear
                         :model-value="disk.ratio"
                         :color="progress_color(disk.ratio)"
-                        height="20"
+                        height="25"
                         rounded
+                        striped
                         >
-                        {{ disk.ratio }} %
+                        <strong>
+                          {{ Math.ceil(disk.ratio) }} %
+                        </strong>
                       </v-progress-linear>
                     </td>
                   </tr>
@@ -568,10 +571,13 @@ setInterval(() => {
                       <v-progress-linear
                         :model-value="disk.ratio"
                         :color="progress_color(disk.ratio)"
-                        height="20"
+                        height="25"
                         rounded
+                        striped
                       >
-                        {{ disk.ratio }} %
+                      <strong>
+                        {{ Math.ceil(disk.ratio) }} %
+                      </strong>
                       </v-progress-linear>
                     </td>
                   </tr>
