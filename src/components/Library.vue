@@ -5,6 +5,7 @@ import { useCount } from '@/composables/useCount';
 import { useFilteredItems } from '@/composables/useFilteredItems';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
+import { usePagination } from "@/composables/usePagination";
 
 const { alert, resetAlert } = useAlert();
 
@@ -65,15 +66,8 @@ const series_total_pages = computed(() =>
   Math.ceil(filtered_series.value.length / items_per_page)
 );
 
-const paginated_movies = computed(() => {
-  const start = (movie_page.value - 1) * items_per_page;
-  return filtered_movies.value.slice(start, start + items_per_page);
-});
-
-const paginated_series = computed(() => {
-  const start = (serie_page.value - 1) * items_per_page;
-  return filtered_series.value.slice(start, start + items_per_page);
-});
+const { paginatedItems: paginated_movies } = usePagination(filtered_movies, movie_page, items_per_page);
+const { paginatedItems: paginated_series } = usePagination(filtered_series, serie_page, items_per_page);
 
 const { total: total_movies } = useCount(filtered_movies);
 const { total: total_series } = useCount(filtered_series);
