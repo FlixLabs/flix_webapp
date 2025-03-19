@@ -8,7 +8,7 @@ import { useAlert } from '@/composables/useAlert';
 
 const router = useRouter();
 
-const { alert, resetAlert } = useAlert();
+const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
 const { state: is_loading, reset: reset_is_loading } = useResettable(false);
 
@@ -75,30 +75,6 @@ function checkData(key) {
     })
     .finally(() => {
     });
-}
-
-function showSuccessAlert(text = 'The operation was successful !') {
-  alert.value = {
-    visible: true,
-    type: 'success',
-    icon: 'mdi-check-circle',
-    text: text
-  };
-  setTimeout(() => {
-    resetAlert();
-  }, 5000);
-}
-
-function showErrorAlert(text = 'An error has occurred !') {
-  alert.value = {
-    visible: true,
-    type: 'error',
-    icon: 'mdi-alert-circle',
-    text: text
-  };
-  setTimeout(() => {
-    resetAlert();
-  }, 5000);
 }
 
 onMounted(() => {
