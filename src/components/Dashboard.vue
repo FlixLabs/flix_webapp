@@ -3,6 +3,7 @@
 import { ref, watch, computed, onMounted } from 'vue';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
+import { usePagination } from "@/composables/usePagination";
 
 const { alert, resetAlert } = useAlert();
 
@@ -48,15 +49,8 @@ const items_per_page = 4;
 const movie_page = ref(1);
 const serie_page = ref(1);
 
-const paginated_movies = computed(() => {
-  const start = (movie_page.value - 1) * items_per_page;
-  return movie_items.value.slice(start, start + items_per_page);
-});
-
-const paginated_series = computed(() => {
-  const start = (serie_page.value - 1) * items_per_page;
-  return serie_items.value.slice(start, start + items_per_page);
-});
+const { paginatedItems: paginated_movies } = usePagination(movie_items, movie_page, items_per_page);
+const { paginatedItems: paginated_series } = usePagination(serie_items, serie_page, items_per_page);
 
 function getQualityProfileList(type) {
   let url = null;
