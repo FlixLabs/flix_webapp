@@ -1,18 +1,12 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue';
+import { useCount } from '@/composables/useCount';
+import { useFilteredItems } from '@/composables/useFilteredItems';
+import { useResettable } from '@/composables/useResettable';
 
-const initial_is_loading_movie = false;
-const is_loading_movie = ref(initial_is_loading_movie);
-const reset_is_loading_movie = () => {
-  is_loading_movie.value = structuredClone(initial_is_loading_movie);
-};
-
-const initial_is_loading_serie = false;
-const is_loading_serie = ref(initial_is_loading_serie);
-const reset_is_loading_serie = () => {
-  is_loading_serie.value = structuredClone(initial_is_loading_serie);
-};
+const { state: is_loading_movie, reset: reset_is_loading_movie } = useResettable(false);
+const { state: is_loading_serie, reset: reset_is_loading_serie } = useResettable(false);
 
 const selected_serie_id = ref<number | null>(null);
 const serie_episodes = ref<any[]>([]);
@@ -23,23 +17,10 @@ const reset_episodes_dialog = () => {
   episodes_dialog.value = structuredClone(initial_episodes_dialog);
 };
 
-const initial_search = '';
-const search = ref(initial_search);
-const reset_search = () => {
-  search.value = structuredClone(initial_search);
-};
+const { state: search, reset: reset_search } = useResettable('');
 
-const initial_movie_items = [];
-const movie_items = ref(initial_movie_items);
-const reset_movie_items = () => {
-  movie_items.value = structuredClone(initial_movie_items);
-};
-
-const initial_serie_items = [];
-const serie_items = ref(initial_serie_items);
-const reset_serie_items = () => {
-  serie_items.value = structuredClone(initial_serie_items);
-};
+const movie_items = ref<any[]>([]);
+const serie_items = ref<any[]>([]);
 
 const selected_view = ref<'movie' | 'series'>('movie');
 
@@ -47,19 +28,8 @@ const items_per_page = 12;
 const movie_page = ref(1);
 const serie_page = ref(1);
 
-const filtered_movies = computed(() => {
-  if (!search.value) return movie_items.value;
-  return movie_items.value.filter((movie) =>
-    movie.title.toLowerCase().includes(search.value.toLowerCase())
-  );
-});
-
-const filtered_series = computed(() => {
-  if (!search.value) return serie_items.value;
-  return serie_items.value.filter((serie) =>
-    serie.title.toLowerCase().includes(search.value.toLowerCase())
-  );
-});
+const { filteredItems: filtered_movies } = useFilteredItems(movie_items, search);
+const { filteredItems: filtered_series } = useFilteredItems(serie_items, search);
 
 const movies_total_pages = computed(() =>
   Math.ceil(filtered_movies.value.length / items_per_page)
@@ -79,8 +49,8 @@ const paginated_series = computed(() => {
   return filtered_series.value.slice(start, start + items_per_page);
 });
 
-const total_movies = computed(() => movie_items.value.length);
-const total_series = computed(() => serie_items.value.length);
+const { total: total_movies } = useCount(filtered_movies);
+const { total: total_series } = useCount(filtered_series);
 
 function getContent(type) {
   let base_url = null;

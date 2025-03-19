@@ -1,38 +1,25 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue';
+import { useCount } from '@/composables/useCount';
+import { useFilteredItems } from '@/composables/useFilteredItems';
+import { useResettable } from '@/composables/useResettable';
 
-const initial_is_loading_movie = false;
-const is_loading_movie = ref(initial_is_loading_movie);
-const reset_is_loading_movie = () => {
-  is_loading_movie.value = structuredClone(initial_is_loading_movie);
-};
+const { state: is_loading_movie, reset: reset_is_loading_movie } = useResettable(false);
+const { state: is_loading_serie, reset: reset_is_loading_serie } = useResettable(false);
 
-const initial_is_loading_serie = false;
-const is_loading_serie = ref(initial_is_loading_serie);
-const reset_is_loading_serie = () => {
-  is_loading_serie.value = structuredClone(initial_is_loading_serie);
-};
+const { state: search, reset: reset_search } = useResettable('');
 
-const initial_search = '';
-const search = ref(initial_search);
-const reset_search = () => {
-  search.value = structuredClone(initial_search);
-};
-
-const initial_movie_items = [];
-const movie_items = ref(initial_movie_items);
-const reset_movie_items = () => {
-  movie_items.value = structuredClone(initial_movie_items);
-};
-
-const initial_serie_items = [];
-const serie_items = ref(initial_serie_items);
-const reset_serie_items = () => {
-  serie_items.value = structuredClone(initial_serie_items);
-};
+const movie_items = ref<any[]>([]);
+const serie_items = ref<any[]>([]);
 
 const selected_view = ref<'movie' | 'series'>('movie');
+
+const { filteredItems: filtered_movies } = useFilteredItems(movie_items, search);
+const { filteredItems: filtered_series } = useFilteredItems(serie_items, search);
+
+const { total: total_movies } = useCount(filtered_movies);
+const { total: total_series } = useCount(filtered_series);
 
 function getContent(type) {
   const api_key = import.meta.env.VITE_IMDB_API_KEY;
@@ -108,20 +95,6 @@ function getContent(type) {
     });
 }
 
-const filtered_movies = computed(() => {
-  if (!search.value) return movie_items.value;
-  return movie_items.value.filter(movie =>
-    movie.title.toLowerCase().includes(search.value.toLowerCase())
-  );
-});
-
-const filtered_series = computed(() => {
-  if (!search.value) return serie_items.value;
-  return serie_items.value.filter(serie =>
-    serie.title.toLowerCase().includes(search.value.toLowerCase())
-  );
-});
-
 onMounted(() => {
   getContent('movie');
   getContent('series');
@@ -138,6 +111,26 @@ onMounted(() => {
           variant="outlined"
           prepend-icon="mdi-magnify"
           clearable
+          />
+      </v-col>
+      <v-col
+        cols="2"
+        >
+        <v-text-field
+          v-if="selected_view == 'movie'"
+          label="Number"
+          variant="outlined"
+          v-model="total_movies"
+          :disabled="true"
+          prepend-icon="mdi-information-outline"
+          />
+        <v-text-field
+          v-if="selected_view == 'series'"
+          label="Number"
+          variant="outlined"
+          v-model="total_series"
+          :disabled="true"
+          prepend-icon="mdi-information-outline"
           />
       </v-col>
     </v-row>

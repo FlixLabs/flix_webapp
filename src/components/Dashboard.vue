@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
-import { ref, watch, computed, onMounted } from "vue";
+import { ref, watch, computed, onMounted } from 'vue';
+import { useResettable } from '@/composables/useResettable';
 
 const initial_alert = {
   visible: false,
@@ -13,22 +14,13 @@ const reset_alert = () => {
   alert.value = structuredClone(initial_alert);
 };
 
-const initial_is_loading_movie = false;
-const is_loading_movie = ref(initial_is_loading_movie);
-const reset_is_loading_movie = () => {
-  is_loading_movie.value = structuredClone(initial_is_loading_movie);
-};
-
-const initial_is_loading_serie = false;
-const is_loading_serie = ref(initial_is_loading_serie);
-const reset_is_loading_serie = () => {
-  is_loading_serie.value = structuredClone(initial_is_loading_serie);
-};
+const { state: is_loading_movie, reset: reset_is_loading_movie } = useResettable(false);
+const { state: is_loading_serie, reset: reset_is_loading_serie } = useResettable(false);
 
 const initial_delete_confirmation_dialog = false;
 const delete_confirmation_dialog = ref(initial_delete_confirmation_dialog);
 const reset_delete_confirmation_dialog = () => {
-  delete_confirmation_dialog.value = structuredClone(initial_is_loading_serie);
+  delete_confirmation_dialog.value = structuredClone(initial_delete_confirmation_dialog);
 };
 
 const initial_item_to_delete = {
@@ -40,23 +32,10 @@ const reset_item_to_delete = () => {
   item_to_delete.value = structuredClone(initial_item_to_delete);
 };
 
-const initial_search = '';
-const search = ref(initial_search);
-const reset_search = () => {
-  search.value = structuredClone(initial_search);
-};
+const { state: search, reset: reset_search } = useResettable('');
 
-const initial_movie_items = [];
-const movie_items = ref(initial_movie_items);
-const reset_movie_items = () => {
-  movie_items.value = structuredClone(initial_movie_items);
-};
-
-const initial_quality_movie_items = [];
-const quality_movie_items = ref(initial_quality_movie_items);
-const reset_quality_movie_items = () => {
-  quality_movie_items.value = structuredClone(initial_quality_movie_items);
-};
+const movie_items = ref<any[]>([]);
+const quality_movie_items = ref<any[]>([]);
 
 const initial_quality_movie = 1;
 const quality_movie = ref(initial_quality_movie);
@@ -64,17 +43,8 @@ const reset_quality_movie = () => {
   quality_movie.value = structuredClone(initial_quality_movie);
 };
 
-const initial_serie_items = [];
-const serie_items = ref(initial_serie_items);
-const reset_serie_items = () => {
-  serie_items.value = structuredClone(initial_serie_items);
-};
-
-const initial_quality_serie_items = [];
-const quality_serie_items = ref(initial_quality_serie_items);
-const reset_quality_serie_items = () => {
-  quality_serie_items.value = structuredClone(initial_quality_serie_items);
-};
+const serie_items = ref<any[]>([]);
+const quality_serie_items = ref<any[]>([]);
 
 const initial_quality_serie = 1;
 const quality_serie = ref(initial_quality_serie);
