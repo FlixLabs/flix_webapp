@@ -639,7 +639,7 @@ onMounted(() => {
                     v-else
                     color="error"
                     variant="outlined"
-                    @click="deleteFromList('series', item)"
+                    @click="openDeleteConfirmationDialog('series', item)"
                     block
                     style="height: 56px"
                     >
