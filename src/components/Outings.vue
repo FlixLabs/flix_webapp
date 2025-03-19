@@ -13,7 +13,7 @@ const { state: search, reset: reset_search } = useResettable('');
 const movie_items = ref<any[]>([]);
 const serie_items = ref<any[]>([]);
 
-const selected_view = ref<'movie' | 'series'>('movie');
+const selected_view = ref<'movies' | 'series'>('movies');
 
 const items_per_page = 12;
 const movie_page = ref(1);
@@ -49,14 +49,14 @@ function getContent(type) {
   let url_type = null;
   let url_request = null;
 
-  if (type == 'movie') {
+  if (type == 'movies') {
     is_loading_movie.value = true;
-    url_type = 'movie',
+    url_type = 'movie';
     url_request = 'upcoming';
   }
   if (type == 'series') {
     is_loading_serie.value = true;
-    url_type = 'tv',
+    url_type = 'tv';
     url_request = 'on_the_air';
   }
 
@@ -72,7 +72,7 @@ function getContent(type) {
         }
 
         let release_date = null;
-        if (type == 'movie') {
+        if (type == 'movies') {
           release_date = item.release_date;
         }
         if (type == 'series') {
@@ -80,7 +80,7 @@ function getContent(type) {
         }
 
         let title = null;
-        if (type == 'movie') {
+        if (type == 'movies') {
           title = item.title;
         }
         if (type == 'series') {
@@ -97,7 +97,7 @@ function getContent(type) {
 
       items.sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime());
 
-      if (type == 'movie') {
+      if (type == 'movies') {
         movie_items.value = items;
       }
       if (type == 'series') {
@@ -108,7 +108,7 @@ function getContent(type) {
       console.error(error);
     })
     .finally(() => {
-      if (type == 'movie') {
+      if (type == 'movies') {
         reset_is_loading_movie();
       }
       if (type == 'series') {
@@ -118,7 +118,7 @@ function getContent(type) {
 }
 
 onMounted(() => {
-  getContent('movie');
+  getContent('movies');
   getContent('series');
 });
 </script>
@@ -139,7 +139,7 @@ onMounted(() => {
         cols="2"
         >
         <v-text-field
-          v-if="selected_view == 'movie'"
+          v-if="selected_view == 'movies'"
           label="Number"
           variant="outlined"
           v-model="total_movies"
@@ -164,7 +164,7 @@ onMounted(() => {
           rounded="xl"
           >
           <v-btn
-            value="movie"
+            value="movies"
             >
             Movies
           </v-btn>
@@ -177,7 +177,7 @@ onMounted(() => {
       </v-col>
     </v-row>
     <div
-      v-if="selected_view == 'movie'">
+      v-if="selected_view == 'movies'">
       <v-row
         v-if="is_loading_movie"
         justify="center"

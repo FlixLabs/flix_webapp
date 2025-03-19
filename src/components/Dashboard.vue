@@ -68,7 +68,7 @@ const paginated_series = computed(() => {
 
 function getQualityProfileList(type) {
   let url = null;
-  if (type == 'movie') {
+  if (type == 'movies') {
     url = import.meta.env.VITE_RADARR_BASE_URL + '/api/v3/qualityProfile?apikey=' + import.meta.env.VITE_RADARR_API_KEY;
   }
   if (type == 'series') {
@@ -93,7 +93,7 @@ function getQualityProfileList(type) {
         showErrorAlert("The profile 'Any' does not exist. Please create it in Radarr and Sonarr.");
       }
 
-      if (type == 'movie') {
+      if (type == 'movies') {
         quality_movie_items.value = items;
         quality_movie.value = any_profile.value;
       }
@@ -110,19 +110,22 @@ function getQualityProfileList(type) {
 function getContent(type, keep_page = false) {
   let base_url = null;
   let api_key = null;
+  let url_type = null;
 
-  if (type == 'movie') {
+  if (type == 'movies') {
     is_loading_movie.value = true;
     base_url = import.meta.env.VITE_RADARR_BASE_URL;
     api_key = import.meta.env.VITE_RADARR_API_KEY;
+    url_type = 'movie';
   }
   if (type == 'series') {
     is_loading_serie.value = true;
     base_url = import.meta.env.VITE_SONARR_BASE_URL;
     api_key = import.meta.env.VITE_SONARR_API_KEY;
+    url_type = 'series';
   }
 
-  fetch(base_url + '/api/v3/' + type + '/lookup?term=' + search.value + '&apikey=' + api_key)
+  fetch(base_url + '/api/v3/' + url_type + '/lookup?term=' + search.value + '&apikey=' + api_key)
     .then(async response => {
       const json_data = await response.json();
 
@@ -132,7 +135,7 @@ function getContent(type, keep_page = false) {
         let alreadyInLibrary = null;
         let quality = null;
 
-        if (type == 'movie') {
+        if (type == 'movies') {
           id = item.tmdbId;
           quality = quality_movie;
         }
@@ -161,7 +164,7 @@ function getContent(type, keep_page = false) {
         });
       }
 
-      if (type == 'movie') {
+      if (type == 'movies') {
         movie_items.value = items;
         if (!keep_page) {
           movie_page.value = 1;
@@ -180,7 +183,7 @@ function getContent(type, keep_page = false) {
       showErrorAlert(error);
     })
     .finally(() => {
-      if (type == 'movie') {
+      if (type == 'movies') {
         reset_is_loading_movie();
       }
       if (type == 'series') {
@@ -192,24 +195,27 @@ function getContent(type, keep_page = false) {
 function isAlreadyInLibrary(type) {
   let base_url = null;
   let api_key = null;
+  let url_type = null;
 
-  if (type == 'movie') {
+  if (type == 'movies') {
     base_url = import.meta.env.VITE_RADARR_BASE_URL;
     api_key = import.meta.env.VITE_RADARR_API_KEY;
+    url_type = 'movie';
   }
   if (type == 'series') {
     base_url = import.meta.env.VITE_SONARR_BASE_URL;
     api_key = import.meta.env.VITE_SONARR_API_KEY;
+    url_type = 'series';
   }
 
-  fetch(base_url + '/api/v3/' + type + '?apikey=' + api_key)
+  fetch(base_url + '/api/v3/' + url_type + '?apikey=' + api_key)
     .then(async response => {
       const json_data = await response.json();
 
       let array_items = [];
       let id_key = null;
 
-      if (type == 'movie') {
+      if (type == 'movies') {
         array_items = movie_items.value;
         id_key = 'tmdbId';
       }
@@ -241,11 +247,13 @@ function markAsAlreadyInLibrary(array_items, json_data, id_key) {
 function addToList(type, item) {
   let base_url = null;
   let api_key = null;
+  let url_type = null;
   let data = {};
 
-  if (type == 'movie') {
+  if (type == 'movies') {
     base_url = import.meta.env.VITE_RADARR_BASE_URL;
     api_key = import.meta.env.VITE_RADARR_API_KEY;
+    url_type = 'movie';
     data = {
       tmdbId: item.id,
       title: item.title,
@@ -261,6 +269,7 @@ function addToList(type, item) {
   if (type == 'series') {
     base_url = import.meta.env.VITE_SONARR_BASE_URL;
     api_key = import.meta.env.VITE_SONARR_API_KEY;
+    url_type = 'series';
     data = {
       tvdbId: item.id,
       title: item.title,
@@ -274,7 +283,7 @@ function addToList(type, item) {
     }
   }
 
-  fetch(base_url + '/api/v3/' + type, {
+  fetch(base_url + '/api/v3/' + url_type, {
 		method: 'POST',
     headers: {
       'Accept': 'application/json',
@@ -297,17 +306,20 @@ function addToList(type, item) {
 function deleteFromList(type, item) {
   let base_url = null;
   let api_key = null;
+  let url_type = null;
 
-  if (type == 'movie') {
+  if (type == 'movies') {
     base_url = import.meta.env.VITE_RADARR_BASE_URL;
     api_key = import.meta.env.VITE_RADARR_API_KEY;
+    url_type = 'movie';
   }
   if (type == 'series') {
     base_url = import.meta.env.VITE_SONARR_BASE_URL;
     api_key = import.meta.env.VITE_SONARR_API_KEY;
+    url_type = 'series';
   }
 
-  fetch(base_url + '/api/v3/' + type + '/' + item.internalId + '?apikey=' + api_key + '&deleteFiles=true', {
+  fetch(base_url + '/api/v3/' + url_type + '/' + item.internalId + '?apikey=' + api_key + '&deleteFiles=true', {
     method: 'DELETE',
     headers: {
       'Accept': 'application/json',
@@ -370,7 +382,7 @@ watch(search, (newValue) => {
   if (newValue && newValue.length >= 3) {
     localStorage.setItem("search_" + window.location.href, newValue);
 
-    getContent('movie');
+    getContent('movies');
     getContent('series');
   } else {
     localStorage.removeItem("search_" + window.location.href);
@@ -385,7 +397,7 @@ onMounted(() => {
     search.value = localStorage.getItem('search_' + window.location.href);
   }
 
-  getQualityProfileList('movie');
+  getQualityProfileList('movies');
   getQualityProfileList('series');
 });
 </script>
@@ -498,7 +510,7 @@ onMounted(() => {
                     v-if="!item.already_in_library"
                     color="primary"
                     variant="outlined"
-                    @click="addToList('movie', item)"
+                    @click="addToList('movies', item)"
                     block
                     style="height: 56px"
                     >
@@ -508,7 +520,7 @@ onMounted(() => {
                     v-else
                     color="error"
                     variant="outlined"
-                    @click="openDeleteConfirmationDialog('movie', item)"
+                    @click="openDeleteConfirmationDialog('movies', item)"
                     block
                     style="height: 56px"
                     >
