@@ -15,8 +15,30 @@ const serie_items = ref<any[]>([]);
 
 const selected_view = ref<'movie' | 'series'>('movie');
 
+const items_per_page = 12;
+const movie_page = ref(1);
+const serie_page = ref(1);
+
 const { filteredItems: filtered_movies } = useFilteredItems(movie_items, search);
 const { filteredItems: filtered_series } = useFilteredItems(serie_items, search);
+
+const movies_total_pages = computed(() =>
+  Math.ceil(filtered_movies.value.length / items_per_page)
+);
+
+const series_total_pages = computed(() =>
+  Math.ceil(filtered_series.value.length / items_per_page)
+);
+
+const paginated_movies = computed(() => {
+  const start = (movie_page.value - 1) * items_per_page;
+  return filtered_movies.value.slice(start, start + items_per_page);
+});
+
+const paginated_series = computed(() => {
+  const start = (serie_page.value - 1) * items_per_page;
+  return filtered_series.value.slice(start, start + items_per_page);
+});
 
 const { total: total_movies } = useCount(filtered_movies);
 const { total: total_series } = useCount(filtered_series);
@@ -179,7 +201,7 @@ onMounted(() => {
         dense
         >
         <v-col
-          v-for="(item, index) in filtered_movies"
+          v-for="(item, index) in paginated_movies"
           :key="index"
           cols="6"
           sm="4"
@@ -214,6 +236,14 @@ onMounted(() => {
         >
         No upcoming movies found
       </v-alert>
+      <v-pagination
+        v-if="filtered_movies.length > 0"
+        v-model="movie_page"
+        :length="movies_total_pages"
+        class="mt-4"
+        total-visible="7"
+        rounded
+        />
     </div>
     <div
       v-else-if="selected_view == 'series'"
@@ -241,7 +271,7 @@ onMounted(() => {
         dense
         >
         <v-col
-          v-for="(item, index) in filtered_series"
+          v-for="(item, index) in paginated_series"
           :key="index"
           cols="6"
           sm="4"
@@ -276,6 +306,14 @@ onMounted(() => {
         >
         No upcoming series found
       </v-alert>
+      <v-pagination
+        v-if="filtered_series.length > 0"
+        v-model="serie_page"
+        :length="series_total_pages"
+        class="mt-4"
+        total-visible="7"
+        rounded
+        />
     </div>
   </v-container>
 </template>
