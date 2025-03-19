@@ -4,17 +4,9 @@ import { ref, computed, onMounted } from 'vue';
 import { useCount } from '@/composables/useCount';
 import { useFilteredItems } from '@/composables/useFilteredItems';
 import { useResettable } from '@/composables/useResettable';
+import { useAlert } from '@/composables/useAlert';
 
-const initial_alert = {
-  visible: false,
-  type: null,
-  icon: null,
-  text: ''
-};
-const alert = ref(initial_alert);
-const reset_alert = () => {
-  alert.value = structuredClone(initial_alert);
-};
+const { alert, resetAlert } = useAlert();
 
 const { state: is_loading_movie, reset: reset_is_loading_movie } = useResettable(false);
 const { state: is_loading_serie, reset: reset_is_loading_serie } = useResettable(false);
@@ -253,7 +245,7 @@ function showSuccessAlert(text = 'The operation was successful !') {
     text: text
   };
   setTimeout(() => {
-    reset_alert();
+    resetAlert();
   }, 5000);
 }
 
@@ -265,7 +257,7 @@ function showErrorAlert(text = 'An error has occurred !') {
     text: text
   };
   setTimeout(() => {
-    reset_alert();
+    resetAlert();
   }, 5000);
 }
 
