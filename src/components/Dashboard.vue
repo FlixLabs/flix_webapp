@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
 import { ref, watch, computed, onMounted } from 'vue';
+import { useCount } from '@/composables/useCount';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from "@/composables/usePagination";
@@ -44,6 +45,9 @@ const serie_page = ref(1);
 
 const { paginatedItems: paginated_movies } = usePagination(movie_items, movie_page, items_per_page);
 const { paginatedItems: paginated_series } = usePagination(serie_items, serie_page, items_per_page);
+
+const { total: total_movies } = useCount(movie_items);
+const { total: total_series } = useCount(serie_items);
 
 function getQualityProfileList(type) {
   let url = null;
@@ -413,6 +417,30 @@ onMounted(() => {
             prepend-icon="mdi-magnify"
             clearable
             />
+        </v-col>
+        <v-col
+          cols="4"
+          >
+          <v-row>
+            <v-col>
+              <v-text-field
+                label="Movies"
+                variant="outlined"
+                v-model="total_movies"
+                :disabled="true"
+                prepend-icon="mdi-movie-open-outline"
+                />
+            </v-col>
+            <v-col>
+              <v-text-field
+                label="Series"
+                variant="outlined"
+                v-model="total_series"
+                :disabled="true"
+                prepend-icon="mdi-television-classic"
+                />
+            </v-col>
+          </v-row>
         </v-col>
       </v-row>
     </v-form>

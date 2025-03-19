@@ -341,11 +341,13 @@ onMounted(() => {
           >
           <v-btn
             value="movies"
+            prepend-icon="mdi-movie-open-outline"
             >
             Movies
           </v-btn>
           <v-btn
             value="series"
+            prepend-icon="mdi-television-classic"
             >
             Series
           </v-btn>
