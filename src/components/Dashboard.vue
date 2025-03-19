@@ -164,6 +164,8 @@ function getContent(type, keep_page = false) {
         });
       }
 
+      items.sort((a, b) => b.year - a.year);
+
       if (type == 'movies') {
         movie_items.value = items;
         if (!keep_page) {
