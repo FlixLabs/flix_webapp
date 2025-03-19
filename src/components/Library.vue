@@ -7,7 +7,7 @@ import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from "@/composables/usePagination";
 
-const { alert, resetAlert } = useAlert();
+const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
 const { state: is_loading_movie, reset: reset_is_loading_movie } = useResettable(false);
 const { state: is_loading_serie, reset: reset_is_loading_serie } = useResettable(false);
@@ -229,30 +229,6 @@ function deleteFromList(type, item) {
   .catch(error => {
     showErrorAlert("Deletion failed");
   });
-}
-
-function showSuccessAlert(text = 'The operation was successful !') {
-  alert.value = {
-    visible: true,
-    type: 'success',
-    icon: 'mdi-check-circle',
-    text: text
-  };
-  setTimeout(() => {
-    resetAlert();
-  }, 5000);
-}
-
-function showErrorAlert(text = 'An error has occurred !') {
-  alert.value = {
-    visible: true,
-    type: 'error',
-    icon: 'mdi-alert-circle',
-    text: text
-  };
-  setTimeout(() => {
-    resetAlert();
-  }, 5000);
 }
 
 function openDeleteConfirmationDialog(type, item) {
