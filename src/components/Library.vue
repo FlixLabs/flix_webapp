@@ -5,16 +5,50 @@ import { useCount } from '@/composables/useCount';
 import { useFilteredItems } from '@/composables/useFilteredItems';
 import { useResettable } from '@/composables/useResettable';
 
+const initial_alert = {
+  visible: false,
+  type: null,
+  icon: null,
+  text: ''
+};
+const alert = ref(initial_alert);
+const reset_alert = () => {
+  alert.value = structuredClone(initial_alert);
+};
+
 const { state: is_loading_movie, reset: reset_is_loading_movie } = useResettable(false);
 const { state: is_loading_serie, reset: reset_is_loading_serie } = useResettable(false);
 
-const selected_serie_id = ref<number | null>(null);
+const initial_delete_confirmation_dialog = false;
+const delete_confirmation_dialog = ref(initial_delete_confirmation_dialog);
+const reset_delete_confirmation_dialog = () => {
+  delete_confirmation_dialog.value = structuredClone(initial_delete_confirmation_dialog);
+};
+
+const initial_item_to_delete = {
+  type: null,
+  item: null
+};
+const item_to_delete = ref(initial_item_to_delete);
+const reset_item_to_delete = () => {
+  item_to_delete.value = structuredClone(initial_item_to_delete);
+};
+
+const selected_movie = ref<any>(null);
+const selected_serie = ref<any>(null);
+
 const serie_episodes = ref<any[]>([]);
 
-const initial_episodes_dialog = false;
-const episodes_dialog = ref(initial_episodes_dialog);
-const reset_episodes_dialog = () => {
-  episodes_dialog.value = structuredClone(initial_episodes_dialog);
+const initial_movie_dialog = false;
+const movie_dialog = ref(initial_movie_dialog);
+const reset_movie_dialog = () => {
+  movie_dialog.value = structuredClone(initial_movie_dialog);
+};
+
+const initial_serie_dialog = false;
+const serie_dialog = ref(initial_serie_dialog);
+const reset_serie_dialog = () => {
+  serie_dialog.value = structuredClone(initial_serie_dialog);
 };
 
 const { state: search, reset: reset_search } = useResettable('');
@@ -22,7 +56,7 @@ const { state: search, reset: reset_search } = useResettable('');
 const movie_items = ref<any[]>([]);
 const serie_items = ref<any[]>([]);
 
-const selected_view = ref<'movie' | 'series'>('movie');
+const selected_view = ref<'movies' | 'series'>('movies');
 
 const items_per_page = 12;
 const movie_page = ref(1);
@@ -55,19 +89,22 @@ const { total: total_series } = useCount(filtered_series);
 function getContent(type) {
   let base_url = null;
   let api_key = null;
+  let url_type = null;
 
-  if (type == 'movie') {
+  if (type == 'movies') {
     is_loading_movie.value = true;
     base_url = import.meta.env.VITE_RADARR_BASE_URL;
     api_key = import.meta.env.VITE_RADARR_API_KEY;
+    url_type = 'movie';
   }
   if (type == 'series') {
     is_loading_serie.value = true;
     base_url = import.meta.env.VITE_SONARR_BASE_URL;
     api_key = import.meta.env.VITE_SONARR_API_KEY;
+    url_type = 'series';
   }
 
-  fetch(base_url + '/api/v3/' + type + '?apikey=' + api_key)
+  fetch(base_url + '/api/v3/' + url_type + '?apikey=' + api_key)
     .then(async (response) => {
       const json_data = await response.json();
 
@@ -76,7 +113,7 @@ function getContent(type) {
         let id = null;
         let alreadyInLibrary = null;
 
-        if (type == 'movie') {
+        if (type == 'movies') {
           id = item.tmdbId;
         }
         if (type == 'series') {
@@ -103,7 +140,7 @@ function getContent(type) {
 
       items.sort((a, b) => a.title.localeCompare(b.title));
 
-      if (type == 'movie') {
+      if (type == 'movies') {
         movie_items.value = items;
       }
       if (type == 'series') {
@@ -114,7 +151,7 @@ function getContent(type) {
       console.error(error);
     })
     .finally(() => {
-      if (type == 'movie') {
+      if (type == 'movies') {
         reset_is_loading_movie();
       }
       if (type == 'series') {
@@ -124,7 +161,7 @@ function getContent(type) {
 }
 
 function getSerieEpisodes(serie_id: number) {
-  episodes_dialog.value = true;
+  serie_dialog.value = true;
 
   serie_episodes.value = [];
 
@@ -148,10 +185,19 @@ function getSerieEpisodes(serie_id: number) {
     });
 }
 
+function handleMovieClick(movie_id: number) {
+  const movie = movie_items.value.find(movie => movie.internalId === movie_id);
+  if (movie) {
+    selected_movie.value = movie;
+    movie_dialog.value = true;
+  }
+}
+
 function handleSerieClick(serie_id: number) {
-  const selected_serie = serie_items.value.find(serie => serie.internalId === serie_id);
-  if (selected_serie) {
-    getSerieEpisodes(selected_serie.internalId);
+  const serie = serie_items.value.find(serie => serie.internalId === serie_id);
+  if (serie) {
+    selected_serie.value = serie;
+    getSerieEpisodes(serie.internalId);
   }
 }
 
@@ -165,13 +211,140 @@ const grouped_episodes = computed(() => {
   }, {} as Record<number, any[]>);
 });
 
+function deleteFromList(type, item) {
+  let base_url = null;
+  let api_key = null;
+  let url_type = null;
+
+  if (type == 'movies') {
+    base_url = import.meta.env.VITE_RADARR_BASE_URL;
+    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    url_type = 'movie';
+  }
+  if (type == 'series') {
+    base_url = import.meta.env.VITE_SONARR_BASE_URL;
+    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    url_type = 'series';
+  }
+
+  fetch(base_url + '/api/v3/' + url_type + '/' + item.internalId + '?apikey=' + api_key + '&deleteFiles=true', {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json;charset=utf-8',
+    },
+  })
+  .then(async response => {
+    if (response.ok) {
+      showSuccessAlert("Deleted successfully");
+      getContent(type, true);
+    }
+  })
+  .catch(error => {
+    showErrorAlert("Deletion failed");
+  });
+}
+
+function showSuccessAlert(text = 'The operation was successful !') {
+  alert.value = {
+    visible: true,
+    type: 'success',
+    icon: 'mdi-check-circle',
+    text: text
+  };
+  setTimeout(() => {
+    reset_alert();
+  }, 5000);
+}
+
+function showErrorAlert(text = 'An error has occurred !') {
+  alert.value = {
+    visible: true,
+    type: 'error',
+    icon: 'mdi-alert-circle',
+    text: text
+  };
+  setTimeout(() => {
+    reset_alert();
+  }, 5000);
+}
+
+function openDeleteConfirmationDialog(type, item) {
+  if (!item) {
+    if (type == 'movies') {
+      item = selected_movie.value
+    }
+    if (type == 'serie') {
+      item = selected_serie.value;
+    }
+  }
+  item_to_delete.value = {
+    type: type,
+    item: item
+  };
+  delete_confirmation_dialog.value = true;
+}
+
+function confirmDelete() {
+  if (item_to_delete.value) {
+    const { type, item } = item_to_delete.value;
+    deleteFromList(type, item);
+    reset_delete_confirmation_dialog();
+    reset_item_to_delete();
+    reset_movie_dialog();
+    reset_serie_dialog();
+  }
+}
+
 onMounted(() => {
-  getContent('movie');
+  getContent('movies');
   getContent('series');
 });
 </script>
 
 <template>
+  <transition
+    name="fade"
+    @before-enter="beforeEnter"
+    @enter="enter"
+    @leave="leave"
+    >
+    <v-alert
+      v-if="alert.visible"
+      :type="alert.type"
+      :icon="alert.icon"
+      class="fixed-alert"
+      :text="alert.text"
+      @click="show_alert = false"
+      />
+  </transition>
+  <v-dialog
+    v-model="delete_confirmation_dialog"
+    max-width="600px"
+    >
+    <v-card>
+      <v-card-title>
+        Confirm deletion
+      </v-card-title>
+      <v-card-text>
+        Are you sure you want to delete this item ? This action cannot be undone.
+      </v-card-text>
+      <v-card-actions>
+        <v-btn
+          @click="reset_delete_confirmation_dialog()"
+          color="secondary"
+          >
+          Cancel
+        </v-btn>
+        <v-btn
+          @click="confirmDelete"
+          color="primary"
+          >
+          Confirm
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
   <v-container>
     <v-row>
       <v-col>
@@ -187,7 +360,7 @@ onMounted(() => {
         cols="2"
         >
         <v-text-field
-          v-if="selected_view == 'movie'"
+          v-if="selected_view == 'movies'"
           label="Number"
           variant="outlined"
           v-model="total_movies"
@@ -212,7 +385,7 @@ onMounted(() => {
           rounded="xl"
           >
           <v-btn
-            value="movie"
+            value="movies"
             >
             Movies
           </v-btn>
@@ -225,7 +398,7 @@ onMounted(() => {
       </v-col>
     </v-row>
     <div
-      v-if="selected_view == 'movie'"
+      v-if="selected_view == 'movies'"
       >
       <v-row
         v-if="is_loading_movie"
@@ -258,7 +431,9 @@ onMounted(() => {
           lg="2"
           class="mb-4"
           >
-          <v-card>
+          <v-card
+            @click="handleMovieClick(item.internalId)"
+            >
             <v-img
               :src="item.prependAvatar"
               class="w-100"
@@ -318,6 +493,34 @@ onMounted(() => {
         total-visible="7"
         rounded
         />
+      <v-dialog
+        v-model="movie_dialog"
+        max-width="600px"
+        max-height="600px"
+        >
+        <v-card>
+          <v-card-title>
+            Movie
+          </v-card-title>
+          <v-card-text>
+            {{ selected_movie.title }}
+          </v-card-text>
+          <v-card-actions>
+            <v-btn
+              @click="openDeleteConfirmationDialog('movies', selected_movie.value)"
+              color="error"
+              >
+              Remove
+            </v-btn>
+            <v-btn
+              @click="reset_movie_dialog()"
+              color="secondary"
+              >
+              Close
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </div>
     <div
       v-else-if="selected_view == 'series'"
@@ -401,85 +604,91 @@ onMounted(() => {
         total-visible="7"
         rounded
         />
-    </div>
-    <v-dialog
-      v-model="episodes_dialog"
-      max-width="600px"
-      max-height="600px"
-      >
-      <v-card>
-        <v-card-title>
-          Episodes
-        </v-card-title>
-        <v-card-text
-          v-if="Object.keys(grouped_episodes).length"
-          >
-          <v-expansion-panels>
-            <v-expansion-panel
-              v-for="(episodes, season) in grouped_episodes"
-              :key="season"
+      <v-dialog
+        v-model="serie_dialog"
+        max-width="600px"
+        max-height="600px"
+        >
+        <v-card>
+          <v-card-title>
+            Episodes
+          </v-card-title>
+          <v-card-text
+            v-if="Object.keys(grouped_episodes).length"
+            >
+            <v-expansion-panels>
+              <v-expansion-panel
+                v-for="(episodes, season) in grouped_episodes"
+                :key="season"
+                >
+                <v-expansion-panel-title>
+                  Season {{ season }}
+                </v-expansion-panel-title>
+                <v-expansion-panel-text>
+                  <v-list>
+                    <v-list-item
+                      v-for="(episode, index) in episodes"
+                      :key="index"
+                      >
+                      <v-list-item-content>
+                        <v-list-item-title>
+                          {{ episode.title }}
+                        </v-list-item-title>
+                        <v-list-item-subtitle>
+                          Episode {{ episode.episode }} - {{ episode.airDate || "Date unknown" }}
+                        </v-list-item-subtitle>
+                        <v-list-item-action
+                          class="pt-2"
+                          >
+                          <v-chip
+                            v-if="episode.hasFile"
+                            color="green"
+                            small
+                            >
+                            Existing
+                          </v-chip>
+                          <v-chip
+                            v-else
+                            color="red"
+                            small
+                            >
+                            Missing
+                          </v-chip>
+                        </v-list-item-action>
+                      </v-list-item-content>
+                    </v-list-item>
+                  </v-list>
+                </v-expansion-panel-text>
+              </v-expansion-panel>
+            </v-expansion-panels>
+          </v-card-text>
+          <v-card-text
+            v-else
+            >
+            <v-alert
+              type="info"
+              class="mt-4"
               >
-              <v-expansion-panel-title>
-                Season {{ season }}
-              </v-expansion-panel-title>
-              <v-expansion-panel-text>
-                <v-list>
-                  <v-list-item
-                    v-for="(episode, index) in episodes"
-                    :key="index"
-                    >
-                    <v-list-item-content>
-                      <v-list-item-title>
-                        {{ episode.title }}
-                      </v-list-item-title>
-                      <v-list-item-subtitle>
-                        Episode {{ episode.episode }} - {{ episode.airDate || "Date unknown" }}
-                      </v-list-item-subtitle>
-                      <v-list-item-action
-                        class="pt-2"
-                        >
-                        <v-chip
-                          v-if="episode.hasFile"
-                          color="green"
-                          small
-                          >
-                          Existing
-                        </v-chip>
-                        <v-chip
-                          v-else
-                          color="red"
-                          small
-                          >
-                          Missing
-                        </v-chip>
-                      </v-list-item-action>
-                    </v-list-item-content>
-                  </v-list-item>
-                </v-list>
-              </v-expansion-panel-text>
-            </v-expansion-panel>
-          </v-expansion-panels>
-        </v-card-text>
-        <v-card-text
-          v-else
-          >
-          <v-alert
-            type="info"
-            class="mt-4"
-            >
-            No episode found
-          </v-alert>
-        </v-card-text>
-        <v-card-actions>
-          <v-btn
-            @click="reset_episodes_dialog()"
-            color="secondary"
-            >
-            Close
-          </v-btn>
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
+              No episode found
+            </v-alert>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn
+              @click="openDeleteConfirmationDialog('series', selected_serie.value)"
+              color="error"
+              >
+              Remove
+            </v-btn>
+            <v-btn
+              @click="reset_serie_dialog()"
+              color="secondary"
+              >
+              Close
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
+    </div>
   </v-container>
 </template>
 
@@ -488,5 +697,37 @@ onMounted(() => {
   font-size: 1rem;
   line-height: 1.2;
   font-weight: bold;
+}
+
+.fixed-alert {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+  max-width: 300px;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.fade-enter-to {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
 }
 </style>
