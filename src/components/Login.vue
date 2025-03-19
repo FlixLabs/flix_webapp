@@ -3,25 +3,14 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import CryptoJS from 'crypto-js';
+import { useResettable } from '@/composables/useResettable';
+import { useAlert } from '@/composables/useAlert';
 
 const router = useRouter();
 
-const initial_alert = {
-  visible: false,
-  type: null,
-  icon: null,
-  text: ''
-};
-const alert = ref(initial_alert);
-const reset_alert = () => {
-  alert.value = structuredClone(initial_alert);
-};
+const { alert, resetAlert } = useAlert();
 
-const initial_is_loading = true;
-const is_loading = ref(initial_is_loading);
-const reset_is_loading = () => {
-  is_loading.value = structuredClone(initial_is_loading);
-};
+const { state: is_loading, reset: reset_is_loading } = useResettable(false);
 
 const initial_auth_data = {
   username: null,
@@ -96,7 +85,7 @@ function showSuccessAlert(text = 'The operation was successful !') {
     text: text
   };
   setTimeout(() => {
-    reset_alert();
+    resetAlert();
   }, 5000);
 }
 
@@ -108,7 +97,7 @@ function showErrorAlert(text = 'An error has occurred !') {
     text: text
   };
   setTimeout(() => {
-    reset_alert();
+    resetAlert();
   }, 5000);
 }
 
