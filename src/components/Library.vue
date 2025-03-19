@@ -6,26 +6,19 @@ import { useFilteredItems } from '@/composables/useFilteredItems';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from "@/composables/usePagination";
+import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
 const { state: is_loading_movie, reset: reset_is_loading_movie } = useResettable(false);
 const { state: is_loading_serie, reset: reset_is_loading_serie } = useResettable(false);
 
-const initial_delete_confirmation_dialog = false;
-const delete_confirmation_dialog = ref(initial_delete_confirmation_dialog);
-const reset_delete_confirmation_dialog = () => {
-  delete_confirmation_dialog.value = structuredClone(initial_delete_confirmation_dialog);
-};
-
-const initial_item_to_delete = {
-  type: null,
-  item: null
-};
-const item_to_delete = ref(initial_item_to_delete);
-const reset_item_to_delete = () => {
-  item_to_delete.value = structuredClone(initial_item_to_delete);
-};
+const {
+  deleteConfirmationDialog,
+  resetDeleteConfirmationDialog,
+  itemToDelete,
+  resetItemToDelete
+} = useDeleteConfirmation();
 
 const selected_movie = ref<any>(null);
 const selected_serie = ref<any>(null);
@@ -240,19 +233,19 @@ function openDeleteConfirmationDialog(type, item) {
       item = selected_serie.value;
     }
   }
-  item_to_delete.value = {
+  itemToDelete.value = {
     type: type,
     item: item
   };
-  delete_confirmation_dialog.value = true;
+  deleteConfirmationDialog.value = true;
 }
 
 function confirmDelete() {
-  if (item_to_delete.value) {
-    const { type, item } = item_to_delete.value;
+  if (itemToDelete.value) {
+    const { type, item } = itemToDelete.value;
     deleteFromList(type, item);
-    reset_delete_confirmation_dialog();
-    reset_item_to_delete();
+    resetDeleteConfirmationDialog();
+    resetItemToDelete();
     reset_movie_dialog();
     reset_serie_dialog();
   }
@@ -281,7 +274,7 @@ onMounted(() => {
       />
   </transition>
   <v-dialog
-    v-model="delete_confirmation_dialog"
+    v-model="deleteConfirmationDialog"
     max-width="600px"
     >
     <v-card>
@@ -293,7 +286,7 @@ onMounted(() => {
       </v-card-text>
       <v-card-actions>
         <v-btn
-          @click="reset_delete_confirmation_dialog()"
+          @click="resetDeleteConfirmationDialog()"
           color="secondary"
           >
           Cancel
