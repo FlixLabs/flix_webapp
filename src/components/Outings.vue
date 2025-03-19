@@ -48,19 +48,22 @@ function getContent(type) {
   const base_url = import.meta.env.VITE_IMDB_BASE_URL;
   let url_type = null;
   let url_request = null;
+  let url_suffixe = null;
 
   if (type == 'movies') {
     is_loading_movie.value = true;
     url_type = 'movie';
     url_request = 'upcoming';
+    url_suffixe = '';
   }
   if (type == 'series') {
     is_loading_serie.value = true;
     url_type = 'tv';
     url_request = 'on_the_air';
+    url_suffixe = '';
   }
 
-  fetch(base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key + '&language=fr-FR&region=FR')
+  fetch(base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key + url_suffixe)
     .then(async (response) => {
       const json_data = await response.json();
 
@@ -95,14 +98,55 @@ function getContent(type) {
         });
       }
 
-      items.sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime());
+      let total_pages = json_data.total_pages || 1;
+      let promises = [];
+      for (let page = 2; page <= total_pages; page++) {
+        let url = base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key + url_suffixe + '&page=' + page;
+        promises.push(
+          fetch(url)
+            .then(async (response) => {
+              const page_data = await response.json();
+              for (const item of page_data.results) {
+                let poster_full = "https://placehold.co/100x150?text=No+Image&font=roboto";
+                if (item.poster_path) {
+                  poster_full = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
+                }
 
-      if (type == 'movies') {
-        movie_items.value = items;
+                let release_date = null;
+                if (type == 'movies') {
+                  release_date = item.release_date;
+                }
+                if (type == 'series') {
+                  release_date = item.first_air_date;
+                }
+
+                let title = null;
+                if (type == 'movies') {
+                  title = item.title;
+                }
+                if (type == 'series') {
+                  title = item.name;
+                }
+
+                items.push({
+                  id: item.id,
+                  poster: poster_full,
+                  title: title,
+                  release_date: release_date
+                });
+              }
+            })
+        );
       }
-      if (type == 'series') {
-        serie_items.value = items;
-      }
+
+      return Promise.all(promises).then(() => {
+        if (type == 'movies') {
+          movie_items.value = items;
+        }
+        if (type == 'series') {
+          serie_items.value = items;
+        }
+      });
     })
     .catch((error) => {
       console.error(error);
@@ -224,7 +268,7 @@ onMounted(() => {
             <v-card-text
               class="text-center"
               >
-              {{ item.release_date }}
+              Realease {{ item.release_date }}
             </v-card-text>
           </v-card>
         </v-col>
@@ -294,7 +338,7 @@ onMounted(() => {
             <v-card-text
               class="text-center"
               >
-              {{ item.release_date }}
+              Premiere {{ item.release_date }}
             </v-card-text>
           </v-card>
         </v-col>
