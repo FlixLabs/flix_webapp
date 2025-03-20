@@ -1,64 +1,24 @@
 <script setup lang="ts">
 
 import { ref, onMounted, computed } from 'vue';
+import { useResettable } from '@/composables/useResettable';
+import { useDiskAndHealthList } from '@/composables/useDiskAndHealthList';
 
-const initial_is_loading_movie = false;
-const is_loading_movie = ref(initial_is_loading_movie);
-const reset_is_loading_movie = () => {
-  is_loading_movie.value = structuredClone(initial_is_loading_movie);
-};
+const { createDiskList, createHealthList } = useDiskAndHealthList();
 
-const initial_is_loading_serie = false;
-const is_loading_serie = ref(initial_is_loading_serie);
-const reset_is_loading_serie = () => {
-  is_loading_serie.value = structuredClone(initial_is_loading_serie);
-};
+const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
+const configHostMovie = ref<Record<string, any> | null>(null);
+const systemStatusMovie = ref<Record<string, any> | null>(null);
+const diskListMovie = createDiskList();
+const healthListMovie = createHealthList();
 
-const disk_list_movie = ref<
-  {
-    path: string;
-    free_space: number;
-    total_space: number;
-    ratio: number;
-  }[]
->([]);
+const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
+const configHostSerie = ref<Record<string, any> | null>(null);
+const systemStatusSerie = ref<Record<string, any> | null>(null);
+const diskListSerie = createDiskList();
+const healthListSerie = createHealthList();
 
-const disk_list_serie = ref<
-  {
-    path: string;
-    free_space: number;
-    total_space: number;
-    ratio: number;
-  }[]
->([]);
-
-const health_list_movie = ref<
-  {
-    source: string;
-    type: string;
-    message: string;
-    wikiUrl: string;
-  }[]
->([]);
-
-const health_list_serie = ref<
-  {
-    source: string;
-    type: string;
-    message: string;
-    wikiUrl: string;
-  }[]
->([]);
-
-const config_host_movie = ref<Record<string, any> | null>(null);
-
-const config_host_serie = ref<Record<string, any> | null>(null);
-
-const system_status_movie = ref<Record<string, any> | null>(null);
-
-const system_status_serie = ref<Record<string, any> | null>(null);
-
-function progress_color(ratio: number): string {
+function progressColor(ratio: number): string {
   const threshold = import.meta.env.VITE_SYSTEM_STORAGE_SPACE_TRESHOLD;
   return ratio >= threshold ? 'red' : 'blue';
 }
@@ -68,12 +28,12 @@ function getData(type, endpoint) {
   let api_key = null;
 
   if (type == 'movie') {
-    is_loading_movie.value = true;
+    isLoadingMovie.value = true;
     base_url = import.meta.env.VITE_RADARR_BASE_URL;
     api_key = import.meta.env.VITE_RADARR_API_KEY;
   }
   if (type == 'series') {
-    is_loading_serie.value = true;
+    isLoadingSerie.value = true;
     base_url = import.meta.env.VITE_SONARR_BASE_URL;
     api_key = import.meta.env.VITE_SONARR_API_KEY;
   }
@@ -99,10 +59,10 @@ function getData(type, endpoint) {
         });
 
         if (type == 'movie') {
-          disk_list_movie.value = data;
+          diskListMovie.value = data;
         }
         if (type == 'series') {
-          disk_list_serie.value = data;
+          diskListSerie.value = data;
         }
       }
 
@@ -117,35 +77,35 @@ function getData(type, endpoint) {
         });
 
         if (type == 'movie') {
-          health_list_movie.value = data;
+          healthListMovie.value = data;
         }
         if (type == 'series') {
-          health_list_serie.value = data;
+          healthListSerie.value = data;
         }
       }
 
       if (endpoint == 'config/host') {
         if (type == 'movie') {
-          config_host_movie.value = json_data;
+          configHostMovie.value = json_data;
         }
         if (type == 'series') {
-          config_host_serie.value = json_data;
+          configHostSerie.value = json_data;
         }
       }
 
       if (endpoint == 'system/status') {
         if (type == 'movie') {
-          system_status_movie.value = json_data;
-          system_status_movie.value.uptime = null;
-          if (system_status_movie.value.startTime) {
-            system_status_movie.value.uptime = calculateUptime(system_status_movie.value.startTime);
+          systemStatusMovie.value = json_data;
+          systemStatusMovie.value.uptime = null;
+          if (systemStatusMovie.value.startTime) {
+            systemStatusMovie.value.uptime = calculateUptime(systemStatusMovie.value.startTime);
           }
         }
         if (type == 'series') {
-          system_status_serie.value = json_data;
-          system_status_serie.value.uptime = null;
-          if (system_status_serie.value.startTime) {
-            system_status_serie.value.uptime = calculateUptime(system_status_serie.value.startTime);
+          systemStatusSerie.value = json_data;
+          systemStatusSerie.value.uptime = null;
+          if (systemStatusSerie.value.startTime) {
+            systemStatusSerie.value.uptime = calculateUptime(systemStatusSerie.value.startTime);
           }
         }
       }
@@ -155,10 +115,10 @@ function getData(type, endpoint) {
     })
     .finally(() => {
       if (type == 'movie') {
-        reset_is_loading_movie();
+        resetIsLoadingMovie();
       }
       if (type == 'series') {
-        reset_is_loading_serie();
+        resetIsLoadingSerie();
       }
     });
 }
@@ -191,11 +151,11 @@ onMounted(() => {
 });
 
 setInterval(() => {
-  if (system_status_movie.value.startTime) {
-    system_status_movie.value.uptime = calculateUptime(system_status_movie.value.startTime);
+  if (systemStatusMovie.value.startTime) {
+    systemStatusMovie.value.uptime = calculateUptime(systemStatusMovie.value.startTime);
   }
-  if (system_status_serie.value.startTime) {
-    system_status_serie.value.uptime = calculateUptime(system_status_serie.value.startTime);
+  if (systemStatusSerie.value.startTime) {
+    systemStatusSerie.value.uptime = calculateUptime(systemStatusSerie.value.startTime);
   }
 }, 1000);
 </script>
@@ -208,7 +168,7 @@ setInterval(() => {
         <v-row>
           <v-col>
             <v-card
-              v-if="config_host_movie && Object.keys(config_host_movie).length > 0"
+              v-if="configHostMovie && Object.keys(configHostMovie).length > 0"
               class="mt-4"
               >
               <v-card-title>
@@ -219,25 +179,25 @@ setInterval(() => {
                   <strong>
                     Bind Address:
                   </strong>
-                  {{ config_host_movie.bindAddress }}
+                  {{ configHostMovie.bindAddress }}
                 </p>
                 <p>
                   <strong>
                     Port:
                   </strong>
-                  {{ config_host_movie.port }}
+                  {{ configHostMovie.port }}
                 </p>
                 <p>
                   <strong>
                     Enable SSL:
                   </strong>
-                  {{ config_host_movie.enableSsl }}
+                  {{ configHostMovie.enableSsl }}
                 </p>
                 <p>
                   <strong>
                     Instance Name:
                   </strong>
-                  {{ config_host_movie.instanceName }}
+                  {{ configHostMovie.instanceName }}
                 </p>
               </v-card-text>
             </v-card>
@@ -246,7 +206,7 @@ setInterval(() => {
         <v-row>
           <v-col>
             <v-card
-              v-if="system_status_movie && Object.keys(system_status_movie).length > 0"
+              v-if="systemStatusMovie && Object.keys(systemStatusMovie).length > 0"
               >
               <v-card-title>
                 System Status
@@ -256,67 +216,67 @@ setInterval(() => {
                   <strong>
                     Version:
                   </strong>
-                  {{ system_status_movie.version }}
+                  {{ systemStatusMovie.version }}
                 </p>
                 <p>
                   <strong>
                     Debug:
                   </strong>
-                  {{ system_status_movie.isDebug }}
+                  {{ systemStatusMovie.isDebug }}
                 </p>
                 <p>
                   <strong>
                     Production:
                   </strong>
-                  {{ system_status_movie.isProduction }}
+                  {{ systemStatusMovie.isProduction }}
                 </p>
                 <p>
                   <strong>
                     Net Core:
                   </strong>
-                  {{ system_status_movie.isNetCore }}
+                  {{ systemStatusMovie.isNetCore }}
                 </p>
                 <p>
                   <strong>
                     Linux:
                   </strong>
-                  {{ system_status_movie.isLinux }}
+                  {{ systemStatusMovie.isLinux }}
                 </p>
                 <p>
                   <strong>
                     MacOS:
                   </strong>
-                  {{ system_status_movie.isOsx }}
+                  {{ systemStatusMovie.isOsx }}
                 </p>
                 <p>
                   <strong>
                     Windows:
                   </strong>
-                  {{ system_status_movie.isWindows }}
+                  {{ systemStatusMovie.isWindows }}
                 </p>
                 <p>
                   <strong>
                     Docker:
                   </strong>
-                  {{ system_status_movie.isDocker }}
+                  {{ systemStatusMovie.isDocker }}
                 </p>
                 <p>
                   <strong>
                     Mode:
                   </strong>
-                  {{ system_status_movie.mode }}
+                  {{ systemStatusMovie.mode }}
                 </p>
                 <p>
                   <strong>
                     Branch:
                   </strong>
-                  {{ system_status_movie.branch }}
+                  {{ systemStatusMovie.branch }}
                 </p>
                 <p>
                   <strong>
                     Uptime:
                   </strong>
-                  {{ system_status_movie.uptime }}
+                  {{ systemStatusMovie.uptime }}
                 </p>
               </v-card-text>
             </v-card>
@@ -325,7 +285,7 @@ setInterval(() => {
         <v-row>
           <v-col>
             <v-card
-              v-if="disk_list_movie.length > 0"
+              v-if="diskListMovie.length > 0"
               >
               <v-card-title>
                 Space
@@ -341,7 +301,7 @@ setInterval(() => {
                 </thead>
                 <tbody>
                   <tr
-                    v-for="disk in disk_list_movie"
+                    v-for="disk in diskListMovie"
                     :key="disk.path"
                     >
                     <td>{{ disk.path }}</td>
@@ -350,7 +310,7 @@ setInterval(() => {
                     <td>
                       <v-progress-linear
                         :model-value="disk.ratio"
-                        :color="progress_color(disk.ratio)"
+                        :color="progressColor(disk.ratio)"
                         height="25"
                         rounded
                         striped
@@ -369,14 +329,14 @@ setInterval(() => {
         <v-row>
           <v-col>
             <v-card
-              v-if="health_list_movie.length > 0"
+              v-if="healthListMovie.length > 0"
               >
               <v-card-title>
                 About
               </v-card-title>
               <v-list>
                 <v-list-item
-                  v-for="(issue, index) in health_list_movie"
+                  v-for="(issue, index) in healthListMovie"
                   :key="index"
                   >
                   <v-list-item-title>
@@ -394,17 +354,17 @@ setInterval(() => {
               </v-list>
             </v-card>
             <v-alert
-              v-if="!is_loading_movie &&
-                    !disk_list_movie.length &&
-                    !health_list_movie.length &&
-                    !config_host_movie &&
-                    !system_status_movie"
+              v-if="!isLoadingMovie &&
+                    !diskListMovie.length &&
+                    !healthListMovie.length &&
+                    !configHostMovie &&
+                    !systemStatusMovie"
               type="info"
               >
               No system information found
             </v-alert>
             <p
-              v-if="is_loading_movie"
+              v-if="isLoadingMovie"
               justify="center"
               align="center"
               class="mt-4"
@@ -428,7 +388,7 @@ setInterval(() => {
         <v-row>
           <v-col>
             <v-card
-              v-if="config_host_serie && Object.keys(config_host_serie).length > 0"
+              v-if="configHostSerie && Object.keys(configHostSerie).length > 0"
               class="mt-4"
               >
               <v-card-title>
@@ -439,25 +399,25 @@ setInterval(() => {
                   <strong>
                     Bind Address:
                   </strong>
-                  {{ config_host_serie.bindAddress }}
+                  {{ configHostSerie.bindAddress }}
                 </p>
                 <p>
                   <strong>
                     Port:
                   </strong>
-                  {{ config_host_serie.port }}
+                  {{ configHostSerie.port }}
                 </p>
                 <p>
                   <strong>
                     Enable SSL:
                   </strong>
-                  {{ config_host_serie.enableSsl }}
+                  {{ configHostSerie.enableSsl }}
                 </p>
                 <p>
                   <strong>
                     Instance Name:
                   </strong>
-                  {{ config_host_serie.instanceName }}
+                  {{ configHostSerie.instanceName }}
                 </p>
               </v-card-text>
             </v-card>
@@ -466,7 +426,7 @@ setInterval(() => {
         <v-row>
           <v-col>
             <v-card
-              v-if="system_status_serie && Object.keys(system_status_serie).length > 0"
+              v-if="systemStatusSerie && Object.keys(systemStatusSerie).length > 0"
               >
               <v-card-title>
                 System Status
@@ -476,67 +436,67 @@ setInterval(() => {
                   <strong>
                     Version:
                   </strong>
-                  {{ system_status_serie.version }}
+                  {{ systemStatusSerie.version }}
                 </p>
                 <p>
                   <strong>
                     Debug:
                   </strong>
-                  {{ system_status_serie.isDebug }}
+                  {{ systemStatusSerie.isDebug }}
                 </p>
                 <p>
                   <strong>
                     Production:
                   </strong>
-                  {{ system_status_serie.isProduction }}
+                  {{ systemStatusSerie.isProduction }}
                 </p>
                 <p>
                   <strong>
                     Net Core:
                   </strong>
-                  {{ system_status_serie.isNetCore }}
+                  {{ systemStatusSerie.isNetCore }}
                 </p>
                 <p>
                   <strong>
                     Linux:
                   </strong>
-                  {{ system_status_serie.isLinux }}
+                  {{ systemStatusSerie.isLinux }}
                 </p>
                 <p>
                   <strong>
                     MacOS:
                   </strong>
-                  {{ system_status_serie.isOsx }}
+                  {{ systemStatusSerie.isOsx }}
                 </p>
                 <p>
                   <strong>
                     Windows:
                   </strong>
-                  {{ system_status_serie.isWindows }}
+                  {{ systemStatusSerie.isWindows }}
                 </p>
                 <p>
                   <strong>
                     Docker:
                   </strong>
-                  {{ system_status_serie.isDocker }}
+                  {{ systemStatusSerie.isDocker }}
                 </p>
                 <p>
                   <strong>
                     Mode:
                   </strong>
-                  {{ system_status_serie.mode }}
+                  {{ systemStatusSerie.mode }}
                 </p>
                 <p>
                   <strong>
                     Branch:
                   </strong>
-                  {{ system_status_serie.branch }}
+                  {{ systemStatusSerie.branch }}
                 </p>
                 <p>
                   <strong>
                     Uptime:
                   </strong>
-                  {{ system_status_serie.uptime }}
+                  {{ systemStatusSerie.uptime }}
                 </p>
               </v-card-text>
             </v-card>
@@ -545,7 +505,7 @@ setInterval(() => {
         <v-row>
           <v-col>
             <v-card
-              v-if="disk_list_serie.length > 0"
+              v-if="diskListSerie.length > 0"
               >
               <v-card-title>
                 Space
@@ -561,7 +521,7 @@ setInterval(() => {
                 </thead>
                 <tbody>
                   <tr
-                    v-for="disk in disk_list_serie"
+                    v-for="disk in diskListSerie"
                     :key="disk.path"
                     >
                     <td>{{ disk.path }}</td>
@@ -570,7 +530,7 @@ setInterval(() => {
                     <td>
                       <v-progress-linear
                         :model-value="disk.ratio"
-                        :color="progress_color(disk.ratio)"
+                        :color="progressColor(disk.ratio)"
                         height="25"
                         rounded
                         striped
@@ -588,12 +548,12 @@ setInterval(() => {
         </v-row>
         <v-row>
           <v-col>
-            <v-card v-if="health_list_serie.length > 0">
+            <v-card v-if="healthListSerie.length > 0">
               <v-card-title>
                 About
               </v-card-title>
               <v-list>
-                <v-list-item v-for="(issue, index) in health_list_serie" :key="index">
+                <v-list-item v-for="(issue, index) in healthListSerie" :key="index">
                   <v-list-item-title>{{ issue.message }}</v-list-item-title>
                   <v-list-item-subtitle>
                     <a :href="issue.wikiUrl" target="_blank">More Info</a>
@@ -602,17 +562,17 @@ setInterval(() => {
               </v-list>
             </v-card>
             <v-alert
-              v-if="!is_loading_serie &&
-                    !disk_list_serie.length &&
-                    !health_list_serie.length &&
-                    !config_host_serie &&
-                    !system_status_serie"
+              v-if="!isLoadingSerie &&
+                    !diskListSerie.length &&
+                    !healthListSerie.length &&
+                    !configHostSerie &&
+                    !systemStatusSerie"
               type="info"
               >
               No system information found
             </v-alert>
             <p
-              v-if="is_loading_serie"
+              v-if="isLoadingSerie"
               justify="center"
               align="center"
               class="mt-4"

@@ -4,7 +4,7 @@ import { ref, watch, computed, onMounted } from 'vue';
 import { useCount } from '@/composables/useCount';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
-import { usePagination } from "@/composables/usePagination";
+import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
