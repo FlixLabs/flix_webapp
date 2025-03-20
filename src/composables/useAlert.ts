@@ -29,5 +29,10 @@ export function useAlert() {
     showAlert('error', 'mdi-alert-circle', text);
   };
 
-  return { alert, showSuccessAlert, showErrorAlert, resetAlert };
+  return {
+    alert,
+    showSuccessAlert,
+    showErrorAlert,
+    resetAlert
+  };
 }

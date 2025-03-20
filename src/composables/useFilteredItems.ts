@@ -8,5 +8,7 @@ export function useFilteredItems<T extends { title: string }>(items: Ref<T[]>, s
     );
   });
 
-  return { filteredItems };
+  return {
+    filteredItems
+  };
 }

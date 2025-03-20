@@ -7,5 +7,8 @@ export function useResettable<T>(initialValue: T) {
     state.value = structuredClone(initialValue);
   };
 
-  return { state, reset };
+  return {
+    state,
+    reset
+  };
 }

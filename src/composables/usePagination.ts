@@ -6,5 +6,7 @@ export function usePagination(items, page, itemsPerPage = 10) {
     return items.value.slice(start, start + itemsPerPage);
   });
 
-  return { paginatedItems };
+  return {
+    paginatedItems
+  };
 }
