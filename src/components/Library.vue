@@ -21,18 +21,7 @@ const {
   resetItemToDelete
 } = useDeleteConfirmation();
 
-const selected_movie = ref<any>(null);
-const selected_serie = ref<any>(null);
-
-const serie_episodes = ref<any[]>([]);
-
-const { dialog: movieDialog, reset: resetMovieDialog } = useDialog();
-const { dialog: serieDialog, reset: resetSerieDialog } = useDialog();
-
 const { state: search, reset: reset_search } = useResettable('');
-
-const movie_items = ref<any[]>([]);
-const serie_items = ref<any[]>([]);
 
 const selected_view = ref<'movies' | 'series'>('movies');
 
@@ -40,21 +29,25 @@ const items_per_page = 12;
 const movie_page = ref(1);
 const serie_page = ref(1);
 
-const { filteredItems: filtered_movies } = useFilteredItems(movie_items, search);
-const { filteredItems: filtered_series } = useFilteredItems(serie_items, search);
-
+const { state: movieItems, reset: resetMovieItems } = useResettable([]);
+const { state: selectedMovie, reset: resetSelectedMovie } = useResettable(null);
+const { dialog: movieDialog, reset: resetMovieDialog } = useDialog();
+const { filteredItems: filtered_movies } = useFilteredItems(movieItems, search);
 const movies_total_pages = computed(() =>
   Math.ceil(filtered_movies.value.length / items_per_page)
 );
+const { paginatedItems: paginated_movies } = usePagination(filtered_movies, movie_page, items_per_page);
+const { total: total_movies } = useCount(filtered_movies);
 
+const { state: serieItems, reset: resetSerieItems } = useResettable([]);
+const { state: selectedSerie, reset: resetSelectedSerie } = useResettable([]);
+const { dialog: serieDialog, reset: resetSerieDialog } = useDialog();
+const { state: serieEpisodes, reset: resetSerieEpisodes } = useResettable([]);
+const { filteredItems: filtered_series } = useFilteredItems(serieItems, search);
 const series_total_pages = computed(() =>
   Math.ceil(filtered_series.value.length / items_per_page)
 );
-
-const { paginatedItems: paginated_movies } = usePagination(filtered_movies, movie_page, items_per_page);
 const { paginatedItems: paginated_series } = usePagination(filtered_series, serie_page, items_per_page);
-
-const { total: total_movies } = useCount(filtered_movies);
 const { total: total_series } = useCount(filtered_series);
 
 function getContent(type) {
@@ -112,10 +105,10 @@ function getContent(type) {
       items.sort((a, b) => a.title.localeCompare(b.title));
 
       if (type == 'movies') {
-        movie_items.value = items;
+        movieItems.value = items;
       }
       if (type == 'series') {
-        serie_items.value = items;
+        serieItems.value = items;
       }
     })
     .catch((error) => {
@@ -134,7 +127,7 @@ function getContent(type) {
 function getSerieEpisodes(serie_id: number) {
   serieDialog.value = true;
 
-  serie_episodes.value = [];
+  serieEpisodes.value = [];
 
   const base_url = import.meta.env.VITE_SONARR_BASE_URL;
   const api_key = import.meta.env.VITE_SONARR_API_KEY;
@@ -143,7 +136,7 @@ function getSerieEpisodes(serie_id: number) {
     .then(async (response) => {
       const json_data = await response.json();
 
-      serie_episodes.value = json_data.map((episode) => ({
+      serieEpisodes.value = json_data.map((episode) => ({
         title: episode.title,
         season: episode.seasonNumber,
         episode: episode.episodeNumber,
@@ -157,23 +150,23 @@ function getSerieEpisodes(serie_id: number) {
 }
 
 function handleMovieClick(movie_id: number) {
-  const movie = movie_items.value.find(movie => movie.internalId === movie_id);
+  const movie = movieItems.value.find(movie => movie.internalId === movie_id);
   if (movie) {
-    selected_movie.value = movie;
+    selectedMovie.value = movie;
     movieDialog.value = true;
   }
 }
 
 function handleSerieClick(serie_id: number) {
-  const serie = serie_items.value.find(serie => serie.internalId === serie_id);
+  const serie = serieItems.value.find(serie => serie.internalId === serie_id);
   if (serie) {
-    selected_serie.value = serie;
+    selectedSerie.value = serie;
     getSerieEpisodes(serie.internalId);
   }
 }
 
 const grouped_episodes = computed(() => {
-  return serie_episodes.value.reduce((acc, episode) => {
+  return serieEpisodes.value.reduce((acc, episode) => {
     if (!acc[episode.season]) {
       acc[episode.season] = [];
     }
@@ -219,10 +212,10 @@ function deleteFromList(type, item) {
 function openDeleteConfirmationDialog(type, item) {
   if (!item) {
     if (type == 'movies') {
-      item = selected_movie.value
+      item = selectedMovie.value
     }
     if (type == 'serie') {
-      item = selected_serie.value;
+      item = selectedSerie.value;
     }
   }
   itemToDelete.value = {
@@ -452,11 +445,11 @@ onMounted(() => {
             Movie
           </v-card-title>
           <v-card-text>
-            {{ selected_movie.title }}
+            {{ selectedMovie.title }}
           </v-card-text>
           <v-card-actions>
             <v-btn
-              @click="openDeleteConfirmationDialog('movies', selected_movie.value)"
+              @click="openDeleteConfirmationDialog('movies', selectedMovie.value)"
               color="error"
               >
               Remove
@@ -623,7 +616,7 @@ onMounted(() => {
           </v-card-text>
           <v-card-actions>
             <v-btn
-              @click="openDeleteConfirmationDialog('series', selected_serie.value)"
+              @click="openDeleteConfirmationDialog('series', selectedSerie.value)"
               color="error"
               >
               Remove

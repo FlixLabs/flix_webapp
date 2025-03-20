@@ -21,22 +21,20 @@ const {
 
 const { state: search, reset: resetSearch } = useResettable('');
 
-const { state: movieItems, reset: resetMovieItems } = useResettable([]);
-const { state: qualityMovieItems, reset: resetQualityMovieItems } = useResettable([]);
-const { state: qualityMovie, reset: resetQualityMovie } = useResettable(1);
-
-const { state: serieItems, reset: resetSerieItems } = useResettable([]);
-const { state: qualitySerieItems, reset: resetQualitySerieItems } = useResettable([]);
-const { state: qualitySerie, reset: resetQualitySerie } = useResettable(1);
-
 const items_per_page = 4;
 const movie_page = ref(1);
 const serie_page = ref(1);
 
+const { state: movieItems, reset: resetMovieItems } = useResettable([]);
+const { state: qualityMovieItems, reset: resetQualityMovieItems } = useResettable([]);
+const { state: qualityMovie, reset: resetQualityMovie } = useResettable(1);
 const { paginatedItems: paginated_movies } = usePagination(movieItems, movie_page, items_per_page);
-const { paginatedItems: paginated_series } = usePagination(serieItems, serie_page, items_per_page);
-
 const { total: total_movies } = useCount(movieItems);
+
+const { state: serieItems, reset: resetSerieItems } = useResettable([]);
+const { state: qualitySerieItems, reset: resetQualitySerieItems } = useResettable([]);
+const { state: qualitySerie, reset: resetQualitySerie } = useResettable(1);
+const { paginatedItems: paginated_series } = usePagination(serieItems, serie_page, items_per_page);
 const { total: total_series } = useCount(serieItems);
 
 function getQualityProfileList(type) {
