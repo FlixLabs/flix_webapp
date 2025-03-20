@@ -6,6 +6,7 @@ import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
+import { useLibraryChecker } from '@/composables/useLibraryChecker';
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
@@ -28,6 +29,7 @@ const { state: qualityMovieItems, reset: resetQualityMovieItems } = useResettabl
 const { state: qualityMovie, reset: resetQualityMovie } = useResettable(1);
 const { paginatedItems: paginated_movies } = usePagination(movieItems, movie_page, items_per_page);
 const { total: total_movies } = useCount(movieItems);
+const { isAlreadyInLibrary: checkMovies } = useLibraryChecker("movies", movieItems, showErrorAlert);
 
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
 const { state: serieItems, reset: resetSerieItems } = useResettable([]);
@@ -35,6 +37,7 @@ const { state: qualitySerieItems, reset: resetQualitySerieItems } = useResettabl
 const { state: qualitySerie, reset: resetQualitySerie } = useResettable(1);
 const { paginatedItems: paginated_series } = usePagination(serieItems, serie_page, items_per_page);
 const { total: total_series } = useCount(serieItems);
+const { isAlreadyInLibrary: checkSeries } = useLibraryChecker("series", serieItems, showErrorAlert);
 
 function getQualityProfileList(type) {
   let url = null;
@@ -137,18 +140,18 @@ function getContent(type, keep_page = false) {
 
       if (type == 'movies') {
         movieItems.value = items;
+        checkMovies();
         if (!keep_page) {
           movie_page.value = 1;
         }
       }
       if (type == 'series') {
         serieItems.value = items;
+        checkSeries();
         if (!keep_page) {
           serie_page.value = 1;
         }
       }
-
-      isAlreadyInLibrary(type);
     })
     .catch(error => {
       showErrorAlert(error);
@@ -161,58 +164,6 @@ function getContent(type, keep_page = false) {
         resetIsLoadingSerie();
       }
     });
-}
-
-function isAlreadyInLibrary(type) {
-  let base_url = null;
-  let api_key = null;
-  let url_type = null;
-
-  if (type == 'movies') {
-    base_url = import.meta.env.VITE_RADARR_BASE_URL;
-    api_key = import.meta.env.VITE_RADARR_API_KEY;
-    url_type = 'movie';
-  }
-  if (type == 'series') {
-    base_url = import.meta.env.VITE_SONARR_BASE_URL;
-    api_key = import.meta.env.VITE_SONARR_API_KEY;
-    url_type = 'series';
-  }
-
-  fetch(base_url + '/api/v3/' + url_type + '?apikey=' + api_key)
-    .then(async response => {
-      const json_data = await response.json();
-
-      let array_items = [];
-      let id_key = null;
-
-      if (type == 'movies') {
-        array_items = movieItems.value;
-        id_key = 'tmdbId';
-      }
-
-      if (type == 'series') {
-        array_items = serieItems.value;
-        id_key = 'tvdbId';
-      }
-
-      if (array_items.length > 0 && id_key) {
-        markAsAlreadyInLibrary(array_items, json_data, id_key);
-      }
-    })
-    .catch(error => {
-      showErrorAlert(error);
-    });
-}
-
-function markAsAlreadyInLibrary(array_items, json_data, id_key) {
-  for (let item of array_items) {
-    for (let compare_item of json_data) {
-      if (item.id == compare_item[id_key]) {
-        item.already_in_library = true;
-      }
-    }
-  }
 }
 
 function addToList(type, item) {
