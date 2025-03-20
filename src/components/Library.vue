@@ -96,6 +96,7 @@ function getContent(type) {
           prependAvatar: item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
           title: title,
           year: item.year,
+          overview: item.overview,
           hasFile: item.hasFile,
           status: item.status
         });
@@ -454,6 +455,11 @@ onMounted(() => {
                 ({{ selectedMovie.year }})
               </v-col>
             </v-row>
+            <v-row>
+              <v-col>
+                {{ selectedMovie.overview }}
+              </v-col>
+            </v-row>
           </v-card-text>
           <v-card-actions>
             <v-btn
@@ -572,6 +578,11 @@ onMounted(() => {
             <v-row>
               <v-col>
                 ({{ selectedSerie.year }})
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                {{ selectedSerie.overview }}
               </v-col>
             </v-row>
           </v-card-text>
