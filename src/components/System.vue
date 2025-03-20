@@ -2,19 +2,22 @@
 
 import { ref, onMounted, computed } from 'vue';
 import { useResettable } from '@/composables/useResettable';
+import { useAlert } from '@/composables/useAlert';
 import { useDiskAndHealthList } from '@/composables/useDiskAndHealthList';
+
+const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
 const { createDiskList, createHealthList } = useDiskAndHealthList();
 
 const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
-const configHostMovie = ref<Record<string, any> | null>(null);
-const systemStatusMovie = ref<Record<string, any> | null>(null);
+const configHostMovie = ref<Record<string, any> | null>({});
+const systemStatusMovie = ref<Record<string, any> | null>({});
 const diskListMovie = createDiskList();
 const healthListMovie = createHealthList();
 
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
-const configHostSerie = ref<Record<string, any> | null>(null);
-const systemStatusSerie = ref<Record<string, any> | null>(null);
+const configHostSerie = ref<Record<string, any> | null>({});
+const systemStatusSerie = ref<Record<string, any> | null>({});
 const diskListSerie = createDiskList();
 const healthListSerie = createHealthList();
 
@@ -27,7 +30,7 @@ function getData(type, endpoint) {
   let base_url = null;
   let api_key = null;
 
-  if (type == 'movie') {
+  if (type == 'movies') {
     isLoadingMovie.value = true;
     base_url = import.meta.env.VITE_RADARR_BASE_URL;
     api_key = import.meta.env.VITE_RADARR_API_KEY;
@@ -58,7 +61,7 @@ function getData(type, endpoint) {
           };
         });
 
-        if (type == 'movie') {
+        if (type == 'movies') {
           diskListMovie.value = data;
         }
         if (type == 'series') {
@@ -76,7 +79,7 @@ function getData(type, endpoint) {
           };
         });
 
-        if (type == 'movie') {
+        if (type == 'movies') {
           healthListMovie.value = data;
         }
         if (type == 'series') {
@@ -85,7 +88,7 @@ function getData(type, endpoint) {
       }
 
       if (endpoint == 'config/host') {
-        if (type == 'movie') {
+        if (type == 'movies') {
           configHostMovie.value = json_data;
         }
         if (type == 'series') {
@@ -94,7 +97,7 @@ function getData(type, endpoint) {
       }
 
       if (endpoint == 'system/status') {
-        if (type == 'movie') {
+        if (type == 'movies') {
           systemStatusMovie.value = json_data;
           systemStatusMovie.value.uptime = null;
           if (systemStatusMovie.value.startTime) {
@@ -111,10 +114,10 @@ function getData(type, endpoint) {
       }
     })
     .catch((error) => {
-      console.error(error);
+      showErrorAlert(error);
     })
     .finally(() => {
-      if (type == 'movie') {
+      if (type == 'movies') {
         resetIsLoadingMovie();
       }
       if (type == 'series') {
@@ -140,13 +143,13 @@ function calculateUptime(startTimeStr) {
 }
 
 onMounted(() => {
-  getData('movie', 'diskspace');
+  getData('movies', 'diskspace');
   getData('series', 'diskspace');
-  getData('movie', 'health');
+  getData('movies', 'health');
   getData('series', 'health');
-  getData('movie', 'config/host');
+  getData('movies', 'config/host');
   getData('series', 'config/host');
-  getData('movie', 'system/status');
+  getData('movies', 'system/status');
   getData('series', 'system/status');
 });
 
