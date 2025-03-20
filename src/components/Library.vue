@@ -112,7 +112,7 @@ function getContent(type) {
       }
     })
     .catch((error) => {
-      console.error(error);
+      showErrorAlert(error);
     })
     .finally(() => {
       if (type == 'movies') {
@@ -145,7 +145,7 @@ function getSerieEpisodes(serie_id: number) {
       }));
     })
     .catch((error) => {
-      console.error(error);
+      showErrorAlert(error);
     });
 }
 

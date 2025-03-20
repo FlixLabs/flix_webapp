@@ -160,7 +160,7 @@ function getContent(type) {
       });
     })
     .catch((error) => {
-      console.error(error);
+      showErrorAlert(error);
     })
     .finally(() => {
       if (type == 'movies') {

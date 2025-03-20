@@ -32,7 +32,7 @@ function getData(key) {
       }
     })
     .catch((error) => {
-      console.error(error);
+      showErrorAlert(error);
     })
     .finally(() => {
       resetIsLoading();
