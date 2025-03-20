@@ -9,9 +9,6 @@ import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
-const { state: is_loading_movie, reset: reset_is_loading_movie } = useResettable(false);
-const { state: is_loading_serie, reset: reset_is_loading_serie } = useResettable(false);
-
 const {
   deleteConfirmationDialog,
   resetDeleteConfirmationDialog,
@@ -25,12 +22,14 @@ const items_per_page = 4;
 const movie_page = ref(1);
 const serie_page = ref(1);
 
+const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
 const { state: movieItems, reset: resetMovieItems } = useResettable([]);
 const { state: qualityMovieItems, reset: resetQualityMovieItems } = useResettable([]);
 const { state: qualityMovie, reset: resetQualityMovie } = useResettable(1);
 const { paginatedItems: paginated_movies } = usePagination(movieItems, movie_page, items_per_page);
 const { total: total_movies } = useCount(movieItems);
 
+const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
 const { state: serieItems, reset: resetSerieItems } = useResettable([]);
 const { state: qualitySerieItems, reset: resetQualitySerieItems } = useResettable([]);
 const { state: qualitySerie, reset: resetQualitySerie } = useResettable(1);
@@ -84,13 +83,13 @@ function getContent(type, keep_page = false) {
   let url_type = null;
 
   if (type == 'movies') {
-    is_loading_movie.value = true;
+    isLoadingMovie.value = true;
     base_url = import.meta.env.VITE_RADARR_BASE_URL;
     api_key = import.meta.env.VITE_RADARR_API_KEY;
     url_type = 'movie';
   }
   if (type == 'series') {
-    is_loading_serie.value = true;
+    isLoadingSerie.value = true;
     base_url = import.meta.env.VITE_SONARR_BASE_URL;
     api_key = import.meta.env.VITE_SONARR_API_KEY;
     url_type = 'series';
@@ -157,10 +156,10 @@ function getContent(type, keep_page = false) {
     })
     .finally(() => {
       if (type == 'movies') {
-        reset_is_loading_movie();
+        resetIsLoadingMovie();
       }
       if (type == 'series') {
-        reset_is_loading_serie();
+        resetIsLoadingSerie();
       }
     });
 }
@@ -505,7 +504,7 @@ onMounted(() => {
           </v-list-item>
         </v-list>
         <v-row
-          v-if="is_loading_movie"
+          v-if="isLoadingMovie"
           justify="center"
           align="center"
           class="mt-4"
@@ -522,7 +521,7 @@ onMounted(() => {
           </span>
         </v-row>
         <v-alert
-          v-else-if="!paginated_movies.length && !is_loading_movie"
+          v-else-if="!paginated_movies.length && !isLoadingMovie"
           type="info"
           >
           No movies found
@@ -606,7 +605,7 @@ onMounted(() => {
           </v-list-item>
         </v-list>
         <v-row
-          v-if="is_loading_serie"
+          v-if="isLoadingSerie"
           justify="center"
           align="center"
           class="mt-4"
@@ -623,7 +622,7 @@ onMounted(() => {
           </span>
         </v-row>
         <v-alert
-          v-else-if="!paginated_series.length && !is_loading_serie"
+          v-else-if="!paginated_series.length && !isLoadingSerie"
           type="info"
           >
           No series found
