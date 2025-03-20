@@ -5,7 +5,7 @@ import { useCount } from '@/composables/useCount';
 import { useFilteredItems } from '@/composables/useFilteredItems';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
-import { usePagination } from "@/composables/usePagination";
+import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useDialog } from '@/composables/useDialog';
 
