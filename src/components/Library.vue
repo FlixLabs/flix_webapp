@@ -444,7 +444,16 @@ onMounted(() => {
             Movie
           </v-card-title>
           <v-card-text>
-            {{ selectedMovie.title }}
+            <v-row>
+              <v-col>
+                {{ selectedMovie.title }}
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                ({{ selectedMovie.year }})
+              </v-col>
+            </v-row>
           </v-card-text>
           <v-card-actions>
             <v-btn
@@ -554,6 +563,18 @@ onMounted(() => {
           <v-card-title>
             Episodes
           </v-card-title>
+          <v-card-text>
+            <v-row>
+              <v-col>
+                {{ selectedSerie.title }}
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                ({{ selectedSerie.year }})
+              </v-col>
+            </v-row>
+          </v-card-text>
           <v-card-text
             v-if="Object.keys(grouped_episodes).length"
             >
