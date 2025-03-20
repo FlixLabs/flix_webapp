@@ -7,7 +7,7 @@ import { useAlert } from '@/composables/useAlert';
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
-const { state: is_loading, reset: reset_is_loading } = useResettable(false);
+const { state: isLoading, reset: resetIsLoading } = useResettable(false);
 
 const initial_auth = false;
 const auth = ref(initial_auth);
@@ -27,7 +27,7 @@ const reset_auth_data = () => {
 function getData(key) {
   let base_url = import.meta.env.VITE_WEBDIS_URL;
 
-  is_loading.value = true;
+  isLoading.value = true;
 
   fetch(base_url + '/JSON.GET/' + key)
     .then(async (response) => {
@@ -42,14 +42,14 @@ function getData(key) {
       console.error(error);
     })
     .finally(() => {
-      reset_is_loading();
+      resetIsLoading();
     });
 }
 
 function setData(key) {
   let base_url = import.meta.env.VITE_WEBDIS_URL;
 
-  is_loading.value = true;
+  isLoading.value = true;
 
   if (auth_data.value.username && auth_data.value.password) {
     auth_data.value.password = CryptoJS.AES.encrypt(auth_data.value.password, import.meta.env.VITE_CRYPT_KEY).toString();
@@ -69,7 +69,7 @@ function setData(key) {
         showErrorAlert(error);
       })
       .finally(() => {
-        reset_is_loading();
+        resetIsLoading();
       });
   } else {
     showErrorAlert('Username and password cannot be empty');
@@ -79,7 +79,7 @@ function setData(key) {
 function deleteData(key) {
   let base_url = import.meta.env.VITE_WEBDIS_URL;
 
-  is_loading.value = true;
+  isLoading.value = true;
 
   fetch(base_url + '/DEL/' + key)
     .then(async (response) => {
@@ -92,7 +92,7 @@ function deleteData(key) {
       showErrorAlert(error);
     })
     .finally(() => {
-      reset_is_loading();
+      resetIsLoading();
     });
 }
 

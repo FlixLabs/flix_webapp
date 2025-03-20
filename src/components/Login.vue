@@ -10,7 +10,7 @@ const router = useRouter();
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
-const { state: is_loading, reset: reset_is_loading } = useResettable(false);
+const { state: isLoading, reset: resetIsLoading } = useResettable(false);
 
 const initial_auth_data = {
   username: null,
@@ -24,7 +24,7 @@ const reset_auth_data = () => {
 function getData(key) {
   let base_url = import.meta.env.VITE_WEBDIS_URL;
 
-  is_loading.value = true;
+  isLoading.value = true;
 
   if (auth_data.value.username && auth_data.value.password) {
     fetch(base_url + '/JSON.GET/' + key)
@@ -47,8 +47,8 @@ function getData(key) {
         showErrorAlert(error);
       })
       .finally(() => {
-        //reset_is_loading(); Not working
-        is_loading.value = false;
+        //resetIsLoading(); Not working
+        isLoading.value = false;
       });
   } else {
     showErrorAlert('Username and password cannot be empty');
@@ -63,8 +63,8 @@ function checkData(key) {
       const json_data = await response.json();
 
       if (json_data && json_data['JSON.GET']) {
-        // reset_is_loading(); Not working
-        is_loading.value = false;
+        // resetIsLoading(); Not working
+        isLoading.value = false;
       } else {
         localStorage.setItem('flix_webapp_is_authenticated', 'true');
         router.push('/dashboard');
@@ -105,7 +105,7 @@ onMounted(() => {
   </transition>
   <v-container>
     <div
-      v-if="!is_loading"
+      v-if="!isLoading"
       >
       <v-text-field
         label="Username"
@@ -133,7 +133,7 @@ onMounted(() => {
       </div>
     </div>
     <p
-      v-if="is_loading"
+      v-if="isLoading"
       justify="center"
       align="center"
       class="mt-4"
