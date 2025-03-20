@@ -9,20 +9,13 @@ const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
 const { state: isLoading, reset: resetIsLoading } = useResettable(false);
 
-const initial_auth = false;
-const auth = ref(initial_auth);
-const reset_auth = () => {
-  auth.value = structuredClone(initial_auth);
-};
+const { state: auth, reset: resetAuth } = useResettable(false);
 
-const initial_auth_data = {
+const initialAuthData = {
   username: null,
   password: null
 };
-const auth_data = ref(initial_auth_data);
-const reset_auth_data = () => {
-  auth_data.value = structuredClone(initial_auth_data);
-};
+const { state: authData, reset: resetAuthData } = useResettable(initialAuthData);
 
 function getData(key) {
   let base_url = import.meta.env.VITE_WEBDIS_URL;
@@ -34,7 +27,7 @@ function getData(key) {
       const json_data = await response.json();
 
       if (json_data && json_data['JSON.GET']) {
-        auth_data.value = JSON.parse(json_data['JSON.GET']);
+        authData.value = JSON.parse(json_data['JSON.GET']);
         auth.value = true;
       }
     })
@@ -51,9 +44,9 @@ function setData(key) {
 
   isLoading.value = true;
 
-  if (auth_data.value.username && auth_data.value.password) {
-    auth_data.value.password = CryptoJS.AES.encrypt(auth_data.value.password, import.meta.env.VITE_CRYPT_KEY).toString();
-    const json_encoded = encodeURIComponent(JSON.stringify(auth_data.value));
+  if (authData.value.username && authData.value.password) {
+    authData.value.password = CryptoJS.AES.encrypt(authData.value.password, import.meta.env.VITE_CRYPT_KEY).toString();
+    const json_encoded = encodeURIComponent(JSON.stringify(authData.value));
 
     fetch(base_url + '/JSON.SET/' + key + '/$/' + json_encoded)
       .then(async (response) => {
@@ -104,9 +97,9 @@ watch(auth, (newValue) => {
   if (!newValue) {
     deleteData('auth');
 
-    // reset_auth_data(); Not working
-    auth_data.value.username = null;
-    auth_data.value.password = null;
+    // resetAuthData(); Not working
+    authData.value.username = null;
+    authData.value.password = null;
   }
 });
 </script>
@@ -150,7 +143,7 @@ watch(auth, (newValue) => {
                 <v-text-field
                   label="Username"
                   variant="outlined"
-                  v-model="auth_data.username"
+                  v-model="authData.username"
                   prepend-icon="mdi-form-textbox"
                   clearable
                   />
@@ -158,7 +151,7 @@ watch(auth, (newValue) => {
                   label="Password"
                   type="password"
                   variant="outlined"
-                  v-model="auth_data.password"
+                  v-model="authData.password"
                   prepend-icon="mdi-form-textbox-password"
                   clearable
                   />
