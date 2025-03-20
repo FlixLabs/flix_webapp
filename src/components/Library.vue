@@ -7,6 +7,7 @@ import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from "@/composables/usePagination";
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
+import { useDialog } from '@/composables/useDialog';
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
@@ -25,17 +26,8 @@ const selected_serie = ref<any>(null);
 
 const serie_episodes = ref<any[]>([]);
 
-const initial_movie_dialog = false;
-const movie_dialog = ref(initial_movie_dialog);
-const reset_movie_dialog = () => {
-  movie_dialog.value = structuredClone(initial_movie_dialog);
-};
-
-const initial_serie_dialog = false;
-const serie_dialog = ref(initial_serie_dialog);
-const reset_serie_dialog = () => {
-  serie_dialog.value = structuredClone(initial_serie_dialog);
-};
+const { dialog: movieDialog, reset: resetMovieDialog } = useDialog();
+const { dialog: serieDialog, reset: resetSerieDialog } = useDialog();
 
 const { state: search, reset: reset_search } = useResettable('');
 
@@ -140,7 +132,7 @@ function getContent(type) {
 }
 
 function getSerieEpisodes(serie_id: number) {
-  serie_dialog.value = true;
+  serieDialog.value = true;
 
   serie_episodes.value = [];
 
@@ -168,7 +160,7 @@ function handleMovieClick(movie_id: number) {
   const movie = movie_items.value.find(movie => movie.internalId === movie_id);
   if (movie) {
     selected_movie.value = movie;
-    movie_dialog.value = true;
+    movieDialog.value = true;
   }
 }
 
@@ -246,8 +238,8 @@ function confirmDelete() {
     deleteFromList(type, item);
     resetDeleteConfirmationDialog();
     resetItemToDelete();
-    reset_movie_dialog();
-    reset_serie_dialog();
+    resetMovieDialog();
+    resetSerieDialog();
   }
 }
 
@@ -451,7 +443,7 @@ onMounted(() => {
         rounded
         />
       <v-dialog
-        v-model="movie_dialog"
+        v-model="movieDialog"
         max-width="600px"
         max-height="600px"
         >
@@ -470,7 +462,7 @@ onMounted(() => {
               Remove
             </v-btn>
             <v-btn
-              @click="reset_movie_dialog()"
+              @click="resetMovieDialog()"
               color="secondary"
               >
               Close
@@ -562,7 +554,7 @@ onMounted(() => {
         rounded
         />
       <v-dialog
-        v-model="serie_dialog"
+        v-model="serieDialog"
         max-width="600px"
         max-height="600px"
         >
@@ -637,7 +629,7 @@ onMounted(() => {
               Remove
             </v-btn>
             <v-btn
-              @click="reset_serie_dialog()"
+              @click="resetSerieDialog()"
               color="secondary"
               >
               Close
