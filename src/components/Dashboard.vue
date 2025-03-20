@@ -128,7 +128,6 @@ function getContent(type, keep_page = false) {
           title: title,
           year: item.year,
           overview: item.overview,
-          // passer par une var pour quality
           selected_quality: quality,
           already_in_library: false
         });
