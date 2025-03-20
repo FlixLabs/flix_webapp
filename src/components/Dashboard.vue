@@ -19,35 +19,25 @@ const {
   resetItemToDelete
 } = useDeleteConfirmation();
 
-const { state: search, reset: reset_search } = useResettable('');
+const { state: search, reset: resetSearch } = useResettable('');
 
-const movie_items = ref<any[]>([]);
-const quality_movie_items = ref<any[]>([]);
+const { state: movieItems, reset: resetMovieItems } = useResettable([]);
+const { state: qualityMovieItems, reset: resetQualityMovieItems } = useResettable([]);
+const { state: qualityMovie, reset: resetQualityMovie } = useResettable(1);
 
-const initial_quality_movie = 1;
-const quality_movie = ref(initial_quality_movie);
-const reset_quality_movie = () => {
-  quality_movie.value = structuredClone(initial_quality_movie);
-};
-
-const serie_items = ref<any[]>([]);
-const quality_serie_items = ref<any[]>([]);
-
-const initial_quality_serie = 1;
-const quality_serie = ref(initial_quality_serie);
-const reset_quality_serie = () => {
-  quality_serie.value = structuredClone(initial_quality_serie);
-};
+const { state: serieItems, reset: resetSerieItems } = useResettable([]);
+const { state: qualitySerieItems, reset: resetQualitySerieItems } = useResettable([]);
+const { state: qualitySerie, reset: resetQualitySerie } = useResettable(1);
 
 const items_per_page = 4;
 const movie_page = ref(1);
 const serie_page = ref(1);
 
-const { paginatedItems: paginated_movies } = usePagination(movie_items, movie_page, items_per_page);
-const { paginatedItems: paginated_series } = usePagination(serie_items, serie_page, items_per_page);
+const { paginatedItems: paginated_movies } = usePagination(movieItems, movie_page, items_per_page);
+const { paginatedItems: paginated_series } = usePagination(serieItems, serie_page, items_per_page);
 
-const { total: total_movies } = useCount(movie_items);
-const { total: total_series } = useCount(serie_items);
+const { total: total_movies } = useCount(movieItems);
+const { total: total_series } = useCount(serieItems);
 
 function getQualityProfileList(type) {
   let url = null;
@@ -77,12 +67,12 @@ function getQualityProfileList(type) {
       }
 
       if (type == 'movies') {
-        quality_movie_items.value = items;
-        quality_movie.value = any_profile.value;
+        qualityMovieItems.value = items;
+        qualityMovie.value = any_profile.value;
       }
       if (type == 'series') {
-        quality_serie_items.value = items;
-        quality_serie.value = any_profile.value;
+        qualitySerieItems.value = items;
+        qualitySerie.value = any_profile.value;
       }
     })
     .catch(error => {
@@ -120,11 +110,11 @@ function getContent(type, keep_page = false) {
 
         if (type == 'movies') {
           id = item.tmdbId;
-          quality = quality_movie;
+          quality = qualityMovie;
         }
         if (type == 'series') {
           id = item.tvdbId;
-          quality = quality_serie;
+          quality = qualitySerie;
         }
 
         let title = item.title;
@@ -150,13 +140,13 @@ function getContent(type, keep_page = false) {
       items.sort((a, b) => b.year - a.year);
 
       if (type == 'movies') {
-        movie_items.value = items;
+        movieItems.value = items;
         if (!keep_page) {
           movie_page.value = 1;
         }
       }
       if (type == 'series') {
-        serie_items.value = items;
+        serieItems.value = items;
         if (!keep_page) {
           serie_page.value = 1;
         }
@@ -201,12 +191,12 @@ function isAlreadyInLibrary(type) {
       let id_key = null;
 
       if (type == 'movies') {
-        array_items = movie_items.value;
+        array_items = movieItems.value;
         id_key = 'tmdbId';
       }
 
       if (type == 'series') {
-        array_items = serie_items.value;
+        array_items = serieItems.value;
         id_key = 'tvdbId';
       }
 
@@ -348,8 +338,8 @@ watch(search, (newValue) => {
   } else {
     localStorage.removeItem("search_" + window.location.href);
 
-    reset_movie_items();
-    reset_serie_items();
+    resetMovieItems();
+    resetSerieItems();
   }
 });
 
@@ -484,7 +474,7 @@ onMounted(() => {
                 <v-col>
                   <v-select
                     v-model="item.selected_quality"
-                    :items="quality_movie_items"
+                    :items="qualityMovieItems"
                     label="Quality"
                     variant="outlined"
                     :disabled="item.already_in_library"
@@ -540,9 +530,9 @@ onMounted(() => {
           No movies found
         </v-alert>
         <v-pagination
-          v-if="movie_items.length > items_per_page"
+          v-if="movieItems.length > items_per_page"
           v-model="movie_page"
-          :length="Math.ceil(movie_items.length / items_per_page)"
+          :length="Math.ceil(movieItems.length / items_per_page)"
           rounded
           />
       </v-col>
@@ -585,7 +575,7 @@ onMounted(() => {
                 <v-col>
                   <v-select
                     v-model="item.selected_quality"
-                    :items="quality_serie_items"
+                    :items="qualitySerieItems"
                     label="Quality"
                     variant="outlined"
                     :disabled="item.already_in_library"
@@ -641,9 +631,9 @@ onMounted(() => {
           No series found
         </v-alert>
         <v-pagination
-          v-if="serie_items.length > items_per_page"
+          v-if="serieItems.length > items_per_page"
           v-model="serie_page"
-          :length="Math.ceil(serie_items.length / items_per_page)"
+          :length="Math.ceil(serieItems.length / items_per_page)"
           rounded
           />
       </v-col>
