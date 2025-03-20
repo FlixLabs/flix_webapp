@@ -214,7 +214,7 @@ function openDeleteConfirmationDialog(type, item) {
     if (type == 'movies') {
       item = selectedMovie.value
     }
-    if (type == 'serie') {
+    if (type == 'series') {
       item = selectedSerie.value;
     }
   }
@@ -463,7 +463,7 @@ onMounted(() => {
           </v-card-text>
           <v-card-actions>
             <v-btn
-              @click="openDeleteConfirmationDialog('movies', selectedMovie.value)"
+              @click="openDeleteConfirmationDialog('movies', selectedMovie)"
               color="error"
               >
               Remove
@@ -647,7 +647,7 @@ onMounted(() => {
           </v-card-text>
           <v-card-actions>
             <v-btn
-              @click="openDeleteConfirmationDialog('series', selectedSerie.value)"
+              @click="openDeleteConfirmationDialog('series', selectedSerie)"
               color="error"
               >
               Remove

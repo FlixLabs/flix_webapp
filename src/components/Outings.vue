@@ -4,15 +4,21 @@ import { ref, computed, onMounted } from 'vue';
 import { useCount } from '@/composables/useCount';
 import { useFilteredItems } from '@/composables/useFilteredItems';
 import { useResettable } from '@/composables/useResettable';
+import { useAlert } from '@/composables/useAlert';
 import { usePagination } from "@/composables/usePagination";
+import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
+import { useDialog } from '@/composables/useDialog';
 
-const { state: is_loading_movie, reset: reset_is_loading_movie } = useResettable(false);
-const { state: is_loading_serie, reset: reset_is_loading_serie } = useResettable(false);
+const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
-const { state: search, reset: reset_search } = useResettable('');
+const {
+  deleteConfirmationDialog,
+  resetDeleteConfirmationDialog,
+  itemToDelete,
+  resetItemToDelete
+} = useDeleteConfirmation();
 
-const movie_items = ref<any[]>([]);
-const serie_items = ref<any[]>([]);
+const { state: search, reset: resetSearch } = useResettable('');
 
 const selected_view = ref<'movies' | 'series'>('movies');
 
@@ -20,38 +26,43 @@ const items_per_page = 12;
 const movie_page = ref(1);
 const serie_page = ref(1);
 
-const { filteredItems: filtered_movies } = useFilteredItems(movie_items, search);
-const { filteredItems: filtered_series } = useFilteredItems(serie_items, search);
-
+const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
+const { state: movieItems, reset: resetMovieItems } = useResettable([]);
+const { state: selectedMovie, reset: resetSelectedMovie } = useResettable(null);
+const { dialog: movieDialog, reset: resetMovieDialog } = useDialog();
+const { filteredItems: filtered_movies } = useFilteredItems(movieItems, search);
 const movies_total_pages = computed(() =>
   Math.ceil(filtered_movies.value.length / items_per_page)
 );
+const { paginatedItems: paginated_movies } = usePagination(filtered_movies, movie_page, items_per_page);
+const { total: total_movies } = useCount(filtered_movies);
 
+const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
+const { state: serieItems, reset: resetSerieItems } = useResettable([]);
+const { state: selectedSerie, reset: resetSelectedSerie } = useResettable([]);
+const { dialog: serieDialog, reset: resetSerieDialog } = useDialog();
+const { filteredItems: filtered_series } = useFilteredItems(serieItems, search);
 const series_total_pages = computed(() =>
   Math.ceil(filtered_series.value.length / items_per_page)
 );
-
-const { paginatedItems: paginated_movies } = usePagination(filtered_movies, movie_page, items_per_page);
 const { paginatedItems: paginated_series } = usePagination(filtered_series, serie_page, items_per_page);
-
-const { total: total_movies } = useCount(filtered_movies);
 const { total: total_series } = useCount(filtered_series);
 
 function getContent(type) {
-  const api_key = import.meta.env.VITE_IMDB_API_KEY;
-  const base_url = import.meta.env.VITE_IMDB_BASE_URL;
+  const api_key = import.meta.env.VITE_TMDB_API_KEY;
+  const base_url = import.meta.env.VITE_TMDB_BASE_URL;
   let url_type = null;
   let url_request = null;
   let url_suffixe = null;
 
   if (type == 'movies') {
-    is_loading_movie.value = true;
+    isLoadingMovie.value = true;
     url_type = 'movie';
     url_request = 'upcoming';
     url_suffixe = '';
   }
   if (type == 'series') {
-    is_loading_serie.value = true;
+    isLoadingSerie.value = true;
     url_type = 'tv';
     url_request = 'on_the_air';
     url_suffixe = '';
@@ -88,7 +99,8 @@ function getContent(type) {
           id: item.id,
           poster: poster_full,
           title: title,
-          release_date: release_date
+          release_date: release_date,
+          overview: item.overview
         });
       }
 
@@ -135,11 +147,13 @@ function getContent(type) {
 
       return Promise.all(promises).then(() => {
         if (type == 'movies') {
-          movie_items.value = items;
+          movieItems.value = items;
         }
         if (type == 'series') {
-          serie_items.value = items;
+          serieItems.value = items;
         }
+
+        isAlreadyInLibrary(type);
       });
     })
     .catch((error) => {
@@ -147,12 +161,211 @@ function getContent(type) {
     })
     .finally(() => {
       if (type == 'movies') {
-        reset_is_loading_movie();
+        resetIsLoadingMovie();
       }
       if (type == 'series') {
-        reset_is_loading_serie();
+        resetIsLoadingSerie();
       }
     });
+}
+
+function isAlreadyInLibrary(type) {
+  let base_url = null;
+  let api_key = null;
+  let url_type = null;
+
+  if (type == 'movies') {
+    base_url = import.meta.env.VITE_RADARR_BASE_URL;
+    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    url_type = 'movie';
+  }
+  if (type == 'series') {
+    base_url = import.meta.env.VITE_SONARR_BASE_URL;
+    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    url_type = 'series';
+  }
+
+  fetch(base_url + '/api/v3/' + url_type + '?apikey=' + api_key)
+    .then(async response => {
+      const json_data = await response.json();
+
+      let array_items = [];
+      let id_key = null;
+
+      if (type == 'movies') {
+        array_items = movieItems.value;
+        id_key = 'tmdbId';
+      }
+
+      if (type == 'series') {
+        array_items = serieItems.value;
+        id_key = 'tvdbId';
+      }
+
+      if (array_items.length > 0 && id_key) {
+        markAsAlreadyInLibrary(array_items, json_data, id_key);
+      }
+    })
+    .catch(error => {
+      showErrorAlert(error);
+    });
+}
+
+function markAsAlreadyInLibrary(array_items, json_data, id_key) {
+  for (let item of array_items) {
+    for (let compare_item of json_data) {
+      if (item.id == compare_item[id_key]) {
+        item.internalId = compare_item.id;
+        item.already_in_library = true;
+      }
+    }
+  }
+}
+
+function handleMovieClick(movie_id: number) {
+  const movie = movieItems.value.find(movie => movie.id === movie_id);
+  if (movie) {
+    selectedMovie.value = movie;
+    movieDialog.value = true;
+  }
+}
+
+function handleSerieClick(serie_id: number) {
+  const serie = serieItems.value.find(serie => serie.id === serie_id);
+  if (serie) {
+    selectedSerie.value = serie;
+    serieDialog.value = true;
+  }
+}
+
+function addToList(type, item) {
+  let base_url = null;
+  let api_key = null;
+  let url_type = null;
+  let data = {};
+
+  const qualityProfileId = 1;
+
+  if (type == 'movies') {
+    base_url = import.meta.env.VITE_RADARR_BASE_URL;
+    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    url_type = 'movie';
+    data = {
+      tmdbId: item.id,
+      title: item.title,
+      year: item.year,
+      qualityProfileId: qualityProfileId,
+      rootFolderPath: "/movies",
+      monitored: true,
+      addOptions: {
+        searchForMovie: true
+      }
+    }
+  }
+  if (type == 'series') {
+    base_url = import.meta.env.VITE_SONARR_BASE_URL;
+    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    url_type = 'series';
+    data = {
+      tvdbId: item.id,
+      title: item.title,
+      year: item.year,
+      qualityProfileId: qualityProfileId,
+      rootFolderPath: "/tv",
+      monitored: true,
+      addOptions: {
+        searchForMissingEpisodes: true
+      }
+    }
+  }
+
+  fetch(base_url + '/api/v3/' + url_type, {
+		method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json;charset=utf-8',
+      'X-Api-Key': api_key
+    },
+    body: JSON.stringify(data)
+	})
+  .then(async response => {
+    if (response.ok) {
+      showSuccessAlert("Added successfully");
+      getContent(type, true);
+    }
+  })
+	.catch(error => {
+		showErrorAlert("Adding failed");
+	})
+  .finally(() => {
+    if (type == 'movies') {
+      resetMovieDialog();
+    }
+    if (type == 'series') {
+      resetSerieDialog();
+    }
+  });
+}
+
+function deleteFromList(type, item) {
+  let base_url = null;
+  let api_key = null;
+  let url_type = null;
+
+  if (type == 'movies') {
+    base_url = import.meta.env.VITE_RADARR_BASE_URL;
+    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    url_type = 'movie';
+  }
+  if (type == 'series') {
+    base_url = import.meta.env.VITE_SONARR_BASE_URL;
+    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    url_type = 'series';
+  }
+
+  fetch(base_url + '/api/v3/' + url_type + '/' + item.internalId + '?apikey=' + api_key + '&deleteFiles=true', {
+    method: 'DELETE',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json;charset=utf-8',
+    },
+  })
+  .then(async response => {
+    if (response.ok) {
+      showSuccessAlert("Deleted successfully");
+      getContent(type, true);
+    }
+  })
+  .catch(error => {
+    showErrorAlert("Deletion failed");
+  });
+}
+
+function openDeleteConfirmationDialog(type, item) {
+  if (!item) {
+    if (type == 'movies') {
+      item = selectedMovie.value;
+    }
+    if (type == 'series') {
+      item = selectedSerie.value;
+    }
+  }
+  itemToDelete.value = {
+    type: type,
+    item: item
+  };
+  deleteConfirmationDialog.value = true;
+}
+
+function confirmDelete() {
+  if (itemToDelete.value) {
+    const { type, item } = itemToDelete.value;
+    deleteFromList(type, item);
+    resetDeleteConfirmationDialog();
+    resetItemToDelete();
+    resetMovieDialog();
+    resetSerieDialog();
+  }
 }
 
 onMounted(() => {
@@ -162,6 +375,48 @@ onMounted(() => {
 </script>
 
 <template>
+  <transition
+    name="fade"
+    @before-enter="beforeEnter"
+    @enter="enter"
+    @leave="leave"
+    >
+    <v-alert
+      v-if="alert.visible"
+      :type="alert.type"
+      :icon="alert.icon"
+      class="fixed-alert"
+      :text="alert.text"
+      @click="show_alert = false"
+      />
+  </transition>
+  <v-dialog
+    v-model="deleteConfirmationDialog"
+    max-width="600px"
+    >
+    <v-card>
+      <v-card-title>
+        Confirm deletion
+      </v-card-title>
+      <v-card-text>
+        Are you sure you want to delete this item ? This action cannot be undone.
+      </v-card-text>
+      <v-card-actions>
+        <v-btn
+          @click="resetDeleteConfirmationDialog()"
+          color="secondary"
+          >
+          Cancel
+        </v-btn>
+        <v-btn
+          @click="confirmDelete"
+          color="primary"
+          >
+          Confirm
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
   <v-container>
     <v-row>
       <v-col>
@@ -219,7 +474,7 @@ onMounted(() => {
     <div
       v-if="selected_view == 'movies'">
       <v-row
-        v-if="is_loading_movie"
+        v-if="isLoadingMovie"
         justify="center"
         align="center"
         class="mt-4"
@@ -249,7 +504,9 @@ onMounted(() => {
           lg="2"
           class="mb-4"
           >
-          <v-card>
+          <v-card
+            @click="handleMovieClick(item.id)"
+            >
             <v-img
               :src="item.poster"
               class="w-100"
@@ -264,13 +521,13 @@ onMounted(() => {
             <v-card-text
               class="text-center"
               >
-              Realease {{ item.release_date }}
+              (Realease {{ item.release_date }})
             </v-card-text>
           </v-card>
         </v-col>
       </v-row>
       <v-alert
-        v-else-if="!filtered_movies.length && !is_loading_movie"
+        v-else-if="!filtered_movies.length && !isLoadingMovie"
         type="info"
         class="mt-4"
         >
@@ -284,12 +541,62 @@ onMounted(() => {
         total-visible="7"
         rounded
         />
+      <v-dialog
+        v-model="movieDialog"
+        max-width="600px"
+        max-height="600px"
+        >
+        <v-card>
+          <v-card-title>
+            Movie
+          </v-card-title>
+          <v-card-text>
+            <v-row>
+              <v-col>
+                {{ selectedMovie.title }}
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                (Release {{ selectedMovie.release_date }})
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                {{ selectedMovie.overview }}
+              </v-col>
+            </v-row>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn
+              v-if="!selectedMovie.already_in_library"
+              @click="addToList('movies', selectedMovie)"
+              color="primary"
+              >
+              Add
+            </v-btn>
+            <v-btn
+              v-else
+              @click="openDeleteConfirmationDialog('movies', selectedMovie)"
+              color="error"
+              >
+              Remove
+            </v-btn>
+            <v-btn
+              @click="resetMovieDialog()"
+              color="secondary"
+              >
+              Close
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </div>
     <div
       v-else-if="selected_view == 'series'"
       >
       <v-row
-        v-if="is_loading_serie"
+        v-if="isLoadingSerie"
         justify="center"
         align="center"
         class="mt-4"
@@ -319,7 +626,9 @@ onMounted(() => {
           lg="2"
           class="mb-4"
           >
-          <v-card>
+          <v-card
+            @click="handleSerieClick(item.id)"
+            >
             <v-img
               :src="item.poster"
               class="w-100"
@@ -334,13 +643,13 @@ onMounted(() => {
             <v-card-text
               class="text-center"
               >
-              Premiere {{ item.release_date }}
+              (Premiere {{ item.release_date }})
             </v-card-text>
           </v-card>
         </v-col>
       </v-row>
       <v-alert
-        v-else-if="!filtered_series.length && !is_loading_serie"
+        v-else-if="!filtered_series.length && !isLoadingSerie"
         type="info"
         class="mt-4"
         >
@@ -354,6 +663,56 @@ onMounted(() => {
         total-visible="7"
         rounded
         />
+      <v-dialog
+        v-model="serieDialog"
+        max-width="600px"
+        max-height="600px"
+        >
+        <v-card>
+          <v-card-title>
+            Serie
+          </v-card-title>
+          <v-card-text>
+            <v-row>
+              <v-col>
+                {{ selectedSerie.title }}
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                (Premiere {{ selectedSerie.release_date }})
+              </v-col>
+            </v-row>
+            <v-row>
+              <v-col>
+                {{ selectedSerie.overview }}
+              </v-col>
+            </v-row>
+          </v-card-text>
+          <v-card-actions>
+            <v-btn
+              v-if="!selectedSerie.already_in_library"
+              @click="addToList('series', selectedSerie)"
+              color="primary"
+              >
+              Add
+            </v-btn>
+            <v-btn
+              v-else
+              @click="openDeleteConfirmationDialog('series', selectedSerie)"
+              color="error"
+              >
+              Remove
+            </v-btn>
+            <v-btn
+              @click="resetSerieDialog()"
+              color="secondary"
+              >
+              Close
+            </v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </div>
   </v-container>
 </template>
@@ -363,5 +722,37 @@ onMounted(() => {
   font-size: 1rem;
   line-height: 1.2;
   font-weight: bold;
+}
+
+.fixed-alert {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+  max-width: 300px;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.fade-enter-from {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+.fade-enter-to {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fade-leave-from {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fade-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
 }
 </style>
