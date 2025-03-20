@@ -6,5 +6,8 @@ export function useDialog(initialValue: boolean = false) {
     dialog.value = structuredClone(initialValue);
   };
 
-  return { dialog, reset };
+  return {
+    dialog,
+    reset
+  };
 }
