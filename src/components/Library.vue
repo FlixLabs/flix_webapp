@@ -18,7 +18,7 @@ const {
   resetItemToDelete
 } = useDeleteConfirmation();
 
-const { state: search, reset: reset_search } = useResettable('');
+const { state: search, reset: resetSearch } = useResettable('');
 
 const selected_view = ref<'movies' | 'series'>('movies');
 
