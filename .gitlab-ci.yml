@@ -68,9 +68,8 @@ deploy:
 
 mirror:
   stage: mirror
-  image: alpine:latest
   before_script:
-    - apt update && apt install -y git
+    - apt install -y git
   script:
     - git clone --mirror "$SOURCE_REPO" repo-mirror
     - cd repo-mirror
