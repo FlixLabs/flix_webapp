@@ -423,7 +423,9 @@ onMounted(() => {
               <v-row
                 class="mt-4"
                 >
-                <v-col>
+                <v-col
+                  v-if="$vuetify.display.smAndUp"
+                  >
                   <v-select
                     v-model="item.selected_quality"
                     :items="qualityMovieItems"
@@ -524,7 +526,9 @@ onMounted(() => {
               <v-row
                 class="mt-4"
                 >
-                <v-col>
+                <v-col
+                  v-if="$vuetify.display.smAndUp"
+                  >
                   <v-select
                     v-model="item.selected_quality"
                     :items="qualitySerieItems"
