@@ -179,171 +179,70 @@ function calculateUptime(startTimeStr) {
   return days + ' days, ' + hours + ' hours, ' + minutes + ' minutes, ' + seconds + ' seconds';
 }
 
-let systemStatusMovieIntervalId = null;
-const startSystemStatusMovieInterval = () => {
-  if (systemStatusMovieIntervalId) {
-    clearInterval(systemStatusMovieIntervalId);
+const intervalIds = {};
+
+const startInterval = (category, type, refVar, callback) => {
+  const key = category + '_' + type;
+
+  if (intervalIds[key]) {
+    clearInterval(intervalIds[key]);
   }
-  systemStatusMovieIntervalId = setInterval(() => {
-    systemStatusMovie.value.uptime = calculateUptime(systemStatusMovie.value.startTime);
-  }, systemStatusMovieInterval.value * 1000);
+
+  intervalIds[key] = setInterval(() => {
+    callback();
+  }, refVar.value * 1000);
 };
-watch(systemStatusMovieInterval, () => {
-  if (!isNaN(systemStatusMovieInterval.value) && systemStatusMovieInterval.value > 0) {
-    startSystemStatusMovieInterval();
-  }
-});
-let diskListMovieIntervalId = null;
-const startDiskListMovieInterval = () => {
-  if (diskListMovieIntervalId) {
-    clearInterval(diskListMovieIntervalId);
-  }
-  diskListMovieIntervalId = setInterval(() => {
-    getData('movies', 'diskspace');
-  }, diskListMovieInterval.value * 1000);
+
+const watchAndStartInterval = (category, type, refVar, callback) => {
+  watch(refVar, () => {
+    if (!isNaN(refVar.value) && refVar.value > 0) {
+      startInterval(category, type, refVar, callback);
+    }
+  });
 };
-watch(diskListMovieInterval, () => {
-  if (!isNaN(diskListMovieInterval.value) && diskListMovieInterval.value > 0) {
-    startDiskListMovieInterval();
-  }
-});
-let logListMovieIntervalId = null;
-const startLogListMovieInterval = () => {
-  if (logListMovieIntervalId) {
-    clearInterval(logListMovieIntervalId);
-  }
-  logListMovieIntervalId = setInterval(() => {
-    getData('movies', 'log');
-  }, logListMovieInterval.value * 1000);
-};
-watch(logListMovieInterval, () => {
-  if (!isNaN(logListMovieInterval.value) && logListMovieInterval.value > 0) {
-    startLogListMovieInterval();
-  }
-});
-let healthListMovieIntervalId = null;
-const startHealthListMovieInterval = () => {
-  if (healthListMovieIntervalId) {
-    clearInterval(healthListMovieIntervalId);
-  }
-  healthListMovieIntervalId = setInterval(() => {
-    getData('movies', 'health');
-  }, healthListMovieInterval.value * 1000);
-};
-watch(healthListMovieInterval, () => {
-  if (!isNaN(healthListMovieInterval.value) && healthListMovieInterval.value > 0) {
-    startHealthListMovieInterval();
-  }
+
+const tasks = [
+  { category: 'movies', type: 'systemStatus', refVar: systemStatusMovieInterval, callback: () => { systemStatusMovie.value.uptime = calculateUptime(systemStatusMovie.value.startTime); }},
+  { category: 'movies', type: 'diskList', refVar: diskListMovieInterval, callback: () => getData('movies', 'diskspace') },
+  { category: 'movies', type: 'logList', refVar: logListMovieInterval, callback: () => getData('movies', 'log') },
+  { category: 'movies', type: 'healthList', refVar: healthListMovieInterval, callback: () => getData('movies', 'health') },
+  { category: 'series', type: 'systemStatus', refVar: systemStatusSerieInterval, callback: () => { systemStatusSerie.value.uptime = calculateUptime(systemStatusSerie.value.startTime); }},
+  { category: 'series', type: 'diskList', refVar: diskListSerieInterval, callback: () => getData('series', 'diskspace') },
+  { category: 'series', type: 'logList', refVar: logListSerieInterval, callback: () => getData('series', 'log') },
+  { category: 'series', type: 'healthList', refVar: healthListSerieInterval, callback: () => getData('series', 'health') },
+];
+
+tasks.forEach(({ category, type, refVar, callback }) => {
+  watchAndStartInterval(category, type, refVar, callback);
 });
 
-let systemStatusSerieIntervalId = null;
-const startSystemStatusSerieInterval = () => {
-  if (systemStatusSerieIntervalId) {
-    clearInterval(systemStatusSerieIntervalId);
-  }
-  systemStatusSerieIntervalId = setInterval(() => {
-    systemStatusSerie.value.uptime = calculateUptime(systemStatusSerie.value.startTime);
-  }, systemStatusSerieInterval.value * 1000);
-};
-watch(systemStatusSerieInterval, () => {
-  if (!isNaN(systemStatusSerieInterval.value) && systemStatusSerieInterval.value > 0) {
-    startSystemStatusSerieInterval();
-  }
-});
-let diskListSerieIntervalId = null;
-const startDiskListSerieInterval = () => {
-  if (diskListSerieIntervalId) {
-    clearInterval(diskListSerieIntervalId);
-  }
-  diskListSerieIntervalId = setInterval(() => {
-    getData('series', 'diskspace');
-  }, diskListSerieInterval.value * 1000);
-};
-watch(diskListSerieInterval, () => {
-  if (!isNaN(diskListSerieInterval.value) && diskListSerieInterval.value > 0) {
-    startDiskListSerieInterval();
-  }
-});
-let logListSerieIntervalId = null;
-const startLogListSerieInterval = () => {
-  if (logListSerieIntervalId) {
-    clearInterval(logListSerieIntervalId);
-  }
-  logListSerieIntervalId = setInterval(() => {
-    getData('series', 'log');
-  }, logListSerieInterval.value * 1000);
-};
-watch(logListSerieInterval, () => {
-  if (!isNaN(logListSerieInterval.value) && logListSerieInterval.value > 0) {
-    startLogListSerieInterval();
-  }
-});
-let healthListSerieIntervalId = null;
-const startHealthListSerieInterval = () => {
-  if (healthListSerieIntervalId) {
-    clearInterval(healthListSerieIntervalId);
-  }
-  healthListSerieIntervalId = setInterval(() => {
-    getData('series', 'health');
-  }, healthListSerieInterval.value * 1000);
-};
-watch(healthListSerieInterval, () => {
-  if (!isNaN(healthListSerieInterval.value) && healthListSerieInterval.value > 0) {
-    startHealthListSerieInterval();
-  }
-});
+const fetchDataOnMount = [
+  { category: 'movies', endpoint: 'config/host' },
+  { category: 'movies', endpoint: 'system/status' },
+  { category: 'movies', endpoint: 'diskspace' },
+  { category: 'movies', endpoint: 'log' },
+  { category: 'movies', endpoint: 'health' },
+  { category: 'series', endpoint: 'config/host' },
+  { category: 'series', endpoint: 'system/status' },
+  { category: 'series', endpoint: 'diskspace' },
+  { category: 'series', endpoint: 'log' },
+  { category: 'series', endpoint: 'health' },
+];
 
 onMounted(() => {
-  getData('movies', 'config/host');
-  getData('movies', 'system/status');
-  getData('movies', 'diskspace');
-  getData('movies', 'log');
-  getData('movies', 'health');
+  fetchDataOnMount.forEach(({ category, endpoint }) => getData(category, endpoint));
 
-  getData('series', 'config/host');
-  getData('series', 'system/status');
-  getData('series', 'diskspace');
-  getData('series', 'log');
-  getData('series', 'health');
-
-  startSystemStatusMovieInterval();
-  startDiskListMovieInterval();
-  startLogListMovieInterval();
-  startHealthListMovieInterval();
-
-  startSystemStatusSerieInterval();
-  startDiskListSerieInterval();
-  startLogListSerieInterval();
-  startHealthListSerieInterval();
+  tasks.forEach(({ category, type, refVar, callback }) => {
+    if (!isNaN(refVar.value) && refVar.value > 0) {
+      startInterval(category, type, refVar, callback);
+    }
+  });
 });
 
 onUnmounted(() => {
-  if (systemStatusMovieIntervalId) {
-    clearInterval(systemStatusMovieIntervalId);
-  }
-  if (diskListMovieIntervalId) {
-    clearInterval(diskListMovieIntervalId);
-  }
-  if (logListMovieIntervalId) {
-    clearInterval(logListMovieIntervalId);
-  }
-  if (healthListMovieIntervalId) {
-    clearInterval(logListMovieIntervalId);
-  }
-
-  if (systemStatusSerieIntervalId) {
-    clearInterval(systemStatusSerieIntervalId);
-  }
-  if (diskListSerieIntervalId) {
-    clearInterval(diskListSerieIntervalId);
-  }
-  if (logListSerieIntervalId) {
-    clearInterval(logListSerieIntervalId);
-  }
-  if (healthListSerieIntervalId) {
-    clearInterval(healthListSerieIntervalId);
-  }
+  Object.values(intervalIds).forEach(clearInterval);
 });
+
 </script>
 
 <template>
