@@ -1,25 +1,35 @@
 <script setup lang="ts">
 
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
-import { useDiskAndHealthList } from '@/composables/useDiskAndHealthList';
+import { useDiskAndLogAndHealthList } from '@/composables/useDiskAndLogAndHealthList';
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
-const { createDiskList, createHealthList } = useDiskAndHealthList();
+const { createDiskList, createLogList, createHealthList } = useDiskAndLogAndHealthList();
 
 const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
 const configHostMovie = ref<Record<string, any> | null>({});
 const systemStatusMovie = ref<Record<string, any> | null>({});
+const { state: systemStatusMovieInterval, reset: resetSystemStatusMovieInterval } = useResettable(60);
 const diskListMovie = createDiskList();
+const { state: diskListMovieInterval, reset: resetDiskListMovieInterval } = useResettable(60);
+const logListMovie = createLogList();
+const { state: logListMovieInterval, reset: resetLogListMovieInterval } = useResettable(60);
 const healthListMovie = createHealthList();
+const { state: healthListMovieInterval, reset: resetHealthListMovieInterval } = useResettable(60);
 
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
 const configHostSerie = ref<Record<string, any> | null>({});
 const systemStatusSerie = ref<Record<string, any> | null>({});
+const { state: systemStatusSerieInterval, reset: resetSystemStatusSerieInterval } = useResettable(60);
 const diskListSerie = createDiskList();
+const { state: diskListSerieInterval, reset: resetDiskListSerieInterval } = useResettable(60);
+const logListSerie = createLogList();
+const { state: logListSerieInterval, reset: resetLogListSerieInterval } = useResettable(60);
 const healthListSerie = createHealthList();
+const { state: healthListSerieInterval, reset: resetHealthListSerieInterval } = useResettable(60);
 
 function progressColor(ratio: number): string {
   const threshold = import.meta.env.VITE_SYSTEM_STORAGE_SPACE_TRESHOLD;
@@ -30,13 +40,23 @@ function getData(type, endpoint) {
   let base_url = null;
   let api_key = null;
 
+  const ignoreLoading = [
+    'diskspace',
+    'log',
+    'health'
+  ]
+
   if (type == 'movies') {
-    isLoadingMovie.value = true;
+    if (!ignoreLoading.includes(endpoint)) {
+      isLoadingMovie.value = true;
+    }
     base_url = import.meta.env.VITE_RADARR_BASE_URL;
     api_key = import.meta.env.VITE_RADARR_API_KEY;
   }
   if (type == 'series') {
-    isLoadingSerie.value = true;
+    if (!ignoreLoading.includes(endpoint)) {
+      isLoadingSerie.value = true;
+    }
     base_url = import.meta.env.VITE_SONARR_BASE_URL;
     api_key = import.meta.env.VITE_SONARR_API_KEY;
   }
@@ -44,6 +64,32 @@ function getData(type, endpoint) {
   fetch(base_url + '/api/v3/' + endpoint + '?apikey=' + api_key)
     .then(async (response) => {
       const json_data = await response.json();
+
+      if (endpoint == 'config/host') {
+        if (type == 'movies') {
+          configHostMovie.value = json_data;
+        }
+        if (type == 'series') {
+          configHostSerie.value = json_data;
+        }
+      }
+
+      if (endpoint == 'system/status') {
+        if (type == 'movies') {
+          systemStatusMovie.value = json_data;
+          systemStatusMovie.value.uptime = null;
+          if (systemStatusMovie.value.startTime) {
+            systemStatusMovie.value.uptime = calculateUptime(systemStatusMovie.value.startTime);
+          }
+        }
+        if (type == 'series') {
+          systemStatusSerie.value = json_data;
+          systemStatusSerie.value.uptime = null;
+          if (systemStatusSerie.value.startTime) {
+            systemStatusSerie.value.uptime = calculateUptime(systemStatusSerie.value.startTime);
+          }
+        }
+      }
 
       if (endpoint == 'diskspace') {
         const data = json_data.map((disk: any) => {
@@ -69,6 +115,23 @@ function getData(type, endpoint) {
         }
       }
 
+      if (endpoint == 'log') {
+        const data = json_data.records.map((log: any) => {
+          return {
+            time: log.time,
+            level: log.level,
+            message: log.message
+          };
+        });
+
+        if (type == 'movies') {
+          logListMovie.value = data;
+        }
+        if (type == 'series') {
+          logListSerie.value = data;
+        }
+      }
+
       if (endpoint == 'health') {
         const data = json_data.map((health: any) => {
           return {
@@ -84,32 +147,6 @@ function getData(type, endpoint) {
         }
         if (type == 'series') {
           healthListSerie.value = data;
-        }
-      }
-
-      if (endpoint == 'config/host') {
-        if (type == 'movies') {
-          configHostMovie.value = json_data;
-        }
-        if (type == 'series') {
-          configHostSerie.value = json_data;
-        }
-      }
-
-      if (endpoint == 'system/status') {
-        if (type == 'movies') {
-          systemStatusMovie.value = json_data;
-          systemStatusMovie.value.uptime = null;
-          if (systemStatusMovie.value.startTime) {
-            systemStatusMovie.value.uptime = calculateUptime(systemStatusMovie.value.startTime);
-          }
-        }
-        if (type == 'series') {
-          systemStatusSerie.value = json_data;
-          systemStatusSerie.value.uptime = null;
-          if (systemStatusSerie.value.startTime) {
-            systemStatusSerie.value.uptime = calculateUptime(systemStatusSerie.value.startTime);
-          }
         }
       }
     })
@@ -142,25 +179,171 @@ function calculateUptime(startTimeStr) {
   return days + ' days, ' + hours + ' hours, ' + minutes + ' minutes, ' + seconds + ' seconds';
 }
 
-onMounted(() => {
-  getData('movies', 'diskspace');
-  getData('series', 'diskspace');
-  getData('movies', 'health');
-  getData('series', 'health');
-  getData('movies', 'config/host');
-  getData('series', 'config/host');
-  getData('movies', 'system/status');
-  getData('series', 'system/status');
+let systemStatusMovieIntervalId = null;
+const startSystemStatusMovieInterval = () => {
+  if (systemStatusMovieIntervalId) {
+    clearInterval(systemStatusMovieIntervalId);
+  }
+  systemStatusMovieIntervalId = setInterval(() => {
+    systemStatusMovie.value.uptime = calculateUptime(systemStatusMovie.value.startTime);
+  }, systemStatusMovieInterval.value * 1000);
+};
+watch(systemStatusMovieInterval, () => {
+  if (!isNaN(systemStatusMovieInterval.value) && systemStatusMovieInterval.value > 0) {
+    startSystemStatusMovieInterval();
+  }
+});
+let diskListMovieIntervalId = null;
+const startDiskListMovieInterval = () => {
+  if (diskListMovieIntervalId) {
+    clearInterval(diskListMovieIntervalId);
+  }
+  diskListMovieIntervalId = setInterval(() => {
+    getData('movies', 'diskspace');
+  }, diskListMovieInterval.value * 1000);
+};
+watch(diskListMovieInterval, () => {
+  if (!isNaN(diskListMovieInterval.value) && diskListMovieInterval.value > 0) {
+    startDiskListMovieInterval();
+  }
+});
+let logListMovieIntervalId = null;
+const startLogListMovieInterval = () => {
+  if (logListMovieIntervalId) {
+    clearInterval(logListMovieIntervalId);
+  }
+  logListMovieIntervalId = setInterval(() => {
+    getData('movies', 'log');
+  }, logListMovieInterval.value * 1000);
+};
+watch(logListMovieInterval, () => {
+  if (!isNaN(logListMovieInterval.value) && logListMovieInterval.value > 0) {
+    startLogListMovieInterval();
+  }
+});
+let healthListMovieIntervalId = null;
+const startHealthListMovieInterval = () => {
+  if (healthListMovieIntervalId) {
+    clearInterval(healthListMovieIntervalId);
+  }
+  healthListMovieIntervalId = setInterval(() => {
+    getData('movies', 'health');
+  }, healthListMovieInterval.value * 1000);
+};
+watch(healthListMovieInterval, () => {
+  if (!isNaN(healthListMovieInterval.value) && healthListMovieInterval.value > 0) {
+    startHealthListMovieInterval();
+  }
 });
 
-setInterval(() => {
-  if (systemStatusMovie.value.startTime) {
-    systemStatusMovie.value.uptime = calculateUptime(systemStatusMovie.value.startTime);
+let systemStatusSerieIntervalId = null;
+const startSystemStatusSerieInterval = () => {
+  if (systemStatusSerieIntervalId) {
+    clearInterval(systemStatusSerieIntervalId);
   }
-  if (systemStatusSerie.value.startTime) {
+  systemStatusSerieIntervalId = setInterval(() => {
     systemStatusSerie.value.uptime = calculateUptime(systemStatusSerie.value.startTime);
+  }, systemStatusSerieInterval.value * 1000);
+};
+watch(systemStatusSerieInterval, () => {
+  if (!isNaN(systemStatusSerieInterval.value) && systemStatusSerieInterval.value > 0) {
+    startSystemStatusSerieInterval();
   }
-}, 1000);
+});
+let diskListSerieIntervalId = null;
+const startDiskListSerieInterval = () => {
+  if (diskListSerieIntervalId) {
+    clearInterval(diskListSerieIntervalId);
+  }
+  diskListSerieIntervalId = setInterval(() => {
+    getData('series', 'diskspace');
+  }, diskListSerieInterval.value * 1000);
+};
+watch(diskListSerieInterval, () => {
+  if (!isNaN(diskListSerieInterval.value) && diskListSerieInterval.value > 0) {
+    startDiskListSerieInterval();
+  }
+});
+let logListSerieIntervalId = null;
+const startLogListSerieInterval = () => {
+  if (logListSerieIntervalId) {
+    clearInterval(logListSerieIntervalId);
+  }
+  logListSerieIntervalId = setInterval(() => {
+    getData('series', 'log');
+  }, logListSerieInterval.value * 1000);
+};
+watch(logListSerieInterval, () => {
+  if (!isNaN(logListSerieInterval.value) && logListSerieInterval.value > 0) {
+    startLogListSerieInterval();
+  }
+});
+let healthListSerieIntervalId = null;
+const startHealthListSerieInterval = () => {
+  if (healthListSerieIntervalId) {
+    clearInterval(healthListSerieIntervalId);
+  }
+  healthListSerieIntervalId = setInterval(() => {
+    getData('series', 'health');
+  }, healthListSerieInterval.value * 1000);
+};
+watch(healthListSerieInterval, () => {
+  if (!isNaN(healthListSerieInterval.value) && healthListSerieInterval.value > 0) {
+    startHealthListSerieInterval();
+  }
+});
+
+onMounted(() => {
+  getData('movies', 'config/host');
+  getData('movies', 'system/status');
+  getData('movies', 'diskspace');
+  getData('movies', 'log');
+  getData('movies', 'health');
+
+  getData('series', 'config/host');
+  getData('series', 'system/status');
+  getData('series', 'diskspace');
+  getData('series', 'log');
+  getData('series', 'health');
+
+  startSystemStatusMovieInterval();
+  startDiskListMovieInterval();
+  startLogListMovieInterval();
+  startHealthListMovieInterval();
+
+  startSystemStatusSerieInterval();
+  startDiskListSerieInterval();
+  startLogListSerieInterval();
+  startHealthListSerieInterval();
+});
+
+onUnmounted(() => {
+  if (systemStatusMovieIntervalId) {
+    clearInterval(systemStatusMovieIntervalId);
+  }
+  if (diskListMovieIntervalId) {
+    clearInterval(diskListMovieIntervalId);
+  }
+  if (logListMovieIntervalId) {
+    clearInterval(logListMovieIntervalId);
+  }
+  if (healthListMovieIntervalId) {
+    clearInterval(logListMovieIntervalId);
+  }
+
+  if (systemStatusSerieIntervalId) {
+    clearInterval(systemStatusSerieIntervalId);
+  }
+  if (diskListSerieIntervalId) {
+    clearInterval(diskListSerieIntervalId);
+  }
+  if (logListSerieIntervalId) {
+    clearInterval(logListSerieIntervalId);
+  }
+  if (healthListSerieIntervalId) {
+    clearInterval(healthListSerieIntervalId);
+  }
+});
 </script>
 
 <template>
@@ -212,7 +395,19 @@ setInterval(() => {
               v-if="systemStatusMovie && Object.keys(systemStatusMovie).length > 0"
               >
               <v-card-title>
-                System Status
+                <v-row>
+                  <v-col>
+                    System Status
+                  </v-col>
+                  <v-col>
+                    <v-text-field
+                      label="Interval (Seconds)"
+                      variant="outlined"
+                      v-model="systemStatusMovieInterval"
+                      type="number"
+                      />
+                  </v-col>
+                </v-row>
               </v-card-title>
               <v-card-text>
                 <p>
@@ -291,7 +486,19 @@ setInterval(() => {
               v-if="diskListMovie.length > 0"
               >
               <v-card-title>
-                Space
+                <v-row>
+                  <v-col>
+                    Space
+                  </v-col>
+                  <v-col>
+                    <v-text-field
+                      label="Interval (Seconds)"
+                      variant="outlined"
+                      v-model="diskListMovieInterval"
+                      type="number"
+                      />
+                  </v-col>
+                </v-row>
               </v-card-title>
               <v-table>
                 <thead>
@@ -332,10 +539,64 @@ setInterval(() => {
         <v-row>
           <v-col>
             <v-card
+              v-if="logListMovie.length > 0"
+              >
+              <v-card-title>
+                <v-row>
+                  <v-col>
+                    Log
+                  </v-col>
+                  <v-col>
+                    <v-text-field
+                      label="Interval (Seconds)"
+                      variant="outlined"
+                      v-model="logListMovieInterval"
+                      type="number"
+                      />
+                  </v-col>
+                </v-row>
+              </v-card-title>
+              <v-table>
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Level</th>
+                    <th>Message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="log in logListMovie"
+                    :key="log.time"
+                    >
+                    <td>{{ log.time }}</td>
+                    <td>{{ log.level }}</td>
+                    <td>{{ log.message }}</td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </v-card>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col>
+            <v-card
               v-if="healthListMovie.length > 0"
               >
               <v-card-title>
-                About
+                <v-row>
+                  <v-col>
+                    About
+                  </v-col>
+                  <v-col>
+                    <v-text-field
+                      label="Interval (Seconds)"
+                      variant="outlined"
+                      v-model="healthListMovieInterval"
+                      type="number"
+                      />
+                  </v-col>
+                </v-row>
               </v-card-title>
               <v-list>
                 <v-list-item
@@ -432,7 +693,19 @@ setInterval(() => {
               v-if="systemStatusSerie && Object.keys(systemStatusSerie).length > 0"
               >
               <v-card-title>
-                System Status
+                <v-row>
+                  <v-col>
+                    System Status
+                  </v-col>
+                  <v-col>
+                    <v-text-field
+                      label="Interval (Seconds)"
+                      variant="outlined"
+                      v-model="systemStatusSerieInterval"
+                      type="number"
+                      />
+                  </v-col>
+                </v-row>
               </v-card-title>
               <v-card-text>
                 <p>
@@ -511,7 +784,19 @@ setInterval(() => {
               v-if="diskListSerie.length > 0"
               >
               <v-card-title>
-                Space
+                <v-row>
+                  <v-col>
+                    Space
+                  </v-col>
+                  <v-col>
+                    <v-text-field
+                      label="Interval (Seconds)"
+                      variant="outlined"
+                      v-model="diskListSerieInterval"
+                      type="number"
+                      />
+                  </v-col>
+                </v-row>
               </v-card-title>
               <v-table>
                 <thead>
@@ -551,9 +836,63 @@ setInterval(() => {
         </v-row>
         <v-row>
           <v-col>
+            <v-card
+              v-if="logListSerie.length > 0"
+              >
+              <v-card-title>
+                <v-row>
+                  <v-col>
+                    Log
+                  </v-col>
+                  <v-col>
+                    <v-text-field
+                      label="Interval (Seconds)"
+                      variant="outlined"
+                      v-model="logListSerieInterval"
+                      type="number"
+                      />
+                  </v-col>
+                </v-row>
+              </v-card-title>
+              <v-table>
+                <thead>
+                  <tr>
+                    <th>Time</th>
+                    <th>Level</th>
+                    <th>Message</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="log in logListSerie"
+                    :key="log.time"
+                    >
+                    <td>{{ log.time }}</td>
+                    <td>{{ log.level }}</td>
+                    <td>{{ log.message }}</td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </v-card>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col>
             <v-card v-if="healthListSerie.length > 0">
               <v-card-title>
-                About
+                <v-row>
+                  <v-col>
+                    About
+                  </v-col>
+                  <v-col>
+                    <v-text-field
+                      label="Interval (Seconds)"
+                      variant="outlined"
+                      v-model="healthListSerieInterval"
+                      type="number"
+                      />
+                  </v-col>
+                </v-row>
               </v-card-title>
               <v-list>
                 <v-list-item v-for="(issue, index) in healthListSerie" :key="index">
