@@ -1,8 +1,9 @@
 stages:
-  - parallel
+  - deploy
+  - mirror
 
 deploy:
-  stage: parallel
+  stage: deploy
   variables:
     DEPLOY_NAME: "flix_webapp"
     DEPLOY_PATH: "docker/flix"
@@ -66,7 +67,7 @@ deploy:
     - master
 
 mirror-gitlab:
-  stage: parallel
+  stage: mirror
   script:
     - git clone --mirror "$SOURCE_GITLAB_REPO" repo-mirror
     - cd repo-mirror
@@ -78,7 +79,7 @@ mirror-gitlab:
     - master
 
 mirror-github:
-  stage: parallel
+  stage: mirror
   script:
     - git clone --mirror "$SOURCE_GITLAB_REPO" repo-mirror
     - cd repo-mirror
