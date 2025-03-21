@@ -388,7 +388,7 @@ onMounted(() => {
     </v-form>
     <v-row>
       <v-col
-        cols="6"
+        md="6"
         >
         <h3>Movies</h3>
         <v-list
@@ -489,7 +489,7 @@ onMounted(() => {
           />
       </v-col>
       <v-col
-        cols="6"
+        md="6"
         >
         <h3>Series</h3>
         <v-list
