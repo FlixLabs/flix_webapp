@@ -18,7 +18,7 @@ const initialAuthData = {
 const { state: authData, reset: resetAuthData } = useResettable(initialAuthData);
 
 function getData(key) {
-  let base_url = import.meta.env.VITE_WEBDIS_URL;
+  const base_url = import.meta.env.VITE_WEBDIS_URL;
 
   isLoading.value = true;
 
@@ -40,7 +40,7 @@ function getData(key) {
 }
 
 function setData(key) {
-  let base_url = import.meta.env.VITE_WEBDIS_URL;
+  const base_url = import.meta.env.VITE_WEBDIS_URL;
 
   isLoading.value = true;
 
@@ -70,7 +70,7 @@ function setData(key) {
 }
 
 function deleteData(key) {
-  let base_url = import.meta.env.VITE_WEBDIS_URL;
+  const base_url = import.meta.env.VITE_WEBDIS_URL;
 
   isLoading.value = true;
 
