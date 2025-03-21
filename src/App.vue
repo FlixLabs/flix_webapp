@@ -83,6 +83,13 @@ const drawer_select_option = (option) => {
         >
         <strong>Flix</strong> | WebApp
       </v-toolbar-title>
+      <template
+        v-slot:append
+        >
+        <div
+          class="burger-compensator"
+          />
+      </template>
     </v-app-bar>
 
     <v-navigation-drawer
@@ -121,3 +128,9 @@ const drawer_select_option = (option) => {
     </v-footer>
   </v-app>
 </template>
+
+<style scoped>
+.burger-compensator {
+  width: 48px;
+}
+</style>
