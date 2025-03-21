@@ -106,7 +106,7 @@ function getContent(type) {
 
       let total_pages = json_data.total_pages || 1;
       let promises = [];
-      
+
       for (let page = 2; page <= total_pages; page++) {
         let url = base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key + '&page=' + page;
         promises.push(
@@ -377,6 +377,7 @@ onMounted(() => {
           />
       </v-col>
       <v-col
+        v-if="$vuetify.display.smAndUp"
         cols="2"
         >
         <v-text-field

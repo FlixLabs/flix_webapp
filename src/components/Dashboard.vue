@@ -360,6 +360,7 @@ onMounted(() => {
             />
         </v-col>
         <v-col
+          v-if="$vuetify.display.smAndUp"
           cols="4"
           >
           <v-row>

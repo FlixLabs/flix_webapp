@@ -297,6 +297,7 @@ onMounted(() => {
           />
       </v-col>
       <v-col
+        v-if="$vuetify.display.smAndUp"
         cols="2"
         >
         <v-text-field
