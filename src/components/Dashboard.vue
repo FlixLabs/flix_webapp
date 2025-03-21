@@ -40,15 +40,19 @@ const { total: total_series } = useCount(serieItems);
 const { isAlreadyInLibrary: checkSeries } = useLibraryChecker("series", serieItems, showErrorAlert);
 
 function getQualityProfileList(type) {
-  let url = null;
+  let base_url = null;
+  let api_key = null;
+
   if (type == 'movies') {
-    url = import.meta.env.VITE_RADARR_BASE_URL + '/api/v3/qualityProfile?apikey=' + import.meta.env.VITE_RADARR_API_KEY;
+    base_url = import.meta.env.VITE_RADARR_BASE_URL;
+    api_key = import.meta.env.VITE_RADARR_API_KEY;
   }
   if (type == 'series') {
-    url = import.meta.env.VITE_SONARR_BASE_URL + '/api/v3/qualityProfile?apikey=' + import.meta.env.VITE_SONARR_API_KEY;
+    base_url = import.meta.env.VITE_SONARR_BASE_URL;
+    api_key = import.meta.env.VITE_SONARR_API_KEY;
   }
 
-  fetch(url)
+  fetch(base_url + '/api/v3/qualityProfile?apikey=' + api_key)
     .then(async response => {
       const json_data = await response.json();
 

@@ -52,26 +52,23 @@ const { total: total_series } = useCount(filtered_series);
 const { isAlreadyInLibrary: checkSeries } = useLibraryChecker("series", serieItems, showErrorAlert);
 
 function getContent(type) {
-  const api_key = import.meta.env.VITE_TMDB_API_KEY;
   const base_url = import.meta.env.VITE_TMDB_BASE_URL;
+  const api_key = import.meta.env.VITE_TMDB_API_KEY;
   let url_type = null;
   let url_request = null;
-  let url_suffixe = null;
 
   if (type == 'movies') {
     isLoadingMovie.value = true;
     url_type = 'movie';
     url_request = 'upcoming';
-    url_suffixe = '';
   }
   if (type == 'series') {
     isLoadingSerie.value = true;
     url_type = 'tv';
     url_request = 'on_the_air';
-    url_suffixe = '';
   }
 
-  fetch(base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key + url_suffixe)
+  fetch(base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key)
     .then(async (response) => {
       const json_data = await response.json();
 
@@ -109,8 +106,9 @@ function getContent(type) {
 
       let total_pages = json_data.total_pages || 1;
       let promises = [];
+      
       for (let page = 2; page <= total_pages; page++) {
-        let url = base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key + url_suffixe + '&page=' + page;
+        let url = base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key + '&page=' + page;
         promises.push(
           fetch(url)
             .then(async (response) => {
