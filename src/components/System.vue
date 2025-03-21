@@ -518,10 +518,11 @@ onUnmounted(() => {
             </v-card>
             <v-alert
               v-if="!isLoadingMovie &&
-                    !diskListMovie.length &&
-                    !healthListMovie.length &&
                     !configHostMovie &&
-                    !systemStatusMovie"
+                    !systemStatusMovie &&
+                    !diskListMovie.length &&
+                    !logListMovie.length &&
+                    !healthListMovie.length"
               type="info"
               >
               No system information found
@@ -804,10 +805,11 @@ onUnmounted(() => {
             </v-card>
             <v-alert
               v-if="!isLoadingSerie &&
-                    !diskListSerie.length &&
-                    !healthListSerie.length &&
                     !configHostSerie &&
-                    !systemStatusSerie"
+                    !systemStatusSerie &&
+                    !diskListSerie.length &&
+                    !logListSerie.length &&
+                    !healthListSerie.length"
               type="info"
               >
               No system information found
