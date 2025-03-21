@@ -486,8 +486,6 @@ onMounted(() => {
         v-if="filtered_movies.length > 0"
         v-model="movie_page"
         :length="movies_total_pages"
-        class="mt-4"
-        total-visible="7"
         rounded
         />
       <v-dialog
@@ -608,8 +606,6 @@ onMounted(() => {
         v-if="filtered_series.length > 0"
         v-model="serie_page"
         :length="series_total_pages"
-        class="mt-4"
-        total-visible="7"
         rounded
         />
       <v-dialog
