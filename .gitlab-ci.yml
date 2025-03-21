@@ -69,7 +69,7 @@ deploy:
 mirror:
   stage: mirror
   before_script:
-    - apt install -y git
+    - apt update && apt install -y git
   script:
     - git clone --mirror "$SOURCE_REPO" repo-mirror
     - cd repo-mirror
