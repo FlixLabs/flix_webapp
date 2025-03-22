@@ -22,7 +22,7 @@ deploy:
   script:
     - cp .env.dist $ENV_FILE
     - ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
-    - sshpass -p "$SSH_PASSWORD" scp -r -C -P "$SSH_PORT" ./* $SSH_USER@$SSH_HOST:$DEPLOY_PATH/$DEPLOY_NAME/
+    - sshpass -p "$SSH_PASSWORD" scp -r -C -P "$SSH_PORT" ./* .[^.]* $SSH_USER@$SSH_HOST:$DEPLOY_PATH/$DEPLOY_NAME/
     - |
       sshpass -p "$SSH_PASSWORD" ssh -T -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" -p "$SSH_PORT" \
       "
