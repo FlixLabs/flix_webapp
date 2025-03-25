@@ -15,6 +15,8 @@ deploy:
     VITE_TMDB_BASE_URL: "https://api.themoviedb.org/3"
     VITE_TMDB_API_KEY: "0d1dc24ae91481452ec415924333e3e9"
     VITE_CRYPT_KEY: "zmSKMpnF2cH5XZB3ufb6CA"
+    VITE_FLIX_API_USE: false
+    VITE_FLIX_API_URL: ""
   script:
     - cp .env.dist $ENV_FILE
     - ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
@@ -34,6 +36,8 @@ deploy:
       VITE_TMDB_BASE_URL='$VITE_TMDB_BASE_URL' \
       VITE_TMDB_API_KEY='$VITE_TMDB_API_KEY' \
       VITE_CRYPT_KEY='$VITE_CRYPT_KEY' \
+      VITE_FLIX_API_USE='$VITE_FLIX_API_USE' \
+      VITE_FLIX_API_URL='$VITE_FLIX_API_URL' \
       bash -s
       " << 'EOF'
 
@@ -48,6 +52,8 @@ deploy:
       sed -i "s|^VITE_TMDB_BASE_URL=.*|VITE_TMDB_BASE_URL=\"$VITE_TMDB_BASE_URL\"|" "$ENV_FILE"
       sed -i "s|^VITE_TMDB_API_KEY=.*|VITE_TMDB_API_KEY=\"$VITE_TMDB_API_KEY\"|" "$ENV_FILE"
       sed -i "s|^VITE_CRYPT_KEY=.*|VITE_CRYPT_KEY=\"$VITE_CRYPT_KEY\"|" "$ENV_FILE"
+      sed -i "s|^VITE_FLIX_API_USE=.*|VITE_FLIX_API_USE=\"$VITE_FLIX_API_USE\"|" "$ENV_FILE"
+      sed -i "s|^VITE_FLIX_API_URL=.*|VITE_FLIX_API_URL=\"$VITE_FLIX_API_URL\"|" "$ENV_FILE"
 
       ./restart.sh
       EOF
@@ -68,6 +74,8 @@ deploy-beta:
     VITE_TMDB_BASE_URL: "https://api.themoviedb.org/3"
     VITE_TMDB_API_KEY: "0d1dc24ae91481452ec415924333e3e9"
     VITE_CRYPT_KEY: "zmSKMpnF2cH5XZB3ufb6CA"
+    VITE_FLIX_API_USE: false
+    VITE_FLIX_API_URL: ""
   before_script:
     - mkdir -p ~/.ssh
     - echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
@@ -85,6 +93,9 @@ deploy-beta:
       sed -i "s|^VITE_TMDB_BASE_URL=.*|VITE_TMDB_BASE_URL=\"$VITE_TMDB_BASE_URL\"|" .env
       sed -i "s|^VITE_TMDB_API_KEY=.*|VITE_TMDB_API_KEY=\"$VITE_TMDB_API_KEY\"|" .env
       sed -i "s|^VITE_CRYPT_KEY=.*|VITE_CRYPT_KEY=\"$VITE_CRYPT_KEY\"|" .env
+      sed -i "s|^VITE_FLIX_API_USE=.*|VITE_FLIX_API_USE=\"$VITE_FLIX_API_USE\"|" "$ENV_FILE"
+      sed -i "s|^VITE_FLIX_API_URL=.*|VITE_FLIX_API_URL=\"$VITE_FLIX_API_URL\"|" "$ENV_FILE"
+      
       ./restart.sh
       EOF
   only:
