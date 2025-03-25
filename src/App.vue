@@ -1,22 +1,16 @@
 <script setup lang="ts">
+
 import { RouterView, useRouter } from 'vue-router'
-import { ref } from "vue";
+import { ref, computed } from 'vue';
+import { useResettable } from '@/composables/useResettable';
 
 const router = useRouter();
 
-const initial_drawer = false;
-const drawer = ref(initial_drawer);
-const reset_drawer = () => {
-  drawer.value = structuredClone(initial_drawer);
-};
+const { state: drawer, reset: resetDrawer } = useResettable(false);
+const { state: drawerSelected, reset: resetDrawerSelected } = useResettable('dashboard');
+const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE);
 
-const initial_drawer_selected = 'dashboard';
-const drawer_selected = ref(initial_drawer_selected);
-const reset_drawer_selected = () => {
-  drawer_selected.value = structuredClone(initial_drawer_selected);
-};
-
-const initial_drawer_options = [
+const initialDrawerOptions = [
   {
     title: 'Dashboard',
     icon: 'mdi-view-dashboard-outline',
@@ -48,19 +42,24 @@ const initial_drawer_options = [
     value: 'signout'
   }
 ];
-const drawer_options = ref(initial_drawer_options);
-const reset_drawer_options = () => {
-  drawer_options.value = structuredClone(initial_drawer_options);
-};
+const { state: drawerOptions, reset: resetDrawerOptions } = useResettable(initialDrawerOptions);
 
-const drawer_select_option = (option) => {
+const filteredDrawerOptions = computed(() => {
+  return drawerOptions.value.filter(option => {
+    return ['settings', 'signout'].includes(option.value)
+      ? useAPI.value === 'true'
+      : true;
+  });
+});
+
+const drawerSelectOption = (option) => {
   if (option == 'signout') {
-    localStorage.removeItem('flix_webapp_is_authenticated');
+    sessionStorage.removeItem('flix_webapp_is_authenticated');
     router.push('/login');
-    reset_drawer();
+    resetDrawer();
   } else {
-    drawer_selected.value = option;
-    reset_drawer();
+    drawerSelected.value = option;
+    resetDrawer();
   }
 };
 </script>
@@ -97,13 +96,13 @@ const drawer_select_option = (option) => {
       >
       <v-list>
         <v-list-item
-          v-for="option in drawer_options"
+          v-for="option in filteredDrawerOptions"
           :key="option.value"
           :prepend-icon="option.icon"
           :title="option.title"
           :to="option.value != 'signout' ? '/' + option.value : undefined"
           :class="{ 'bg-blue-lighten-4': $route.path === '/' + option.value }"
-          @click="drawer_select_option(option.value)"
+          @click="drawerSelectOption(option.value)"
           />
       </v-list>
     </v-navigation-drawer>
