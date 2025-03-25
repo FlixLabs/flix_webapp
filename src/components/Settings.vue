@@ -17,17 +17,17 @@ const initialAuthData = {
 };
 const { state: authData, reset: resetAuthData } = useResettable(initialAuthData);
 
-function getData(key) {
-  const base_url = import.meta.env.VITE_WEBDIS_URL;
+function getData() {
+  const base_url = import.meta.env.VITE_FLIX_API_URL;
 
   isLoading.value = true;
 
-  fetch(base_url + '/JSON.GET/' + key)
+  fetch(base_url + '/auth')
     .then(async (response) => {
       const json_data = await response.json();
 
-      if (json_data && json_data['JSON.GET']) {
-        authData.value = JSON.parse(json_data['JSON.GET']);
+      if (json_data.username && json_data.password) {
+        authData.value = json_data;
         auth.value = true;
       }
     })
@@ -40,22 +40,24 @@ function getData(key) {
 }
 
 function setData(key) {
-  const base_url = import.meta.env.VITE_WEBDIS_URL;
+  const base_url = import.meta.env.VITE_FLIX_API_URL;
 
   isLoading.value = true;
 
   if (authData.value.username && authData.value.password) {
     authData.value.password = CryptoJS.AES.encrypt(authData.value.password, import.meta.env.VITE_CRYPT_KEY).toString();
-    const json_encoded = encodeURIComponent(JSON.stringify(authData.value));
 
-    fetch(base_url + '/JSON.SET/' + key + '/$/' + json_encoded)
+    fetch(base_url + '/auth', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json;charset=utf-8'
+        },
+        body: JSON.stringify(authData.value)
+      })
       .then(async (response) => {
-        const json_data = await response.json();
-
-        if (json_data && json_data['JSON.SET'][0]) {
+        if (response.ok) {
           showSuccessAlert();
-        } else {
-          showErrorAlert();
         }
       })
       .catch((error) => {
@@ -69,15 +71,20 @@ function setData(key) {
   }
 }
 
-function deleteData(key) {
-  const base_url = import.meta.env.VITE_WEBDIS_URL;
+function deleteData() {
+  const base_url = import.meta.env.VITE_FLIX_API_URL;
 
   isLoading.value = true;
 
-  fetch(base_url + '/DEL/' + key)
+  fetch(base_url + '/auth', {
+      method: 'DELETE',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json;charset=utf-8'
+      }
+    })
     .then(async (response) => {
-      const json_data = await response.json();
-      if (json_data && json_data.DEL == 1) {
+      if (response.ok) {
         showSuccessAlert();
       }
     })
@@ -90,12 +97,12 @@ function deleteData(key) {
 }
 
 onMounted(() => {
-  getData('auth');
+  getData();
 });
 
 watch(auth, (newValue) => {
   if (!newValue) {
-    deleteData('auth');
+    deleteData();
 
     // resetAuthData(); Not working
     authData.value.username = null;

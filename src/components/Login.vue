@@ -21,22 +21,22 @@ const reset_auth_data = () => {
   auth_data.value = structuredClone(initial_auth_data);
 };
 
-function getData(key) {
-  let base_url = import.meta.env.VITE_WEBDIS_URL;
+function getData() {
+  let base_url = import.meta.env.VITE_FLIX_API_URL;
 
   isLoading.value = true;
 
   if (auth_data.value.username && auth_data.value.password) {
-    fetch(base_url + '/JSON.GET/' + key)
+    fetch(base_url + '/auth')
       .then(async (response) => {
         const json_data = await response.json();
 
-        if (json_data && json_data['JSON.GET']) {
-          const decrypted_password = CryptoJS.AES.decrypt(JSON.parse(json_data['JSON.GET']).password, import.meta.env.VITE_CRYPT_KEY);
+        if (json_data.username && json_data.password) {
+          const decrypted_password = CryptoJS.AES.decrypt(json_data.password, import.meta.env.VITE_CRYPT_KEY);
 
-          if (auth_data.value.username == JSON.parse(json_data['JSON.GET']).username &&
+          if (auth_data.value.username == json_data.username &&
               auth_data.value.password == decrypted_password.toString(CryptoJS.enc.Utf8)) {
-            localStorage.setItem('flix_webapp_is_authenticated', 'true');
+            sessionStorage.setItem('flix_webapp_is_authenticated', 'true');
             router.push('/dashboard');
           } else {
             showErrorAlert('Wrong Username or Password');
@@ -45,28 +45,30 @@ function getData(key) {
       })
       .catch((error) => {
         showErrorAlert(error);
+        console.log(error);
       })
       .finally(() => {
         //resetIsLoading(); Not working
         isLoading.value = false;
       });
   } else {
+    isLoading.value = false;
     showErrorAlert('Username and password cannot be empty');
   }
 }
 
-function checkData(key) {
-  let base_url = import.meta.env.VITE_WEBDIS_URL;
+function checkData() {
+  let base_url = import.meta.env.VITE_FLIX_API_URL;
 
-  fetch(base_url + '/JSON.GET/' + key)
+  fetch(base_url + '/auth')
     .then(async (response) => {
       const json_data = await response.json();
 
-      if (json_data && json_data['JSON.GET']) {
+      if (json_data.username && json_data.password) {
         // resetIsLoading(); Not working
         isLoading.value = false;
       } else {
-        localStorage.setItem('flix_webapp_is_authenticated', 'true');
+        sessionStorage.setItem('flix_webapp_is_authenticated', 'true');
         router.push('/dashboard');
       }
     })
@@ -78,11 +80,11 @@ function checkData(key) {
 }
 
 onMounted(() => {
-  const is_authenticated = localStorage.getItem('flix_webapp_is_authenticated') === 'true';
+  const is_authenticated = sessionStorage.getItem('flix_webapp_is_authenticated') === 'true';
   if (is_authenticated) {
     router.push('/dashboard');
   } else {
-    checkData('auth');
+    checkData();
   }
 });
 </script>
@@ -126,7 +128,7 @@ onMounted(() => {
         <v-btn
           color="primary"
           variant="outlined"
-          @click="getData('auth')"
+          @click="getData()"
           >
           Sign In
         </v-btn>
