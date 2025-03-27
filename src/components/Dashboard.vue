@@ -78,7 +78,7 @@ function getQualityProfileList(type) {
       for (let item of json_data) {
         items.push({
           title: item.name,
-          value: item.id,
+          value: item.id
         });
       }
 

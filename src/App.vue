@@ -21,6 +21,7 @@ const initialDrawerOptions = [
   { title: 'Dashboard', icon: 'mdi-view-dashboard-outline', value: 'dashboard' },
   { title: 'Library', icon: 'mdi-movie-open-outline', value: 'library' },
   { title: 'Outings', icon: 'mdi-filmstrip-box', value: 'outings' },
+  { title: 'Downloads', icon: 'mdi-download-box-outline', value: 'downloads' },
   { title: 'Settings', icon: 'mdi-cog-outline', value: 'settings' },
   { title: 'System', icon: 'mdi-server-outline', value: 'system' },
   { title: 'Sign Out', icon: 'mdi-logout', value: 'signout' }
