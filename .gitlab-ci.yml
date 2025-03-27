@@ -63,23 +63,23 @@ deploy:
 mirror-gitlab:
   stage: mirror
   script:
-    - git clone --mirror "$SOURCE_GITLAB_REPO" repo-mirror
+    - git clone --mirror "$WEBAPP_SOURCE_GITLAB_REPO" repo-mirror
     - cd repo-mirror
-    - git filter-branch --index-filter 'git rm --cached --ignore-unmatch $FILE_TO_REMOVE' -- --all
+    - git filter-branch --index-filter 'git rm --cached --ignore-unmatch \.gitlab-ci\.yml' -- --all
     - rm -rf refs/original/ && git reflog expire --all && git gc --prune=now
     - git for-each-ref --format="%(refname)" refs/pipelines/ | xargs -r git update-ref -d
-    - git push --mirror "$MIRROR_GITLAB_REPO"
+    - git push --mirror "$WEBAPP_MIRROR_GITLAB_REPO"
   only:
     - master
 
 mirror-github:
   stage: mirror
   script:
-    - git clone --mirror "$SOURCE_GITLAB_REPO" repo-mirror
+    - git clone --mirror "$WEBAPP_SOURCE_GITLAB_REPO" repo-mirror
     - cd repo-mirror
-    - git filter-branch --index-filter 'git rm --cached --ignore-unmatch $FILE_TO_REMOVE' -- --all
+    - git filter-branch --index-filter 'git rm --cached --ignore-unmatch \.gitlab-ci\.yml' -- --all
     - rm -rf refs/original/ && git reflog expire --all && git gc --prune=now
     - git for-each-ref --format="%(refname)" refs/pipelines/ | xargs -r git update-ref -d
-    - git push --mirror "$MIRROR_GITHUB_REPO"
+    - git push --mirror "$WEBAPP_MIRROR_GITHUB_REPO"
   only:
     - master
