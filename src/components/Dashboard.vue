@@ -166,7 +166,7 @@ function getContent(type, keep_page = false) {
           title: title,
           year: item.year,
           overview: item.overview,
-          selected_quality: quality,
+          selected_quality: quality.value,
           already_in_library: false
         });
       }

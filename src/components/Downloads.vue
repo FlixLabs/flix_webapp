@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
@@ -16,9 +16,11 @@ const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
 const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
 const { state: movieRecords, reset: resetMovieRecords } = useResettable([]);
+const { state: movieRecordsInterval, reset: resetMovieRecordsInterval } = useResettable(60);
 
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
 const { state: serieRecords, reset: resetSerieRecords } = useResettable([]);
+const { state: serieRecordsInterval, reset: resetSerieRecordsInterval } = useResettable(60);
 
 function getData(type) {
   let base_url = null;
@@ -94,9 +96,54 @@ function getData(type) {
     });
 }
 
+const intervalIds = {};
+
+const startInterval = (category, refVar, callback) => {
+  const key = category;
+
+  if (intervalIds[key]) {
+    clearInterval(intervalIds[key]);
+  }
+
+  intervalIds[key] = setInterval(() => {
+    callback();
+  }, refVar.value * 1000);
+};
+
+const watchAndStartInterval = (category, refVar, callback) => {
+  watch(refVar, () => {
+    if (!isNaN(refVar.value) && refVar.value > 0) {
+      startInterval(category, refVar, callback);
+    }
+  });
+};
+
+const tasks = [
+  { category: 'movies', refVar: movieRecordsInterval, callback: () => getData('movies') },
+  { category: 'series', refVar: serieRecordsInterval, callback: () => getData('series') }
+];
+
+tasks.forEach(({ category, refVar, callback }) => {
+  watchAndStartInterval(category, refVar, callback);
+});
+
+const fetchDataOnMount = [
+  { category: 'movies' },
+  { category: 'series' }
+];
+
 onMounted(() => {
-  getData('movies');
-  getData('series');
+  fetchDataOnMount.forEach(({ category }) => getData(category));
+
+  tasks.forEach(({ category, refVar, callback }) => {
+    if (!isNaN(refVar.value) && refVar.value > 0) {
+      startInterval(category, refVar, callback);
+    }
+  });
+});
+
+onUnmounted(() => {
+  Object.values(intervalIds).forEach(clearInterval);
 });
 </script>
 
@@ -107,9 +154,15 @@ onMounted(() => {
         md="6"
         >
         <h3>Radarr</h3>
+        <v-text-field
+          label="Interval (Seconds)"
+          variant="outlined"
+          v-model="movieRecordsInterval"
+          type="number"
+          class="mt-4"
+          />
         <v-table
           v-if="movieRecords.length > 0"
-          class="mt-4"
           >
           <thead>
             <tr>
@@ -153,7 +206,6 @@ onMounted(() => {
           v-if="!isLoadingMovie &&
                 !movieRecords.length"
           type="info"
-          class="mt-4"
           >
           No download information found
         </v-alert>
@@ -161,7 +213,6 @@ onMounted(() => {
           v-if="isLoadingMovie"
           justify="center"
           align="center"
-          class="mt-4"
           >
           <v-progress-circular
             indeterminate
@@ -179,9 +230,15 @@ onMounted(() => {
         md="6"
         >
         <h3>Sonarr</h3>
+        <v-text-field
+          label="Interval (Seconds)"
+          variant="outlined"
+          v-model="serieRecordsInterval"
+          type="number"
+          class="mt-4"
+          />
         <v-table
           v-if="serieRecords.length > 0"
-          class="mt-4"
           >
           <thead>
             <tr>
@@ -225,7 +282,6 @@ onMounted(() => {
           v-if="!isLoadingSerie &&
                 !serieRecords.length"
           type="info"
-          class="mt-4"
           >
           No download information found
         </v-alert>
@@ -233,7 +289,6 @@ onMounted(() => {
           v-if="isLoadingSerie"
           justify="center"
           align="center"
-          class="mt-4"
           >
           <v-progress-circular
             indeterminate
