@@ -270,7 +270,9 @@ onUnmounted(() => {
 <template>
   <v-container>
     <v-row>
-      <v-col>
+      <v-col
+        md="6"
+        >
         <h3>Radarr</h3>
         <v-row
           v-if="configHostMovie && Object.keys(configHostMovie).length > 0"
@@ -571,7 +573,9 @@ onUnmounted(() => {
           </span>
         </p>
       </v-col>
-      <v-col>
+      <v-col
+        md="6"
+        >
         <h3>Sonarr</h3>
         <v-row
           v-if="configHostSerie && Object.keys(configHostSerie).length > 0"

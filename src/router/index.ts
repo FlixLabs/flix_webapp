@@ -3,6 +3,7 @@ import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import LibraryView from '../views/LibraryView.vue'
 import OutingsView from '../views/OutingsView.vue'
+import DownloadsView from '../views/DownloadsView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import SystemView from '../views/SystemView.vue'
 import { useResettable } from '@/composables/useResettable'
@@ -39,6 +40,14 @@ const routes = [
     path: '/outings',
     name: 'Outings',
     component: OutingsView,
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/downloads',
+    name: 'Downloads',
+    component: DownloadsView,
     meta: {
       requiresAuth: true
     }
