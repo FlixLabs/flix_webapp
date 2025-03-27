@@ -1,10 +1,13 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import LoginView from '../views/LoginView.vue';
+import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import LibraryView from '../views/LibraryView.vue'
 import OutingsView from '../views/OutingsView.vue'
 import SettingsView from '../views/SettingsView.vue'
 import SystemView from '../views/SystemView.vue'
+import { useResettable } from '@/composables/useResettable'
+
+const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
 
 const routes = [
   {
@@ -64,10 +67,14 @@ const router = createRouter({
 })
 
 router.beforeEach((to, from, next) => {
-  const is_authenticated = sessionStorage.getItem('flix_webapp_is_authenticated') == 'true';
+  if (!useAPI) {
+    const is_authenticated = sessionStorage.getItem('flix_webapp_is_authenticated') == 'true';
 
-  if (to.meta.requiresAuth && !is_authenticated) {
-    next('/login');
+    if (to.meta.requiresAuth && !is_authenticated) {
+      next('/login');
+    } else {
+      next();
+    }
   } else {
     next();
   }
