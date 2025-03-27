@@ -8,6 +8,8 @@ import { useAlert } from '@/composables/useAlert';
 
 const router = useRouter();
 
+const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
+
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
 const { state: isLoading, reset: resetIsLoading } = useResettable(false);
@@ -45,7 +47,6 @@ function getData() {
       })
       .catch((error) => {
         showErrorAlert(error);
-        console.log(error);
       })
       .finally(() => {
         //resetIsLoading(); Not working
@@ -80,11 +81,15 @@ function checkData() {
 }
 
 onMounted(() => {
-  const is_authenticated = sessionStorage.getItem('flix_webapp_is_authenticated') === 'true';
-  if (is_authenticated) {
+  if (!useAPI.value) {
     router.push('/dashboard');
   } else {
-    checkData();
+    const is_authenticated = sessionStorage.getItem('flix_webapp_is_authenticated') === 'true';
+    if (is_authenticated) {
+      router.push('/dashboard');
+    } else {
+      checkData();
+    }
   }
 });
 </script>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted } from 'vue';
+import { useFlixStore } from '@/stores/flixStore';
 import { useCount } from '@/composables/useCount';
 import { useFilteredItems } from '@/composables/useFilteredItems';
 import { useResettable } from '@/composables/useResettable';
@@ -9,6 +10,13 @@ import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useDialog } from '@/composables/useDialog';
 import { useLibraryChecker } from '@/composables/useLibraryChecker';
+
+const store = useFlixStore();
+
+const selectedInstance = computed(() => store.selectedInstance);
+const selectedInstanceData = computed(() => store.selectedInstanceData);
+
+const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
@@ -37,7 +45,7 @@ const movies_total_pages = computed(() =>
 );
 const { paginatedItems: paginated_movies } = usePagination(filtered_movies, movie_page, items_per_page);
 const { total: total_movies } = useCount(filtered_movies);
-const { isAlreadyInLibrary: checkMovies } = useLibraryChecker("movies", movieItems, showErrorAlert);
+const { isAlreadyInLibrary: checkMovies } = useLibraryChecker("movies", movieItems, showErrorAlert, useAPI);
 
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
 const { state: serieItems, reset: resetSerieItems } = useResettable([]);
@@ -49,7 +57,7 @@ const series_total_pages = computed(() =>
 );
 const { paginatedItems: paginated_series } = usePagination(filtered_series, serie_page, items_per_page);
 const { total: total_series } = useCount(filtered_series);
-const { isAlreadyInLibrary: checkSeries } = useLibraryChecker("series", serieItems, showErrorAlert);
+const { isAlreadyInLibrary: checkSeries } = useLibraryChecker("series", serieItems, showErrorAlert, useAPI);
 
 function getContent(type) {
   const base_url = import.meta.env.VITE_TMDB_BASE_URL;
@@ -74,29 +82,27 @@ function getContent(type) {
 
       let items = [];
       for (const item of json_data.results) {
-        let poster_full = "https://placehold.co/100x150?text=No+Image&font=roboto";
+        let tmdbId = null;
+        let alreadyInLibrary = null;
+        let release_date = null;
+        let title = null;
+
+        let poster_full = 'https://placehold.co/100x150?text=No+Image&font=roboto';
         if (item.poster_path) {
-          poster_full = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
+          poster_full = 'https://image.tmdb.org/t/p/w500' + item.poster_path;
         }
 
-        let release_date = null;
         if (type == 'movies') {
           release_date = item.release_date;
-        }
-        if (type == 'series') {
-          release_date = item.first_air_date;
-        }
-
-        let title = null;
-        if (type == 'movies') {
           title = item.title;
         }
         if (type == 'series') {
+          release_date = item.first_air_date;
           title = item.name;
         }
 
         items.push({
-          id: item.id,
+          tmdbId: item.id,
           poster: poster_full,
           title: title,
           release_date: release_date,
@@ -113,33 +119,33 @@ function getContent(type) {
           fetch(url)
             .then(async (response) => {
               const page_data = await response.json();
+
               for (const item of page_data.results) {
+                let tmdbId = null;
+                let alreadyInLibrary = null;
+                let release_date = null;
+                let title = null;
+
                 let poster_full = "https://placehold.co/100x150?text=No+Image&font=roboto";
                 if (item.poster_path) {
                   poster_full = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
                 }
 
-                let release_date = null;
                 if (type == 'movies') {
                   release_date = item.release_date;
-                }
-                if (type == 'series') {
-                  release_date = item.first_air_date;
-                }
-
-                let title = null;
-                if (type == 'movies') {
                   title = item.title;
                 }
                 if (type == 'series') {
+                  release_date = item.first_air_date;
                   title = item.name;
                 }
 
                 items.push({
-                  id: item.id,
+                  tmdbId: item.id,
                   poster: poster_full,
                   title: title,
-                  release_date: release_date
+                  release_date: release_date,
+                  overview: item.overview
                 });
               }
             })
@@ -171,7 +177,7 @@ function getContent(type) {
 }
 
 function handleMovieClick(movie_id: number) {
-  const movie = movieItems.value.find(movie => movie.id === movie_id);
+  const movie = movieItems.value.find(movie => movie.tmdbId === movie_id);
   if (movie) {
     selectedMovie.value = movie;
     movieDialog.value = true;
@@ -179,11 +185,35 @@ function handleMovieClick(movie_id: number) {
 }
 
 function handleSerieClick(serie_id: number) {
-  const serie = serieItems.value.find(serie => serie.id === serie_id);
+  const serie = serieItems.value.find(serie => serie.tmdbId === serie_id);
   if (serie) {
+    if (!serie.tvdbId) {
+      getSerieTvdbId(serie)
+        .then(tvdbId => serie.tvdbId = tvdbId);
+    }
     selectedSerie.value = serie;
     serieDialog.value = true;
   }
+}
+
+const getSerieTvdbId = async (serie) => {
+  const base_url = import.meta.env.VITE_TMDB_BASE_URL;
+  const api_key = import.meta.env.VITE_TMDB_API_KEY;
+  let tvdbId = null;
+
+  await fetch(base_url + '/tv/' + serie.tmdbId + '/external_ids?api_key=' + api_key)
+    .then(async (response) => {
+      const json_data = await response.json();
+
+      tvdbId = json_data.tvdb_id;
+    })
+    .catch((error) => {
+      showErrorAlert(error);
+    })
+    .finally(() => {
+    });
+
+  return tvdbId;
 }
 
 function addToList(type, item) {
@@ -192,14 +222,20 @@ function addToList(type, item) {
   let url_type = null;
   let data = {};
 
+  // gerer de maniere generique
   const qualityProfileId = 1;
 
   if (type == 'movies') {
-    base_url = import.meta.env.VITE_RADARR_BASE_URL;
-    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_RADARR_BASE_URL;
+      api_key = import.meta.env.VITE_RADARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.radarr.base_url;
+      api_key = selectedInstanceData.value.radarr.api_key;
+    }
     url_type = 'movie';
     data = {
-      tmdbId: item.id,
+      tmdbId: item.tmdbId,
       title: item.title,
       year: item.year,
       qualityProfileId: qualityProfileId,
@@ -211,11 +247,16 @@ function addToList(type, item) {
     }
   }
   if (type == 'series') {
-    base_url = import.meta.env.VITE_SONARR_BASE_URL;
-    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_SONARR_BASE_URL;
+      api_key = import.meta.env.VITE_SONARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.sonarr.base_url;
+      api_key = selectedInstanceData.value.sonarr.api_key;
+    }
     url_type = 'series';
     data = {
-      tvdbId: item.id,
+      tvdbId: item.tvdbId,
       title: item.title,
       year: item.year,
       qualityProfileId: qualityProfileId,
@@ -261,17 +302,27 @@ function deleteFromList(type, item) {
   let url_type = null;
 
   if (type == 'movies') {
-    base_url = import.meta.env.VITE_RADARR_BASE_URL;
-    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_RADARR_BASE_URL;
+      api_key = import.meta.env.VITE_RADARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.radarr.base_url;
+      api_key = selectedInstanceData.value.radarr.api_key;
+    }
     url_type = 'movie';
   }
   if (type == 'series') {
-    base_url = import.meta.env.VITE_SONARR_BASE_URL;
-    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_SONARR_BASE_URL;
+      api_key = import.meta.env.VITE_SONARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.sonarr.base_url;
+      api_key = selectedInstanceData.value.sonarr.api_key;
+    }
     url_type = 'series';
   }
 
-  fetch(base_url + '/api/v3/' + url_type + '/' + item.internalId + '?apikey=' + api_key + '&deleteFiles=true', {
+  fetch(base_url + '/api/v3/' + url_type + '/' + item.id + '?apikey=' + api_key + '&deleteFiles=true', {
     method: 'DELETE',
     headers: {
       'Accept': 'application/json',
@@ -454,7 +505,7 @@ onMounted(() => {
           class="mb-4"
           >
           <v-card
-            @click="handleMovieClick(item.id)"
+            @click="handleMovieClick(item.tmdbId)"
             >
             <v-img
               :src="item.poster"
@@ -574,7 +625,7 @@ onMounted(() => {
           class="mb-4"
           >
           <v-card
-            @click="handleSerieClick(item.id)"
+            @click="handleSerieClick(item.tmdbId)"
             >
             <v-img
               :src="item.poster"

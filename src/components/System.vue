@@ -1,9 +1,17 @@
 <script setup lang="ts">
 
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { useFlixStore } from '@/stores/flixStore';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { useDiskAndLogAndHealthList } from '@/composables/useDiskAndLogAndHealthList';
+
+const store = useFlixStore();
+
+const selectedInstance = computed(() => store.selectedInstance);
+const selectedInstanceData = computed(() => store.selectedInstanceData);
+
+const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
@@ -50,15 +58,25 @@ function getData(type, endpoint) {
     if (!ignoreLoading.includes(endpoint)) {
       isLoadingMovie.value = true;
     }
-    base_url = import.meta.env.VITE_RADARR_BASE_URL;
-    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_RADARR_BASE_URL;
+      api_key = import.meta.env.VITE_RADARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.radarr.base_url;
+      api_key = selectedInstanceData.value.radarr.api_key;
+    }
   }
   if (type == 'series') {
     if (!ignoreLoading.includes(endpoint)) {
       isLoadingSerie.value = true;
     }
-    base_url = import.meta.env.VITE_SONARR_BASE_URL;
-    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_SONARR_BASE_URL;
+      api_key = import.meta.env.VITE_SONARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.sonarr.base_url;
+      api_key = selectedInstanceData.value.sonarr.api_key;
+    }
   }
 
   fetch(base_url + '/api/v3/' + endpoint + '?apikey=' + api_key)
@@ -239,6 +257,10 @@ onMounted(() => {
   });
 });
 
+watch(selectedInstance, () => {
+  fetchDataOnMount.forEach(({ category, endpoint }) => getData(category, endpoint));
+});
+
 onUnmounted(() => {
   Object.values(intervalIds).forEach(clearInterval);
 });
@@ -250,10 +272,11 @@ onUnmounted(() => {
     <v-row>
       <v-col>
         <h3>Radarr</h3>
-        <v-row>
+        <v-row
+          v-if="configHostMovie && Object.keys(configHostMovie).length > 0"
+          >
           <v-col>
             <v-card
-              v-if="configHostMovie && Object.keys(configHostMovie).length > 0"
               class="mt-4"
               >
               <v-card-title>
@@ -288,11 +311,11 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
-        <v-row>
+        <v-row
+          v-if="systemStatusMovie && Object.keys(systemStatusMovie).length > 0"
+          >
           <v-col>
-            <v-card
-              v-if="systemStatusMovie && Object.keys(systemStatusMovie).length > 0"
-              >
+            <v-card>
               <v-card-title>
                 <v-row>
                   <v-col>
@@ -379,11 +402,11 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
-        <v-row>
+        <v-row
+          v-if="diskListMovie.length > 0"
+          >
           <v-col>
-            <v-card
-              v-if="diskListMovie.length > 0"
-              >
+            <v-card>
               <v-card-title>
                 <v-row>
                   <v-col>
@@ -435,11 +458,11 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
-        <v-row>
+        <v-row
+          v-if="logListMovie.length > 0"
+          >
           <v-col>
-            <v-card
-              v-if="logListMovie.length > 0"
-              >
+            <v-card>
               <v-card-title>
                 <v-row>
                   <v-col>
@@ -477,11 +500,11 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
-        <v-row>
+        <v-row
+          v-if="healthListMovie.length > 0"
+          >
           <v-col>
-            <v-card
-              v-if="healthListMovie.length > 0"
-              >
+            <v-card>
               <v-card-title>
                 <v-row>
                   <v-col>
@@ -516,43 +539,45 @@ onUnmounted(() => {
                 </v-list-item>
               </v-list>
             </v-card>
-            <v-alert
-              v-if="!isLoadingMovie &&
-                    !configHostMovie &&
-                    !systemStatusMovie &&
-                    !diskListMovie.length &&
-                    !logListMovie.length &&
-                    !healthListMovie.length"
-              type="info"
-              >
-              No system information found
-            </v-alert>
-            <p
-              v-if="isLoadingMovie"
-              justify="center"
-              align="center"
-              class="mt-4"
-              >
-              <v-progress-circular
-                indeterminate
-                color="primary"
-                size="50"
-                />
-              <span
-                class="ml-2"
-                >
-                Loading data...
-              </span>
-            </p>
           </v-col>
         </v-row>
+        <v-alert
+          v-if="!isLoadingMovie &&
+                !configHostMovie &&
+                !systemStatusMovie &&
+                !diskListMovie.length &&
+                !logListMovie.length &&
+                !healthListMovie.length"
+          type="info"
+          class="mt-4"
+          >
+          No system information found
+        </v-alert>
+        <p
+          v-if="isLoadingMovie"
+          justify="center"
+          align="center"
+          class="mt-4"
+          >
+          <v-progress-circular
+            indeterminate
+            color="primary"
+            size="50"
+            />
+          <span
+            class="ml-2"
+            >
+            Loading data...
+          </span>
+        </p>
       </v-col>
       <v-col>
         <h3>Sonarr</h3>
-        <v-row>
+        <v-row
+          v-if="configHostSerie && Object.keys(configHostSerie).length > 0"
+          >
           <v-col>
             <v-card
-              v-if="configHostSerie && Object.keys(configHostSerie).length > 0"
               class="mt-4"
               >
               <v-card-title>
@@ -587,11 +612,11 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
-        <v-row>
+        <v-row
+          v-if="systemStatusSerie && Object.keys(systemStatusSerie).length > 0"
+          >
           <v-col>
-            <v-card
-              v-if="systemStatusSerie && Object.keys(systemStatusSerie).length > 0"
-              >
+            <v-card>
               <v-card-title>
                 <v-row>
                   <v-col>
@@ -678,11 +703,11 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
-        <v-row>
+        <v-row
+          v-if="diskListSerie.length > 0"
+          >
           <v-col>
-            <v-card
-              v-if="diskListSerie.length > 0"
-              >
+            <v-card>
               <v-card-title>
                 <v-row>
                   <v-col>
@@ -734,11 +759,11 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
-        <v-row>
+        <v-row
+          v-if="logListSerie.length > 0"
+          >
           <v-col>
-            <v-card
-              v-if="logListSerie.length > 0"
-              >
+            <v-card>
               <v-card-title>
                 <v-row>
                   <v-col>
@@ -776,9 +801,11 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
-        <v-row>
+        <v-row
+          v-if="healthListSerie.length > 0"
+          >
           <v-col>
-            <v-card v-if="healthListSerie.length > 0">
+            <v-card>
               <v-card-title>
                 <v-row>
                   <v-col>
@@ -803,38 +830,39 @@ onUnmounted(() => {
                 </v-list-item>
               </v-list>
             </v-card>
-            <v-alert
-              v-if="!isLoadingSerie &&
-                    !configHostSerie &&
-                    !systemStatusSerie &&
-                    !diskListSerie.length &&
-                    !logListSerie.length &&
-                    !healthListSerie.length"
-              type="info"
-              >
-              No system information found
-            </v-alert>
-            <p
-              v-if="isLoadingSerie"
-              justify="center"
-              align="center"
-              class="mt-4"
-              >
-              <v-progress-circular
-                indeterminate
-                color="primary"
-                size="50"
-                />
-              <span
-                class="ml-2"
-                >
-                Loading data...
-              </span>
-            </p>
           </v-col>
         </v-row>
       </v-col>
     </v-row>
+    <v-alert
+      v-if="!isLoadingSerie &&
+            !configHostSerie &&
+            !systemStatusSerie &&
+            !diskListSerie.length &&
+            !logListSerie.length &&
+            !healthListSerie.length"
+      type="info"
+      class="mt-4"
+      >
+      No system information found
+    </v-alert>
+    <p
+      v-if="isLoadingSerie"
+      justify="center"
+      align="center"
+      class="mt-4"
+      >
+      <v-progress-circular
+        indeterminate
+        color="primary"
+        size="50"
+        />
+      <span
+        class="ml-2"
+        >
+        Loading data...
+      </span>
+    </p>
   </v-container>
 </template>
 

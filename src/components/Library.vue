@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
-import { ref, computed, onMounted } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
+import { useFlixStore } from '@/stores/flixStore';
 import { useCount } from '@/composables/useCount';
 import { useFilteredItems } from '@/composables/useFilteredItems';
 import { useResettable } from '@/composables/useResettable';
@@ -8,6 +9,13 @@ import { useAlert } from '@/composables/useAlert';
 import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useDialog } from '@/composables/useDialog';
+
+const store = useFlixStore();
+
+const selectedInstance = computed(() => store.selectedInstance);
+const selectedInstanceData = computed(() => store.selectedInstanceData);
+
+const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
@@ -56,14 +64,24 @@ function getContent(type) {
 
   if (type == 'movies') {
     isLoadingMovie.value = true;
-    base_url = import.meta.env.VITE_RADARR_BASE_URL;
-    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_RADARR_BASE_URL;
+      api_key = import.meta.env.VITE_RADARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.radarr.base_url;
+      api_key = selectedInstanceData.value.radarr.api_key;
+    }
     url_type = 'movie';
   }
   if (type == 'series') {
     isLoadingSerie.value = true;
-    base_url = import.meta.env.VITE_SONARR_BASE_URL;
-    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_SONARR_BASE_URL;
+      api_key = import.meta.env.VITE_SONARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.sonarr.base_url;
+      api_key = selectedInstanceData.value.sonarr.api_key;
+    }
     url_type = 'series';
   }
 
@@ -73,14 +91,14 @@ function getContent(type) {
 
       let items = [];
       for (let item of json_data) {
-        let id = null;
-        let alreadyInLibrary = null;
+        let tmdbId = null;
+        let tvdbId = null;
 
         if (type == 'movies') {
-          id = item.tmdbId;
+          tmdbId = item.tmdbId;
         }
         if (type == 'series') {
-          id = item.tvdbId;
+          tvdbId = item.tvdbId;
         }
 
         let title = item.title;
@@ -91,8 +109,9 @@ function getContent(type) {
         }
 
         items.push({
-          id: id,
-          internalId: item.id,
+          id: item.id,
+          tmdbId: tmdbId,
+          tvdbId: tvdbId,
           prependAvatar: item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
           title: title,
           year: item.year,
@@ -125,12 +144,20 @@ function getContent(type) {
 }
 
 function getSerieEpisodes(serie_id: number) {
+  let base_url = null;
+  let api_key = null;
+
   serieDialog.value = true;
 
   serieEpisodes.value = [];
 
-  const base_url = import.meta.env.VITE_SONARR_BASE_URL;
-  const api_key = import.meta.env.VITE_SONARR_API_KEY;
+  if (!useAPI.value) {
+    base_url = import.meta.env.VITE_SONARR_BASE_URL;
+    api_key = import.meta.env.VITE_SONARR_API_KEY;
+  } else {
+    base_url = selectedInstanceData.value.sonarr.base_url;
+    api_key = selectedInstanceData.value.sonarr.api_key;
+  }
 
   fetch(base_url + '/api/v3/episode?apikey=' + api_key + '&seriesId=' + serie_id)
     .then(async (response) => {
@@ -150,7 +177,7 @@ function getSerieEpisodes(serie_id: number) {
 }
 
 function handleMovieClick(movie_id: number) {
-  const movie = movieItems.value.find(movie => movie.internalId === movie_id);
+  const movie = movieItems.value.find(movie => movie.id === movie_id);
   if (movie) {
     selectedMovie.value = movie;
     movieDialog.value = true;
@@ -158,10 +185,10 @@ function handleMovieClick(movie_id: number) {
 }
 
 function handleSerieClick(serie_id: number) {
-  const serie = serieItems.value.find(serie => serie.internalId === serie_id);
+  const serie = serieItems.value.find(serie => serie.id === serie_id);
   if (serie) {
     selectedSerie.value = serie;
-    getSerieEpisodes(serie.internalId);
+    getSerieEpisodes(serie.id);
   }
 }
 
@@ -181,17 +208,27 @@ function deleteFromList(type, item) {
   let url_type = null;
 
   if (type == 'movies') {
-    base_url = import.meta.env.VITE_RADARR_BASE_URL;
-    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_RADARR_BASE_URL;
+      api_key = import.meta.env.VITE_RADARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.radarr.base_url;
+      api_key = selectedInstanceData.value.radarr.api_key;
+    }
     url_type = 'movie';
   }
   if (type == 'series') {
-    base_url = import.meta.env.VITE_SONARR_BASE_URL;
-    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_SONARR_BASE_URL;
+      api_key = import.meta.env.VITE_SONARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.sonarr.base_url;
+      api_key = selectedInstanceData.value.sonarr.api_key;
+    }
     url_type = 'series';
   }
 
-  fetch(base_url + '/api/v3/' + url_type + '/' + item.internalId + '?apikey=' + api_key + '&deleteFiles=true', {
+  fetch(base_url + '/api/v3/' + url_type + '/' + item.id + '?apikey=' + api_key + '&deleteFiles=true', {
     method: 'DELETE',
     headers: {
       'Accept': 'application/json',
@@ -237,6 +274,11 @@ function confirmDelete() {
 }
 
 onMounted(() => {
+  getContent('movies');
+  getContent('series');
+});
+
+watch(selectedInstance, () => {
   getContent('movies');
   getContent('series');
 });
@@ -375,7 +417,7 @@ onMounted(() => {
           class="mb-4"
           >
           <v-card
-            @click="handleMovieClick(item.internalId)"
+            @click="handleMovieClick(item.id)"
             >
             <v-img
               :src="item.prependAvatar"
@@ -512,7 +554,7 @@ onMounted(() => {
           class="mb-4"
           >
           <v-card
-            @click="handleSerieClick(item.internalId)"
+            @click="handleSerieClick(item.id)"
             >
             <v-img
               :src="item.prependAvatar"

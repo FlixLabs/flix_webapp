@@ -1,12 +1,20 @@
 <script setup lang="ts">
 
 import { ref, watch, computed, onMounted } from 'vue';
+import { useFlixStore } from '@/stores/flixStore';
 import { useCount } from '@/composables/useCount';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useLibraryChecker } from '@/composables/useLibraryChecker';
+
+const store = useFlixStore();
+
+const selectedInstance = computed(() => store.selectedInstance);
+const selectedInstanceData = computed(() => store.selectedInstanceData);
+
+const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
@@ -29,7 +37,7 @@ const { state: qualityMovieItems, reset: resetQualityMovieItems } = useResettabl
 const { state: qualityMovie, reset: resetQualityMovie } = useResettable(1);
 const { paginatedItems: paginated_movies } = usePagination(movieItems, movie_page, items_per_page);
 const { total: total_movies } = useCount(movieItems);
-const { isAlreadyInLibrary: checkMovies } = useLibraryChecker("movies", movieItems, showErrorAlert);
+const { isAlreadyInLibrary: checkMovies } = useLibraryChecker("movies", movieItems, showErrorAlert, useAPI);
 
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
 const { state: serieItems, reset: resetSerieItems } = useResettable([]);
@@ -37,19 +45,29 @@ const { state: qualitySerieItems, reset: resetQualitySerieItems } = useResettabl
 const { state: qualitySerie, reset: resetQualitySerie } = useResettable(1);
 const { paginatedItems: paginated_series } = usePagination(serieItems, serie_page, items_per_page);
 const { total: total_series } = useCount(serieItems);
-const { isAlreadyInLibrary: checkSeries } = useLibraryChecker("series", serieItems, showErrorAlert);
+const { isAlreadyInLibrary: checkSeries } = useLibraryChecker("series", serieItems, showErrorAlert, useAPI);
 
 function getQualityProfileList(type) {
   let base_url = null;
   let api_key = null;
 
   if (type == 'movies') {
-    base_url = import.meta.env.VITE_RADARR_BASE_URL;
-    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_RADARR_BASE_URL;
+      api_key = import.meta.env.VITE_RADARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.radarr.base_url;
+      api_key = selectedInstanceData.value.radarr.api_key;
+    }
   }
   if (type == 'series') {
-    base_url = import.meta.env.VITE_SONARR_BASE_URL;
-    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_SONARR_BASE_URL;
+      api_key = import.meta.env.VITE_SONARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.sonarr.base_url;
+      api_key = selectedInstanceData.value.sonarr.api_key;
+    }
   }
 
   fetch(base_url + '/api/v3/qualityProfile?apikey=' + api_key)
@@ -91,14 +109,24 @@ function getContent(type, keep_page = false) {
 
   if (type == 'movies') {
     isLoadingMovie.value = true;
-    base_url = import.meta.env.VITE_RADARR_BASE_URL;
-    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_RADARR_BASE_URL;
+      api_key = import.meta.env.VITE_RADARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.radarr.base_url;
+      api_key = selectedInstanceData.value.radarr.api_key;
+    }
     url_type = 'movie';
   }
   if (type == 'series') {
     isLoadingSerie.value = true;
-    base_url = import.meta.env.VITE_SONARR_BASE_URL;
-    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_SONARR_BASE_URL;
+      api_key = import.meta.env.VITE_SONARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.sonarr.base_url;
+      api_key = selectedInstanceData.value.sonarr.api_key;
+    }
     url_type = 'series';
   }
 
@@ -108,16 +136,18 @@ function getContent(type, keep_page = false) {
 
       let items = [];
       for (let item of json_data) {
-        let id = null;
+        let tmdbId = null;
+        let tvdbId = null;
         let alreadyInLibrary = null;
         let quality = null;
 
         if (type == 'movies') {
-          id = item.tmdbId;
+          tmdbId = item.tmdbId;
           quality = qualityMovie;
         }
         if (type == 'series') {
-          id = item.tvdbId;
+          tmdbId = item.tmdbId;
+          tvdbId = item.tvdbId;
           quality = qualitySerie;
         }
 
@@ -129,8 +159,9 @@ function getContent(type, keep_page = false) {
         }
 
         items.push({
-          id: id,
-          internalId: item.id,
+          id: item.id,
+          tmdbId: tmdbId,
+          tvdbId: item.tvdbId,
           prependAvatar: item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
           title: title,
           year: item.year,
@@ -177,11 +208,16 @@ function addToList(type, item) {
   let data = {};
 
   if (type == 'movies') {
-    base_url = import.meta.env.VITE_RADARR_BASE_URL;
-    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_RADARR_BASE_URL;
+      api_key = import.meta.env.VITE_RADARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.radarr.base_url;
+      api_key = selectedInstanceData.value.radarr.api_key;
+    }
     url_type = 'movie';
     data = {
-      tmdbId: item.id,
+      tmdbId: item.tmdbId,
       title: item.title,
       year: item.year,
       qualityProfileId: item.selected_quality,
@@ -193,11 +229,16 @@ function addToList(type, item) {
     }
   }
   if (type == 'series') {
-    base_url = import.meta.env.VITE_SONARR_BASE_URL;
-    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_SONARR_BASE_URL;
+      api_key = import.meta.env.VITE_SONARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.sonarr.base_url;
+      api_key = selectedInstanceData.value.sonarr.api_key;
+    }
     url_type = 'series';
     data = {
-      tvdbId: item.id,
+      tvdbId: item.tvdbId,
       title: item.title,
       year: item.year,
       qualityProfileId: item.selected_quality,
@@ -235,17 +276,27 @@ function deleteFromList(type, item) {
   let url_type = null;
 
   if (type == 'movies') {
-    base_url = import.meta.env.VITE_RADARR_BASE_URL;
-    api_key = import.meta.env.VITE_RADARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_RADARR_BASE_URL;
+      api_key = import.meta.env.VITE_RADARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.radarr.base_url;
+      api_key = selectedInstanceData.value.radarr.api_key;
+    }
     url_type = 'movie';
   }
   if (type == 'series') {
-    base_url = import.meta.env.VITE_SONARR_BASE_URL;
-    api_key = import.meta.env.VITE_SONARR_API_KEY;
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_SONARR_BASE_URL;
+      api_key = import.meta.env.VITE_SONARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.sonarr.base_url;
+      api_key = selectedInstanceData.value.sonarr.api_key;
+    }
     url_type = 'series';
   }
 
-  fetch(base_url + '/api/v3/' + url_type + '/' + item.internalId + '?apikey=' + api_key + '&deleteFiles=true', {
+  fetch(base_url + '/api/v3/' + url_type + '/' + item.id + '?apikey=' + api_key + '&deleteFiles=true', {
     method: 'DELETE',
     headers: {
       'Accept': 'application/json',
@@ -301,6 +352,11 @@ onMounted(() => {
 
   getQualityProfileList('movies');
   getQualityProfileList('series');
+});
+
+watch(selectedInstance, () => {
+  getContent('movies');
+  getContent('series');
 });
 </script>
 
@@ -480,6 +536,7 @@ onMounted(() => {
         <v-alert
           v-else-if="!paginated_movies.length && !isLoadingMovie"
           type="info"
+          class="mt-4"
           >
           No movies found
         </v-alert>
@@ -583,6 +640,7 @@ onMounted(() => {
         <v-alert
           v-else-if="!paginated_series.length && !isLoadingSerie"
           type="info"
+          class="mt-4"
           >
           No series found
         </v-alert>

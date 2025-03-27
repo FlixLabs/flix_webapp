@@ -1,38 +1,47 @@
-import { ref } from 'vue';
+import { computed } from 'vue';
+import { useFlixStore } from '@/stores/flixStore';
 
-export function useLibraryChecker(type, items, showErrorAlert) {
-  const BASE_URLS = {
-    movies: import.meta.env.VITE_RADARR_BASE_URL,
-    series: import.meta.env.VITE_SONARR_BASE_URL,
-  };
-
-  const API_KEYS = {
-    movies: import.meta.env.VITE_RADARR_API_KEY,
-    series: import.meta.env.VITE_SONARR_API_KEY,
-  };
+export function useLibraryChecker(type, items, showErrorAlert, useAPI) {
+  const store = useFlixStore();
+  const selectedInstanceData = computed(() => store.selectedInstanceData);
 
   const URL_TYPES = {
     movies: 'movie',
     series: 'series',
   };
 
-  const ID_KEYS = {
-    movies: 'tmdbId',
-    series: 'tvdbId',
-  };
-
   const isAlreadyInLibrary = () => {
-    const base_url = BASE_URLS[type];
-    const api_key = API_KEYS[type];
+    let base_url = null;
+    let api_key = null;
+
+    if (type == 'movies') {
+      if (!useAPI.value) {
+        base_url = import.meta.env.VITE_RADARR_BASE_URL;
+        api_key = import.meta.env.VITE_RADARR_API_KEY;
+      } else {
+        base_url = selectedInstanceData.value.radarr.base_url;
+        api_key = selectedInstanceData.value.radarr.api_key;
+      }
+    }
+
+    if (type =='series') {
+      if (!useAPI.value) {
+        base_url = import.meta.env.VITE_SONARR_BASE_URL;
+        api_key = import.meta.env.VITE_SONARR_API_KEY;
+      } else {
+        base_url = selectedInstanceData.value.sonarr.base_url;
+        api_key = selectedInstanceData.value.sonarr.api_key;
+      }
+    }
+
     const url_type = URL_TYPES[type];
 
     fetch(base_url + '/api/v3/' + url_type + '?apikey=' + api_key)
       .then(async (response) => {
         const json_data = await response.json();
-        const id_key = ID_KEYS[type];
 
-        if (items.value.length > 0 && id_key) {
-          markAsAlreadyInLibrary(items.value, json_data, id_key);
+        if (items.value.length > 0) {
+          markAsAlreadyInLibrary(items.value, json_data);
         }
       })
       .catch((error) => {
@@ -40,12 +49,15 @@ export function useLibraryChecker(type, items, showErrorAlert) {
       });
   };
 
-  const markAsAlreadyInLibrary = (array_items, json_data, id_key) => {
+  const markAsAlreadyInLibrary = (array_items, json_data) => {
     for (let item of array_items) {
       for (let compare_item of json_data) {
-        if (item.id == compare_item[id_key]) {
-          item.internalId = compare_item.id;
+        if (item.tmdbId == compare_item.tmdbId) {
           item.already_in_library = true;
+          item.id = compare_item.id;
+          if (compare_item.tvdbId) {
+            item.tvdbId = compare_item.tvdbId;
+          }
         }
       }
     }
