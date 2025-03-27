@@ -16,7 +16,7 @@ deploy:
     VITE_TMDB_API_KEY: "0d1dc24ae91481452ec415924333e3e9"
     VITE_CRYPT_KEY: "zmSKMpnF2cH5XZB3ufb6CA"
     VITE_FLIX_API_USE: true
-    VITE_FLIX_API_URL: "http://localhost:3051"
+    VITE_FLIX_API_URL: "http://192.168.2.203:3051"
   script:
     - cp .env.dist $ENV_FILE
     - ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
