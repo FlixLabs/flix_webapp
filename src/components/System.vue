@@ -836,37 +836,37 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
+        <v-alert
+          v-if="!isLoadingSerie &&
+                !configHostSerie &&
+                !systemStatusSerie &&
+                !diskListSerie.length &&
+                !logListSerie.length &&
+                !healthListSerie.length"
+          type="info"
+          class="mt-4"
+          >
+          No system information found
+        </v-alert>
+        <p
+          v-if="isLoadingSerie"
+          justify="center"
+          align="center"
+          class="mt-4"
+          >
+          <v-progress-circular
+            indeterminate
+            color="primary"
+            size="50"
+            />
+          <span
+            class="ml-2"
+            >
+            Loading data...
+          </span>
+        </p>
       </v-col>
     </v-row>
-    <v-alert
-      v-if="!isLoadingSerie &&
-            !configHostSerie &&
-            !systemStatusSerie &&
-            !diskListSerie.length &&
-            !logListSerie.length &&
-            !healthListSerie.length"
-      type="info"
-      class="mt-4"
-      >
-      No system information found
-    </v-alert>
-    <p
-      v-if="isLoadingSerie"
-      justify="center"
-      align="center"
-      class="mt-4"
-      >
-      <v-progress-circular
-        indeterminate
-        color="primary"
-        size="50"
-        />
-      <span
-        class="ml-2"
-        >
-        Loading data...
-      </span>
-    </p>
   </v-container>
 </template>
 
