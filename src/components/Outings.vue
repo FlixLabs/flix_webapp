@@ -551,17 +551,28 @@ onMounted(() => {
           <v-card-text>
             <v-row>
               <v-col>
-                {{ selectedMovie.title }}
+                <v-img
+                  :src="selectedMovie.poster"
+                  class="w-100"
+                  cover
+                  />
               </v-col>
-            </v-row>
-            <v-row>
               <v-col>
-                (Release {{ selectedMovie.release_date }})
-              </v-col>
-            </v-row>
-            <v-row>
-              <v-col>
-                {{ selectedMovie.overview }}
+                <v-row>
+                  <v-col>
+                    {{ selectedMovie.title }}
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-col>
+                    (Release {{ selectedMovie.release_date }})
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-col>
+                    {{ selectedMovie.overview }}
+                  </v-col>
+                </v-row>
               </v-col>
             </v-row>
           </v-card-text>
@@ -671,17 +682,28 @@ onMounted(() => {
           <v-card-text>
             <v-row>
               <v-col>
-                {{ selectedSerie.title }}
+                <v-img
+                  :src="selectedSerie.poster"
+                  class="w-100"
+                  cover
+                  />
               </v-col>
-            </v-row>
-            <v-row>
               <v-col>
-                (Premiere {{ selectedSerie.release_date }})
-              </v-col>
-            </v-row>
-            <v-row>
-              <v-col>
-                {{ selectedSerie.overview }}
+                <v-row>
+                  <v-col>
+                    {{ selectedSerie.title }}
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-col>
+                    (Premiere {{ selectedSerie.release_date }})
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-col>
+                    {{ selectedSerie.overview }}
+                  </v-col>
+                </v-row>
               </v-col>
             </v-row>
           </v-card-text>

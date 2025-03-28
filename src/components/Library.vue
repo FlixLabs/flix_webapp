@@ -232,8 +232,8 @@ function deleteFromList(type, item) {
     method: 'DELETE',
     headers: {
       'Accept': 'application/json',
-      'Content-Type': 'application/json;charset=utf-8',
-    },
+      'Content-Type': 'application/json;charset=utf-8'
+    }
   })
   .then(async response => {
     if (response.ok) {
@@ -271,6 +271,66 @@ function confirmDelete() {
     resetMovieDialog();
     resetSerieDialog();
   }
+}
+
+function searchContent(type, item) {
+  let base_url = null;
+  let api_key = null;
+  let url_type = null;
+  let data = {};
+
+  if (type == 'movies') {
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_RADARR_BASE_URL;
+      api_key = import.meta.env.VITE_RADARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.radarr.base_url;
+      api_key = selectedInstanceData.value.radarr.api_key;
+    }
+    url_type = 'movie';
+    data = {
+      name: "MoviesSearch",
+      movieIds: [item.id]
+    }
+  }
+  if (type == 'series') {
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_SONARR_BASE_URL;
+      api_key = import.meta.env.VITE_SONARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.sonarr.base_url;
+      api_key = selectedInstanceData.value.sonarr.api_key;
+    }
+    url_type = 'series';
+    data = {
+      name: "SeriesSearch",
+      movieIds: [item.id]
+    }
+  }
+
+  fetch(base_url + '/api/v3/command', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json;charset=utf-8',
+      'X-Api-Key': api_key
+    },
+    body: JSON.stringify(data)
+  })
+  .then(async response => {
+    if (response.ok) {
+      showSuccessAlert("Start search successfully");
+      if (type == 'movies') {
+        resetMovieDialog();
+      }
+      if (type == 'series') {
+        resetSerieDialog();
+      }
+    }
+  })
+  .catch(error => {
+    showErrorAlert("Search failed");
+  });
 }
 
 onMounted(() => {
@@ -488,21 +548,39 @@ watch(selectedInstance, () => {
           <v-card-text>
             <v-row>
               <v-col>
-                {{ selectedMovie.title }}
+                <v-img
+                  :src="selectedMovie.prependAvatar"
+                  class="w-100"
+                  cover
+                  />
               </v-col>
-            </v-row>
-            <v-row>
               <v-col>
-                ({{ selectedMovie.year }})
-              </v-col>
-            </v-row>
-            <v-row>
-              <v-col>
-                {{ selectedMovie.overview }}
+                <v-row>
+                  <v-col>
+                    {{ selectedMovie.title }}
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-col>
+                    ({{ selectedMovie.year }})
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-col>
+                    {{ selectedMovie.overview }}
+                  </v-col>
+                </v-row>
               </v-col>
             </v-row>
           </v-card-text>
           <v-card-actions>
+            <v-btn
+              v-if="selectedMovie && !selectedMovie.hasFile && selectedMovie.status == 'released'"
+              @click="searchContent('movies', selectedMovie)"
+              color="primary"
+              >
+              Search
+            </v-btn>
             <v-btn
               @click="openDeleteConfirmationDialog('movies', selectedMovie)"
               color="error"
@@ -611,17 +689,28 @@ watch(selectedInstance, () => {
           <v-card-text>
             <v-row>
               <v-col>
-                {{ selectedSerie.title }}
+                <v-img
+                  :src="selectedSerie.prependAvatar"
+                  class="w-100"
+                  cover
+                  />
               </v-col>
-            </v-row>
-            <v-row>
               <v-col>
-                ({{ selectedSerie.year }})
-              </v-col>
-            </v-row>
-            <v-row>
-              <v-col>
-                {{ selectedSerie.overview }}
+                <v-row>
+                  <v-col>
+                    {{ selectedSerie.title }}
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-col>
+                    ({{ selectedSerie.year }})
+                  </v-col>
+                </v-row>
+                <v-row>
+                  <v-col>
+                    {{ selectedSerie.overview }}
+                  </v-col>
+                </v-row>
               </v-col>
             </v-row>
           </v-card-text>
