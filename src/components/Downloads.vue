@@ -171,7 +171,7 @@ onUnmounted(() => {
               <!--<th>Indexer</th>-->
               <!--<th>Client</th>-->
               <!--<th>Languages</th>-->
-              <!--<th>Status</th>-->
+              <th>Status</th>
               <th>Progress</th>
             </tr>
           </thead>
@@ -180,12 +180,12 @@ onUnmounted(() => {
               v-for="record in movieRecords"
               :key="record.title"
               >
-              <td>{{ record.title.substr(0, 30) + '...' }}</td>
+              <td>{{ record.title.substr(0, 20) + '...' }}</td>
               <td>{{ record.date }}</td>
               <!--<td>{{ record.indexer }}</td>-->
               <!--<td>{{ record.client }}</td>-->
               <!--<td>{{ record.languages }}</td>-->
-              <!--<td>{{ record.status.charAt(0).toUpperCase() + record.status.slice(1) }}</td>-->
+              <td>{{ record.status.charAt(0).toUpperCase() + record.status.slice(1) }}</td>
               <td>
                 <v-progress-linear
                   :model-value="record.ratio"
@@ -247,7 +247,7 @@ onUnmounted(() => {
               <!--<th>Indexer</th>-->
               <!--<th>Client</th>-->
               <!--<th>Languages</th>-->
-              <!--<th>Status</th>-->
+              <th>Status</th>
               <th>Progress</th>
             </tr>
           </thead>
@@ -256,12 +256,12 @@ onUnmounted(() => {
               v-for="record in serieRecords"
               :key="record.title"
               >
-              <td>{{ record.title.substr(0, 30) + '...' }}</td>
+              <td>{{ record.title.substr(0, 20) + '...' }}</td>
               <td>{{ record.date }}</td>
               <!--<td>{{ record.indexer }}</td>-->
               <!--<td>{{ record.client }}</td>-->
               <!--<td>{{ record.languages }}</td>-->
-              <!--<td>{{ record.status.charAt(0).toUpperCase() + record.status.slice(1) }}</td>-->
+              <td>{{ record.status.charAt(0).toUpperCase() + record.status.slice(1) }}</td>
               <td>
                 <v-progress-linear
                   :model-value="record.ratio"
