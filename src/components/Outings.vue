@@ -551,11 +551,13 @@ onMounted(() => {
           <v-card-text>
             <v-row>
               <v-col>
-                <v-img
-                  :src="selectedMovie.poster"
-                  class="w-100"
-                  cover
-                  />
+                <v-card>
+                  <v-img
+                    :src="selectedMovie.poster"
+                    class="w-100"
+                    cover
+                    />
+                </v-card>
               </v-col>
               <v-col>
                 <v-row>
@@ -682,11 +684,13 @@ onMounted(() => {
           <v-card-text>
             <v-row>
               <v-col>
-                <v-img
-                  :src="selectedSerie.poster"
-                  class="w-100"
-                  cover
-                  />
+                <v-card>
+                  <v-img
+                    :src="selectedSerie.poster"
+                    class="w-100"
+                    cover
+                    />
+                </v-card>
               </v-col>
               <v-col>
                 <v-row>

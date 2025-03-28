@@ -548,11 +548,13 @@ watch(selectedInstance, () => {
           <v-card-text>
             <v-row>
               <v-col>
-                <v-img
-                  :src="selectedMovie.prependAvatar"
-                  class="w-100"
-                  cover
-                  />
+                <v-card>
+                  <v-img
+                    :src="selectedMovie.prependAvatar"
+                    class="w-100"
+                    cover
+                    />
+                </v-card>
               </v-col>
               <v-col>
                 <v-row>
@@ -689,11 +691,13 @@ watch(selectedInstance, () => {
           <v-card-text>
             <v-row>
               <v-col>
-                <v-img
-                  :src="selectedSerie.prependAvatar"
-                  class="w-100"
-                  cover
-                  />
+                <v-card>
+                  <v-img
+                    :src="selectedSerie.prependAvatar"
+                    class="w-100"
+                    cover
+                    />
+                </v-card>
               </v-col>
               <v-col>
                 <v-row>
