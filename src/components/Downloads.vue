@@ -172,7 +172,7 @@ onUnmounted(() => {
               <!--<th>Client</th>-->
               <!--<th>Languages</th>-->
               <!--<th>Status</th>-->
-              <th>Ratio</th>
+              <th>Progress</th>
             </tr>
           </thead>
           <tbody>
@@ -248,7 +248,7 @@ onUnmounted(() => {
               <!--<th>Client</th>-->
               <!--<th>Languages</th>-->
               <!--<th>Status</th>-->
-              <th>Ratio</th>
+              <th>Progress</th>
             </tr>
           </thead>
           <tbody>
