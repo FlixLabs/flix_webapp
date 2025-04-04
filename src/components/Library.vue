@@ -9,6 +9,7 @@ import { useAlert } from '@/composables/useAlert';
 import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useDialog } from '@/composables/useDialog';
+import Alert from '@/components/common/Alert.vue';
 
 const store = useFlixStore();
 
@@ -345,21 +346,10 @@ watch(selectedInstance, () => {
 </script>
 
 <template>
-  <transition
-    name="fade"
-    @before-enter="beforeEnter"
-    @enter="enter"
-    @leave="leave"
-    >
-    <v-alert
-      v-if="alert.visible"
-      :type="alert.type"
-      :icon="alert.icon"
-      class="fixed-alert"
-      :text="alert.text"
-      @click="show_alert = false"
-      />
-  </transition>
+  <Alert
+    :alert="alert"
+    @update:alert="alert = $event"
+    />
   <v-dialog
     v-model="deleteConfirmationDialog"
     max-width="600px"
@@ -802,37 +792,5 @@ watch(selectedInstance, () => {
   font-size: 1rem;
   line-height: 1.2;
   font-weight: bold;
-}
-
-.fixed-alert {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  z-index: 9999;
-  max-width: 300px;
-}
-
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.fade-enter-from {
-  opacity: 0;
-  transform: translateY(-20px);
-}
-
-.fade-enter-to {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.fade-leave-from {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-20px);
 }
 </style>

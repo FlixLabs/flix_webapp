@@ -4,6 +4,7 @@ import { ref, onMounted, watch } from 'vue';
 import CryptoJS from 'crypto-js';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
+import Alert from '@/components/common/Alert.vue';
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
@@ -112,21 +113,10 @@ watch(auth, (newValue) => {
 </script>
 
 <template>
-  <transition
-    name="fade"
-    @before-enter="beforeEnter"
-    @enter="enter"
-    @leave="leave"
-    >
-    <v-alert
-      v-if="alert.visible"
-      :type="alert.type"
-      :icon="alert.icon"
-      class="fixed-alert"
-      :text="alert.text"
-      @click="show_alert = false"
-      />
-  </transition>
+  <Alert
+    :alert="alert"
+    @update:alert="alert = $event"
+    />
   <v-container>
     <v-row>
       <v-col>
@@ -179,37 +169,3 @@ watch(auth, (newValue) => {
     </v-row>
   </v-container>
 </template>
-
-<style scoped>
-.fixed-alert {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  z-index: 9999;
-  max-width: 300px;
-}
-
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.5s ease, transform 0.5s ease;
-}
-
-.fade-enter-from {
-  opacity: 0;
-  transform: translateY(-20px);
-}
-
-.fade-enter-to {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.fade-leave-from {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-20px);
-}
-</style>
