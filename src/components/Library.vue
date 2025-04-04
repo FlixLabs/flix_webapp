@@ -9,6 +9,7 @@ import { useAlert } from '@/composables/useAlert';
 import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useDialog } from '@/composables/useDialog';
+import { useDeleteItem } from '@/composables/useDeleteItem';
 import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
 
@@ -58,6 +59,14 @@ const series_total_pages = computed(() =>
 );
 const { paginatedItems: paginated_series } = usePagination(filtered_series, serie_page, items_per_page);
 const { total: total_series } = useCount(filtered_series);
+
+const { deleteItem } = useDeleteItem({
+  useAPI,
+  selectedInstanceData,
+  showSuccessAlert,
+  showErrorAlert,
+  refreshContent: getContent
+});
 
 function getContent(type) {
   let base_url = null;
@@ -204,50 +213,6 @@ const grouped_episodes = computed(() => {
   }, {} as Record<number, any[]>);
 });
 
-function deleteFromList(type, item) {
-  let base_url = null;
-  let api_key = null;
-  let url_type = null;
-
-  if (type == 'movies') {
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_RADARR_BASE_URL;
-      api_key = import.meta.env.VITE_RADARR_API_KEY;
-    } else {
-      base_url = selectedInstanceData.value.radarr.base_url;
-      api_key = selectedInstanceData.value.radarr.api_key;
-    }
-    url_type = 'movie';
-  }
-  if (type == 'series') {
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_SONARR_BASE_URL;
-      api_key = import.meta.env.VITE_SONARR_API_KEY;
-    } else {
-      base_url = selectedInstanceData.value.sonarr.base_url;
-      api_key = selectedInstanceData.value.sonarr.api_key;
-    }
-    url_type = 'series';
-  }
-
-  fetch(base_url + '/api/v3/' + url_type + '/' + item.id + '?apikey=' + api_key + '&deleteFiles=true', {
-    method: 'DELETE',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json;charset=utf-8'
-    }
-  })
-  .then(async response => {
-    if (response.ok) {
-      showSuccessAlert("Deleted successfully");
-      getContent(type, true);
-    }
-  })
-  .catch(error => {
-    showErrorAlert("Deletion failed");
-  });
-}
-
 function openDeleteConfirmationDialog(type, item) {
   if (!item) {
     if (type == 'movies') {
@@ -267,7 +232,7 @@ function openDeleteConfirmationDialog(type, item) {
 function confirmDelete() {
   if (itemToDelete.value) {
     const { type, item } = itemToDelete.value;
-    deleteFromList(type, item);
+    deleteItem(type, item);
     resetDeleteConfirmationDialog();
     resetItemToDelete();
     resetMovieDialog();
