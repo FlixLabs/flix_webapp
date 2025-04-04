@@ -9,6 +9,7 @@ import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useLibraryChecker } from '@/composables/useLibraryChecker';
 import Alert from '@/components/common/Alert.vue';
+import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
 
 const store = useFlixStore();
 
@@ -366,33 +367,11 @@ watch(selectedInstance, () => {
     :alert="alert"
     @update:alert="alert = $event"
     />
-  <v-dialog
+  <DeleteConfirmationDialog
     v-model="deleteConfirmationDialog"
-    max-width="600px"
-    >
-    <v-card>
-      <v-card-title>
-        Confirm deletion
-      </v-card-title>
-      <v-card-text>
-        Are you sure you want to delete this item ? This action cannot be undone.
-      </v-card-text>
-      <v-card-actions>
-        <v-btn
-          @click="resetDeleteConfirmationDialog()"
-          color="secondary"
-          >
-          Cancel
-        </v-btn>
-        <v-btn
-          @click="confirmDelete"
-          color="primary"
-          >
-          Confirm
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+    @confirm="confirmDelete"
+    @cancel="resetDeleteConfirmationDialog"
+    />
   <v-container>
     <v-form>
       <v-row>
