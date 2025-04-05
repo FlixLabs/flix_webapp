@@ -377,10 +377,13 @@ watch(selectedInstance, () => {
         <h3>Movies</h3>
         <v-list
           v-if="paginated_movies.length"
-          class="custom-list mt-4"
+          class="custom-list mt-4 pa-0"
           >
           <v-list-item
-            v-for="(item, index) in paginated_movies" :key="index"
+            v-for="(item, index) in paginated_movies"
+            :key="index"
+            link
+            class="pa-0 spacing-list-item"
             >
             <template
               v-slot:prepend
@@ -481,10 +484,13 @@ watch(selectedInstance, () => {
         <h3>Series</h3>
         <v-list
           v-if="paginated_series.length"
-          class="custom-list mt-4"
+          class="custom-list mt-4 pa-0"
           >
           <v-list-item
-            v-for="(item, index) in paginated_series" :key="index"
+            v-for="(item, index) in paginated_series"
+            :key="index"
+            link
+            class="pa-0 spacing-list-item"
             >
             <template
               v-slot:prepend
@@ -585,7 +591,7 @@ watch(selectedInstance, () => {
 
 <style scoped>
 .custom-list {
-  border-radius: 5px !important;
+  background-color: #121212 !important;
 }
 
 .custom-avatar {
@@ -611,5 +617,13 @@ watch(selectedInstance, () => {
   font-size: 0.9em;
   margin-top: 5px;
   margin-left: 15px;
+}
+
+.spacing-list-item:not(:first-child) {
+  margin-top: 10px;
+}
+
+.spacing-list-item {
+  border-radius: 5px !important;
 }
 </style>
