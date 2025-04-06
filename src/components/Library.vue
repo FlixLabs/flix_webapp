@@ -133,7 +133,8 @@ function getContent(type) {
           overview: item.overview,
           hasFile: item.hasFile,
           status: item.status,
-          file: file
+          file: file,
+          statistics: item.statistics
         });
       }
 
@@ -276,7 +277,7 @@ function searchContent(type, item) {
     url_type = 'series';
     data = {
       name: "SeriesSearch",
-      movieIds: [item.id]
+      seriesId: item.id
     }
   }
 
@@ -738,6 +739,13 @@ watch(selectedInstance, () => {
             </div>
           </v-card-text>
           <v-card-actions>
+            <v-btn
+              v-if="selectedSerie && selectedSerie.statistics.sizeOnDisk == 0 && selectedSerie.status != 'upcoming'"
+              @click="searchContent('series', selectedSerie)"
+              color="primary"
+              >
+              Search
+            </v-btn>
             <v-btn
               @click="openDeleteConfirmationDialog('series', selectedSerie)"
               color="error"
