@@ -478,11 +478,15 @@ onMounted(() => {
         max-width="600px"
         max-height="600px"
         >
-        <v-card>
+        <v-card
+          class="dialog-flex"
+          >
           <v-card-title>
             Movie
           </v-card-title>
-          <v-card-text>
+          <v-card-text
+            class="dialog-flex-text"
+            >
             <v-row>
               <v-col>
                 <v-card>
@@ -611,11 +615,15 @@ onMounted(() => {
         max-width="600px"
         max-height="600px"
         >
-        <v-card>
+        <v-card
+          class="dialog-flex"
+          >
           <v-card-title>
             Serie
           </v-card-title>
-          <v-card-text>
+          <v-card-text
+            class="dialog-flex-text"
+            >
             <v-row>
               <v-col>
                 <v-card>
@@ -678,5 +686,16 @@ onMounted(() => {
   font-size: 1rem;
   line-height: 1.2;
   font-weight: bold;
+}
+
+.dialog-flex {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.dialog-flex-text {
+  flex: 1;
+  overflow-y: auto;
 }
 </style>
