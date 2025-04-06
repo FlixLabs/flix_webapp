@@ -104,9 +104,13 @@ function getContent(type) {
       for (let item of json_data) {
         let tmdbId = null;
         let tvdbId = null;
+        let file = null;
 
         if (type == 'movies') {
           tmdbId = item.tmdbId;
+          if (item.movieFile) {
+            file = item.movieFile.relativePath;
+          }
         }
         if (type == 'series') {
           tvdbId = item.tvdbId;
@@ -128,7 +132,8 @@ function getContent(type) {
           year: item.year,
           overview: item.overview,
           hasFile: item.hasFile,
-          status: item.status
+          status: item.status,
+          file: file
         });
       }
 
@@ -475,11 +480,15 @@ watch(selectedInstance, () => {
         max-width="600px"
         max-height="600px"
         >
-        <v-card>
+        <v-card
+          class="dialog-flex"
+          >
           <v-card-title>
             Movie
           </v-card-title>
-          <v-card-text>
+          <v-card-text
+            class="dialog-flex-text"
+            >
             <v-row>
               <v-col>
                 <v-card>
@@ -506,6 +515,18 @@ watch(selectedInstance, () => {
                     {{ selectedMovie.overview }}
                   </v-col>
                 </v-row>
+              </v-col>
+            </v-row>
+            <v-row
+              v-if="selectedMovie.file"
+              >
+              <v-col>
+                <v-text-field
+                  label="File"
+                  variant="outlined"
+                  v-model="selectedMovie.file"
+                  :disabled="true"
+                  />
               </v-col>
             </v-row>
           </v-card-text>
@@ -618,11 +639,15 @@ watch(selectedInstance, () => {
         max-width="600px"
         max-height="600px"
         >
-        <v-card>
+        <v-card
+          class="dialog-flex"
+          >
           <v-card-title>
             Episodes
           </v-card-title>
-          <v-card-text>
+          <v-card-text
+            class="dialog-flex-text"
+            >
             <v-row>
               <v-col>
                 <v-card>
@@ -651,65 +676,66 @@ watch(selectedInstance, () => {
                 </v-row>
               </v-col>
             </v-row>
-          </v-card-text>
-          <v-card-text
-            v-if="Object.keys(grouped_episodes).length"
-            >
-            <v-expansion-panels>
-              <v-expansion-panel
-                v-for="(episodes, season) in grouped_episodes"
-                :key="season"
-                >
-                <v-expansion-panel-title>
-                  Season {{ season }}
-                </v-expansion-panel-title>
-                <v-expansion-panel-text>
-                  <v-list>
-                    <v-list-item
-                      v-for="(episode, index) in episodes"
-                      :key="index"
-                      >
-                      <v-list-item-content>
-                        <v-list-item-title>
-                          {{ episode.title }}
-                        </v-list-item-title>
-                        <v-list-item-subtitle>
-                          Episode {{ episode.episode }} - {{ episode.airDate || "Date unknown" }}
-                        </v-list-item-subtitle>
-                        <v-list-item-action
-                          class="pt-2"
-                          >
-                          <v-chip
-                            v-if="episode.hasFile"
-                            color="green"
-                            small
-                            >
-                            Existing
-                          </v-chip>
-                          <v-chip
-                            v-else
-                            color="red"
-                            small
-                            >
-                            Missing
-                          </v-chip>
-                        </v-list-item-action>
-                      </v-list-item-content>
-                    </v-list-item>
-                  </v-list>
-                </v-expansion-panel-text>
-              </v-expansion-panel>
-            </v-expansion-panels>
-          </v-card-text>
-          <v-card-text
-            v-else
-            >
-            <v-alert
-              type="info"
+            <div
+              v-if="Object.keys(grouped_episodes).length"
               class="mt-4"
               >
-              No episode found
-            </v-alert>
+              <v-expansion-panels>
+                <v-expansion-panel
+                  v-for="(episodes, season) in grouped_episodes"
+                  :key="season"
+                  >
+                  <v-expansion-panel-title>
+                    Season {{ season }}
+                  </v-expansion-panel-title>
+                  <v-expansion-panel-text>
+                    <v-list>
+                      <v-list-item
+                        v-for="(episode, index) in episodes"
+                        :key="index"
+                        >
+                        <v-list-item-content>
+                          <v-list-item-title>
+                            {{ episode.title }}
+                          </v-list-item-title>
+                          <v-list-item-subtitle>
+                            Episode {{ episode.episode }} - {{ episode.airDate || "Date unknown" }}
+                          </v-list-item-subtitle>
+                          <v-list-item-action
+                            class="pt-2"
+                            >
+                            <v-chip
+                              v-if="episode.hasFile"
+                              color="green"
+                              small
+                              >
+                              Existing
+                            </v-chip>
+                            <v-chip
+                              v-else
+                              color="red"
+                              small
+                              >
+                              Missing
+                            </v-chip>
+                          </v-list-item-action>
+                        </v-list-item-content>
+                      </v-list-item>
+                    </v-list>
+                  </v-expansion-panel-text>
+                </v-expansion-panel>
+              </v-expansion-panels>
+            </div>
+            <div
+              v-else
+              >
+              <v-alert
+                type="info"
+                class="mt-4"
+                >
+                No episode found
+              </v-alert>
+            </div>
           </v-card-text>
           <v-card-actions>
             <v-btn
@@ -736,5 +762,16 @@ watch(selectedInstance, () => {
   font-size: 1rem;
   line-height: 1.2;
   font-weight: bold;
+}
+
+.dialog-flex {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.dialog-flex-text {
+  flex: 1;
+  overflow-y: auto;
 }
 </style>
