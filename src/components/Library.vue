@@ -104,12 +104,12 @@ function getContent(type) {
       for (let item of json_data) {
         let tmdbId = null;
         let tvdbId = null;
-        let file = null;
+        let relativePath = null;
 
         if (type == 'movies') {
           tmdbId = item.tmdbId;
           if (item.movieFile) {
-            file = item.movieFile.relativePath;
+            relativePath = item.movieFile.relativePath;
           }
         }
         if (type == 'series') {
@@ -133,7 +133,7 @@ function getContent(type) {
           overview: item.overview,
           hasFile: item.hasFile,
           status: item.status,
-          file: file,
+          relativePath: relativePath,
           statistics: item.statistics
         });
       }
@@ -176,7 +176,7 @@ function getSerieEpisodes(serie_id: number) {
     api_key = selectedInstanceData.value.sonarr.api_key;
   }
 
-  fetch(base_url + '/api/v3/episode?apikey=' + api_key + '&seriesId=' + serie_id)
+  fetch(base_url + '/api/v3/episode?includeEpisodeFile=true&apikey=' + api_key + '&seriesId=' + serie_id)
     .then(async (response) => {
       const json_data = await response.json();
 
@@ -185,7 +185,8 @@ function getSerieEpisodes(serie_id: number) {
         season: episode.seasonNumber,
         episode: episode.episodeNumber,
         airDate: episode.airDate,
-        hasFile: episode.hasFile
+        hasFile: episode.hasFile,
+        relativePath: episode.episodeFile ? episode.episodeFile.relativePath : null
       }));
     })
     .catch((error) => {
@@ -519,13 +520,13 @@ watch(selectedInstance, () => {
               </v-col>
             </v-row>
             <v-row
-              v-if="selectedMovie.file"
+              v-if="selectedMovie.relativePath"
               >
               <v-col>
                 <v-text-field
                   label="File"
                   variant="outlined"
-                  v-model="selectedMovie.file"
+                  v-model="selectedMovie.relativePath"
                   :disabled="true"
                   />
               </v-col>
@@ -720,6 +721,19 @@ watch(selectedInstance, () => {
                               Missing
                             </v-chip>
                           </v-list-item-action>
+                          <v-row
+                            v-if="episode.relativePath"
+                            class="mt-4"
+                            >
+                            <v-col>
+                              <v-text-field
+                                label="File"
+                                variant="outlined"
+                                v-model="episode.relativePath"
+                                :disabled="true"
+                                />
+                            </v-col>
+                          </v-row>
                         </v-list-item-content>
                       </v-list-item>
                     </v-list>
