@@ -515,6 +515,18 @@ onMounted(() => {
                 </v-row>
               </v-col>
             </v-row>
+            <v-row
+              v-if="selectedMovie.relativePath"
+              >
+              <v-col>
+                <v-text-field
+                  label="File"
+                  variant="outlined"
+                  v-model="selectedMovie.relativePath"
+                  :disabled="true"
+                  />
+              </v-col>
+            </v-row>
           </v-card-text>
           <v-card-actions>
             <v-btn
