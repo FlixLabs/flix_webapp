@@ -59,6 +59,7 @@ const series_total_pages = computed(() =>
 );
 const { paginatedItems: paginated_series } = usePagination(filtered_series, serie_page, items_per_page);
 const { total: total_series } = useCount(filtered_series);
+const { state: isLoadingSerieEpisodes, reset: resetIsLoadingSerieEpisodes } = useResettable(false);
 
 const { deleteItem } = useDeleteItem({
   useAPI,
@@ -165,6 +166,7 @@ function getSerieEpisodes(serie_id: number) {
   let api_key = null;
 
   serieDialog.value = true;
+  isLoadingSerieEpisodes.value = true;
 
   serieEpisodes.value = [];
 
@@ -188,6 +190,8 @@ function getSerieEpisodes(serie_id: number) {
         hasFile: episode.hasFile,
         relativePath: episode.episodeFile ? episode.episodeFile.relativePath : null
       }));
+
+      isLoadingSerieEpisodes.value = false;
     })
     .catch((error) => {
       showErrorAlert(error);
@@ -678,8 +682,25 @@ watch(selectedInstance, () => {
                 </v-row>
               </v-col>
             </v-row>
+            <v-row
+              v-if="isLoadingSerieEpisodes"
+              justify="center"
+              align="center"
+              class="mt-4"
+              >
+              <v-progress-circular
+                indeterminate
+                color="primary"
+                size="50"
+                />
+              <span
+                class="ml-2"
+                >
+                Research in progress...
+              </span>
+            </v-row>
             <div
-              v-if="Object.keys(grouped_episodes).length"
+              v-if="Object.keys(grouped_episodes).length && !isLoadingSerieEpisodes"
               class="mt-4"
               >
               <v-expansion-panels>
@@ -742,7 +763,7 @@ watch(selectedInstance, () => {
               </v-expansion-panels>
             </div>
             <div
-              v-else
+              v-else-if="!Object.keys(grouped_episodes).length && !isLoadingSerieEpisodes"
               >
               <v-alert
                 type="info"

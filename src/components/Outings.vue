@@ -54,6 +54,7 @@ const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(fals
 const { state: serieItems, reset: resetSerieItems } = useResettable([]);
 const { state: selectedSerie, reset: resetSelectedSerie } = useResettable([]);
 const { dialog: serieDialog, reset: resetSerieDialog } = useDialog();
+const { state: serieEpisodes, reset: resetSerieEpisodes } = useResettable([]);
 const { filteredItems: filtered_series } = useFilteredItems(serieItems, search);
 const series_total_pages = computed(() =>
   Math.ceil(filtered_series.value.length / items_per_page)
@@ -61,6 +62,7 @@ const series_total_pages = computed(() =>
 const { paginatedItems: paginated_series } = usePagination(filtered_series, serie_page, items_per_page);
 const { total: total_series } = useCount(filtered_series);
 const { isAlreadyInLibrary: checkSeries } = useLibraryChecker("series", serieItems, showErrorAlert, useAPI);
+const { state: isLoadingSerieEpisodes, reset: resetIsLoadingSerieEpisodes } = useResettable(false);
 
 const { deleteItem } = useDeleteItem({
   useAPI,
@@ -187,6 +189,67 @@ function getContent(type) {
     });
 }
 
+function getSerieEpisodes(serie_id: number) {
+  const base_url = import.meta.env.VITE_TMDB_BASE_URL;
+  const api_key = import.meta.env.VITE_TMDB_API_KEY;
+
+  serieDialog.value = true;
+  isLoadingSerieEpisodes.value = true;
+
+  serieEpisodes.value = [];
+
+  fetch(base_url + '/tv/' + serie_id + '?api_key=' + api_key)
+    .then(async (response) => {
+      const json_data = await response.json();
+      const seasonPromises = [];
+
+      for (const season of json_data.seasons) {
+          const seasonPromise = fetch(base_url + '/tv/' + serie_id + '/season/' + season.season_number + '?api_key=' + api_key)
+            .then(response => response.json())
+            .then(seasonData => {
+              if (seasonData && Array.isArray(seasonData.episodes)) {
+                return seasonData.episodes.map(episode => {
+                  if (
+                    episode &&
+                    episode.name &&
+                    typeof episode.season_number !== 'undefined' &&
+                    episode.episode_number &&
+                    episode.air_date
+                  ) {
+                    return {
+                      title: episode.name,
+                      season: episode.season_number,
+                      episode: episode.episode_number,
+                      airDate: episode.air_date
+                    };
+                  } else {
+                    return null;
+                  }
+                }).filter(ep => ep !== null);
+              }
+              return [];
+            })
+            .catch(error => {
+              return [];
+            });
+
+          seasonPromises.push(seasonPromise);
+      }
+
+      const seasonsEpisodes = await Promise.all(seasonPromises);
+      const episodesArray = seasonsEpisodes.flat();
+
+      serieEpisodes.value = episodesArray.filter(
+        episode => episode && typeof episode.season !== 'undefined'
+      );
+
+      isLoadingSerieEpisodes.value = false;
+    })
+    .catch((error) => {
+      showErrorAlert(error);
+    });
+}
+
 function handleMovieClick(movie_id: number) {
   const movie = movieItems.value.find(movie => movie.tmdbId === movie_id);
   if (movie) {
@@ -200,10 +263,12 @@ function handleSerieClick(serie_id: number) {
   if (serie) {
     if (!serie.tvdbId) {
       getSerieTvdbId(serie)
-        .then(tvdbId => serie.tvdbId = tvdbId);
+        .then(tvdbId => {
+          serie.tvdbId = tvdbId;
+        });
     }
     selectedSerie.value = serie;
-    serieDialog.value = true;
+    getSerieEpisodes(serie.tmdbId);
   }
 }
 
@@ -226,6 +291,16 @@ const getSerieTvdbId = async (serie) => {
 
   return tvdbId;
 }
+
+const grouped_episodes = computed(() => {
+  return serieEpisodes.value.reduce((acc, episode) => {
+    if (!acc[episode.season]) {
+      acc[episode.season] = [];
+    }
+    acc[episode.season].push(episode);
+    return acc;
+  }, {} as Record<number, any[]>);
+});
 
 function addToList(type, item) {
   let base_url = null;
@@ -664,6 +739,98 @@ onMounted(() => {
                 </v-row>
               </v-col>
             </v-row>
+            <v-row
+              v-if="isLoadingSerieEpisodes"
+              justify="center"
+              align="center"
+              class="mt-4"
+              >
+              <v-progress-circular
+                indeterminate
+                color="primary"
+                size="50"
+                />
+              <span
+                class="ml-2"
+                >
+                Research in progress...
+              </span>
+            </v-row>
+            <div
+              v-if="Object.keys(grouped_episodes).length && !isLoadingSerieEpisodes"
+              class="mt-4"
+              >
+              <v-expansion-panels>
+                <v-expansion-panel
+                  v-for="(episodes, season) in grouped_episodes"
+                  :key="season"
+                  >
+                  <v-expansion-panel-title>
+                    Season {{ season }}
+                  </v-expansion-panel-title>
+                  <v-expansion-panel-text>
+                    <v-list>
+                      <v-list-item
+                        v-for="(episode, index) in episodes"
+                        :key="index"
+                        >
+                        <v-list-item-content>
+                          <v-list-item-title>
+                            {{ episode.title }}
+                          </v-list-item-title>
+                          <v-list-item-subtitle>
+                            Episode {{ episode.episode }} - {{ episode.airDate || "Date unknown" }}
+                          </v-list-item-subtitle>
+                          <!--
+                          <v-list-item-action
+                            class="pt-2"
+                            >
+                            <v-chip
+                              v-if="episode.hasFile"
+                              color="green"
+                              small
+                              >
+                              Existing
+                            </v-chip>
+                            <v-chip
+                              v-else
+                              color="red"
+                              small
+                              >
+                              Missing
+                            </v-chip>
+                          </v-list-item-action>
+                          <v-row
+                            v-if="episode.relativePath"
+                            class="mt-4"
+                            >
+                            <v-col>
+                              <v-text-field
+                                label="File"
+                                variant="outlined"
+                                v-model="episode.relativePath"
+                                :disabled="true"
+                                />
+                            </v-col>
+                          </v-row>
+                          -->
+                        </v-list-item-content>
+                      </v-list-item>
+                    </v-list>
+                  </v-expansion-panel-text>
+                </v-expansion-panel>
+              </v-expansion-panels>
+            </div>
+            <div
+              v-else-if="!Object.keys(grouped_episodes).length && !isLoadingSerieEpisodes"
+              >
+              <v-alert
+                type="info"
+                class="mt-4"
+                >
+                No episode found
+              </v-alert>
+            </div>
           </v-card-text>
           <v-card-actions>
             <v-btn
