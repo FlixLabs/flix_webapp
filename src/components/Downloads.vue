@@ -316,9 +316,7 @@ onUnmounted(() => {
         </v-row>
         <v-row>
           <v-col>
-            <v-card
-              class="mt-4"
-              >
+            <v-card>
               <v-card-title>
                 History
               </v-card-title>
@@ -473,9 +471,7 @@ onUnmounted(() => {
         </v-row>
         <v-row>
           <v-col>
-            <v-card
-              class="mt-4"
-              >
+            <v-card>
               <v-card-title>
                 History
               </v-card-title>
