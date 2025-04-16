@@ -96,9 +96,14 @@ function getContent(type) {
       let items = [];
       for (const item of json_data.results) {
         let tmdbId = null;
+        let tvdbId = null;
         let alreadyInLibrary = null;
         let release_date = null;
         let title = null;
+        let hasFile = null;
+        let status = null;
+        let relativePath = null;
+        let statistics = null;
 
         let poster_full = 'https://placehold.co/100x150?text=No+Image&font=roboto';
         if (item.poster_path) {
@@ -116,10 +121,15 @@ function getContent(type) {
 
         items.push({
           tmdbId: item.id,
+          tvdbId: tvdbId,
           poster: poster_full,
           title: title,
           release_date: release_date,
-          overview: item.overview
+          overview: item.overview,
+          hasFile: hasFile,
+          status: status,
+          relativePath: relativePath,
+          statistics: statistics
         });
       }
 
@@ -409,6 +419,66 @@ function confirmDelete() {
   }
 }
 
+function searchContent(type, item) {
+  let base_url = null;
+  let api_key = null;
+  let url_type = null;
+  let data = {};
+
+  if (type == 'movies') {
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_RADARR_BASE_URL;
+      api_key = import.meta.env.VITE_RADARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.radarr.base_url;
+      api_key = selectedInstanceData.value.radarr.api_key;
+    }
+    url_type = 'movie';
+    data = {
+      name: "MoviesSearch",
+      movieIds: [item.id]
+    }
+  }
+  if (type == 'series') {
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_SONARR_BASE_URL;
+      api_key = import.meta.env.VITE_SONARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.sonarr.base_url;
+      api_key = selectedInstanceData.value.sonarr.api_key;
+    }
+    url_type = 'series';
+    data = {
+      name: "SeriesSearch",
+      seriesId: item.id
+    }
+  }
+
+  fetch(base_url + '/api/v3/command', {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json;charset=utf-8',
+      'X-Api-Key': api_key
+    },
+    body: JSON.stringify(data)
+  })
+  .then(async response => {
+    if (response.ok) {
+      showSuccessAlert("Start search successfully");
+      if (type == 'movies') {
+        resetMovieDialog();
+      }
+      if (type == 'series') {
+        resetSerieDialog();
+      }
+    }
+  })
+  .catch(error => {
+    showErrorAlert("Search failed");
+  });
+}
+
 onMounted(() => {
   getContent('movies');
   getContent('series');
@@ -532,6 +602,40 @@ onMounted(() => {
               >
               (Realease {{ item.release_date }})
             </v-card-text>
+            <v-card-action
+              class="d-flex justify-center pb-2"
+              >
+              <v-chip
+                v-if="item.hasFile"
+                color="green"
+                small
+                >
+                Existing
+              </v-chip>
+              <v-chip
+                v-else
+                color="red"
+                small
+                >
+                Missing
+              </v-chip>
+              <v-chip
+                v-if="item.status"
+                color="blue"
+                small
+                class="ml-1"
+                >
+                {{ item.status.charAt(0).toUpperCase() + item.status.slice(1) }}
+              </v-chip>
+              <v-chip
+                v-else
+                color="blue"
+                small
+                class="ml-1"
+                >
+                Unknown
+              </v-chip>
+            </v-card-action>
           </v-card>
         </v-col>
       </v-row>
@@ -604,6 +708,13 @@ onMounted(() => {
             </v-row>
           </v-card-text>
           <v-card-actions>
+            <v-btn
+              v-if="selectedMovie && !selectedMovie.hasFile && selectedMovie.status == 'released'"
+              @click="searchContent('movies', selectedMovie)"
+              color="primary"
+              >
+              Search
+            </v-btn>
             <v-btn
               v-if="!selectedMovie.already_in_library"
               @click="addToList('movies', selectedMovie)"
@@ -681,6 +792,26 @@ onMounted(() => {
               >
               (Premiere {{ item.release_date }})
             </v-card-text>
+            <v-card-action
+              class="d-flex justify-center pb-2"
+              >
+              <v-chip
+                v-if="item.status"
+                color="blue"
+                small
+                class="ml-1"
+                >
+                {{ item.status.charAt(0).toUpperCase() + item.status.slice(1) }}
+              </v-chip>
+              <v-chip
+                v-else
+                color="blue"
+                small
+                class="ml-1"
+                >
+                Unknown
+              </v-chip>
+            </v-card-action>
           </v-card>
         </v-col>
       </v-row>
@@ -833,6 +964,13 @@ onMounted(() => {
             </div>
           </v-card-text>
           <v-card-actions>
+            <v-btn
+              v-if="selectedSerie && selectedSerie.statistics && selectedSerie.statistics.sizeOnDisk == 0 && selectedSerie.status != 'upcoming'"
+              @click="searchContent('series', selectedSerie)"
+              color="primary"
+              >
+              Search
+            </v-btn>
             <v-btn
               v-if="!selectedSerie.already_in_library"
               @click="addToList('series', selectedSerie)"
