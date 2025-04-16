@@ -458,11 +458,20 @@ watch(selectedInstance, () => {
                 Missing
               </v-chip>
               <v-chip
+                v-if="item.status"
                 color="blue"
                 small
                 class="ml-1"
                 >
                 {{ item.status.charAt(0).toUpperCase() + item.status.slice(1) }}
+              </v-chip>
+              <v-chip
+                v-else
+                color="blue"
+                small
+                class="ml-1"
+                >
+                Unknown
               </v-chip>
             </v-card-action>
           </v-card>
@@ -617,11 +626,20 @@ watch(selectedInstance, () => {
               class="d-flex justify-center pb-2"
               >
               <v-chip
+                v-if="item.status"
                 color="blue"
                 small
                 class="ml-1"
                 >
                 {{ item.status.charAt(0).toUpperCase() + item.status.slice(1) }}
+              </v-chip>
+              <v-chip
+                v-else
+                color="blue"
+                small
+                class="ml-1"
+                >
+                Unknown
               </v-chip>
             </v-card-action>
           </v-card>
@@ -775,7 +793,7 @@ watch(selectedInstance, () => {
           </v-card-text>
           <v-card-actions>
             <v-btn
-              v-if="selectedSerie && selectedSerie.statistics.sizeOnDisk == 0 && selectedSerie.status != 'upcoming'"
+              v-if="selectedSerie && selectedSerie.statistics && selectedSerie.statistics.sizeOnDisk == 0 && selectedSerie.status != 'upcoming'"
               @click="searchContent('series', selectedSerie)"
               color="primary"
               >

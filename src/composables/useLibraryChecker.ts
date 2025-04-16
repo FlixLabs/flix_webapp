@@ -58,8 +58,17 @@ export function useLibraryChecker(type, items, showErrorAlert, useAPI) {
           if (compare_item.tvdbId) {
             item.tvdbId = compare_item.tvdbId;
           }
+          if (compare_item.hasFile) {
+            item.hasFile = compare_item.hasFile;
+          }
+          if (compare_item.status) {
+            item.status = compare_item.status;
+          }
           if (compare_item.movieFile) {
             item.relativePath = compare_item.movieFile.relativePath;
+          }
+          if (compare_item.statistics) {
+            item.statistics = compare_item.statistics;
           }
         }
       }
