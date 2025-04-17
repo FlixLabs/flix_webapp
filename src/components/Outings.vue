@@ -697,7 +697,9 @@ onMounted(() => {
             <v-row
               v-if="selectedMovie.relativePath"
               >
-              <v-col>
+              <v-col
+                cols="9"
+                >
                 <v-tooltip
                   :text="selectedMovie.relativePath"
                   >
@@ -712,6 +714,16 @@ onMounted(() => {
                     </span>
                   </template>
                 </v-tooltip>
+              </v-col>
+              <v-col
+                cols="3"
+                >
+                <v-text-field
+                  label="Size (GB)"
+                  variant="outlined"
+                  :model-value="(selectedMovie.statistics.sizeOnDisk / 1e9).toFixed(2)"
+                  :disabled="true"
+                  />
               </v-col>
             </v-row>
           </v-card-text>
