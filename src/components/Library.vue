@@ -188,7 +188,8 @@ function getSerieEpisodes(serie_id: number) {
         episode: episode.episodeNumber,
         airDate: episode.airDate,
         hasFile: episode.hasFile,
-        relativePath: episode.episodeFile ? episode.episodeFile.relativePath : null
+        relativePath: episode.episodeFile ? episode.episodeFile.relativePath : null,
+        sizeOnDisk: episode.episodeFile ? episode.episodeFile.size : null
       }));
 
       isLoadingSerieEpisodes.value = false;
@@ -535,7 +536,9 @@ watch(selectedInstance, () => {
             <v-row
               v-if="selectedMovie.relativePath"
               >
-              <v-col>
+              <v-col
+                cols="9"
+                >
                 <v-tooltip
                   :text="selectedMovie.relativePath"
                   >
@@ -550,6 +553,16 @@ watch(selectedInstance, () => {
                     </span>
                   </template>
                 </v-tooltip>
+              </v-col>
+              <v-col
+                cols="3"
+                >
+                <v-text-field
+                  label="Size (GB)"
+                  variant="outlined"
+                  :model-value="(selectedMovie.statistics.sizeOnDisk / 1e9).toFixed(2)"
+                  :disabled="true"
+                  />
               </v-col>
             </v-row>
           </v-card-text>
@@ -772,7 +785,9 @@ watch(selectedInstance, () => {
                             v-if="episode.relativePath"
                             class="mt-4"
                             >
-                            <v-col>
+                            <v-col
+                              cols="9"
+                              >
                               <v-tooltip
                                 :text="episode.relativePath"
                                 >
@@ -787,6 +802,16 @@ watch(selectedInstance, () => {
                                   </span>
                                 </template>
                               </v-tooltip>
+                            </v-col>
+                            <v-col
+                              cols="3"
+                              >
+                              <v-text-field
+                                label="Size (GB)"
+                                variant="outlined"
+                                :model-value="(episode.sizeOnDisk / 1e9).toFixed(2)"
+                                :disabled="true"
+                                />
                             </v-col>
                           </v-row>
                         </v-list-item-content>
