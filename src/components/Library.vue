@@ -536,12 +536,20 @@ watch(selectedInstance, () => {
               v-if="selectedMovie.relativePath"
               >
               <v-col>
-                <v-text-field
-                  label="File"
-                  variant="outlined"
-                  v-model="selectedMovie.relativePath"
-                  :disabled="true"
-                  />
+                <v-tooltip
+                  :text="selectedMovie.relativePath"
+                  >
+                  <template #activator="{ props }">
+                    <span v-bind="props" style="cursor:pointer;">
+                      <v-text-field
+                        label="File"
+                        variant="outlined"
+                        v-model="selectedMovie.relativePath"
+                        :disabled="true"
+                        />
+                    </span>
+                  </template>
+                </v-tooltip>
               </v-col>
             </v-row>
           </v-card-text>
@@ -765,12 +773,20 @@ watch(selectedInstance, () => {
                             class="mt-4"
                             >
                             <v-col>
-                              <v-text-field
-                                label="File"
-                                variant="outlined"
-                                v-model="episode.relativePath"
-                                :disabled="true"
-                                />
+                              <v-tooltip
+                                :text="episode.relativePath"
+                                >
+                                <template #activator="{ props }">
+                                  <span v-bind="props" style="cursor:pointer;">
+                                    <v-text-field
+                                      label="File"
+                                      variant="outlined"
+                                      v-model="episode.relativePath"
+                                      :disabled="true"
+                                      />
+                                  </span>
+                                </template>
+                              </v-tooltip>
                             </v-col>
                           </v-row>
                         </v-list-item-content>
