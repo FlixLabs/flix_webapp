@@ -202,11 +202,21 @@ function getContent(type) {
 function getSerieEpisodes(serie_id: number) {
   const base_url = import.meta.env.VITE_TMDB_BASE_URL;
   const api_key = import.meta.env.VITE_TMDB_API_KEY;
+  let base_url_sonarr = null;
+  let api_key_sonarr = null;
 
   serieDialog.value = true;
   isLoadingSerieEpisodes.value = true;
 
   serieEpisodes.value = [];
+
+  if (!useAPI.value) {
+    base_url_sonarr = import.meta.env.VITE_SONARR_BASE_URL;
+    api_key_sonarr = import.meta.env.VITE_SONARR_API_KEY;
+  } else {
+    base_url_sonarr = selectedInstanceData.value.sonarr.base_url;
+    api_key_sonarr = selectedInstanceData.value.sonarr.api_key;
+  }
 
   fetch(base_url + '/tv/' + serie_id + '?api_key=' + api_key)
     .then(async (response) => {
@@ -214,36 +224,64 @@ function getSerieEpisodes(serie_id: number) {
       const seasonPromises = [];
 
       for (const season of json_data.seasons) {
-          const seasonPromise = fetch(base_url + '/tv/' + serie_id + '/season/' + season.season_number + '?api_key=' + api_key)
-            .then(response => response.json())
-            .then(seasonData => {
-              if (seasonData && Array.isArray(seasonData.episodes)) {
-                return seasonData.episodes.map(episode => {
-                  if (
-                    episode &&
-                    episode.name &&
-                    typeof episode.season_number !== 'undefined' &&
-                    episode.episode_number &&
-                    episode.air_date
-                  ) {
-                    return {
-                      title: episode.name,
-                      season: episode.season_number,
-                      episode: episode.episode_number,
-                      airDate: episode.air_date
-                    };
-                  } else {
-                    return null;
-                  }
-                }).filter(ep => ep !== null);
-              }
-              return [];
-            })
-            .catch(error => {
-              return [];
-            });
+        const seasonPromise = fetch(base_url + '/tv/' + serie_id + '/season/' + season.season_number + '?api_key=' + api_key)
+          .then(response => response.json())
+          .then(async seasonData => {
+            let tmdbEpisodes: any[] = [];
 
-          seasonPromises.push(seasonPromise);
+            if (seasonData && Array.isArray(seasonData.episodes)) {
+              tmdbEpisodes = seasonData.episodes
+                .filter(episode =>
+                  episode &&
+                  episode.name &&
+                  typeof episode.season_number !== 'undefined' &&
+                  episode.episode_number &&
+                  episode.air_date
+                )
+                .map(episode => ({
+                  title: episode.name,
+                  season: episode.season_number,
+                  episode: episode.episode_number,
+                  airDate: episode.air_date,
+                  hasFile     : false,
+                  relativePath: null,
+                  sizeOnDisk  : null
+                }));
+            }
+
+            if (selectedSerie.value.id) {
+              await fetch(base_url_sonarr + '/api/v3/episode?includeEpisodeFile=true&apikey=' + api_key_sonarr + '&seriesId=' + selectedSerie.value.id)
+                .then(async (response) => {
+                  const json_data_sonarr = await response.json();
+
+                  const lookup = {};
+                  json_data_sonarr.forEach(episodeData => {
+                    const key = 'S' + String(episodeData.seasonNumber).padStart(2, '0') + 'E' + String(episodeData.episodeNumber).padStart(2, '0');
+                    lookup[key] = episodeData;
+                  });
+
+                  tmdbEpisodes.forEach(episodeData => {
+                    const key = 'S' + String(episodeData.season).padStart(2, '0') + 'E' + String(episodeData.episode).padStart(2, '0');
+                    const matched = lookup[key];
+                    if (matched) {
+                      episodeData.hasFile      = matched.hasFile;
+                      episodeData.relativePath = matched.episodeFile ? matched.episodeFile.relativePath : null,
+                      episodeData.sizeOnDisk   = matched.episodeFile ? matched.episodeFile.size : null
+                    }
+                  });
+                })
+                .catch((error) => {
+                  //showErrorAlert(error);
+                });
+            }
+
+            return tmdbEpisodes;
+          })
+          .catch(error => {
+            return [];
+          });
+
+        seasonPromises.push(seasonPromise);
       }
 
       const seasonsEpisodes = await Promise.all(seasonPromises);
@@ -932,7 +970,6 @@ onMounted(() => {
                           <v-list-item-subtitle>
                             Episode {{ episode.episode }} - {{ episode.airDate || "Date unknown" }}
                           </v-list-item-subtitle>
-                          <!--
                           <v-list-item-action
                             class="pt-2"
                             >
@@ -955,16 +992,35 @@ onMounted(() => {
                             v-if="episode.relativePath"
                             class="mt-4"
                             >
-                            <v-col>
+                            <v-col
+                              cols="9"
+                              >
+                              <v-tooltip
+                                :text="episode.relativePath"
+                                >
+                                <template #activator="{ props }">
+                                  <span v-bind="props" style="cursor:pointer;">
+                                    <v-text-field
+                                      label="File"
+                                      variant="outlined"
+                                      v-model="episode.relativePath"
+                                      :disabled="true"
+                                      />
+                                  </span>
+                                </template>
+                              </v-tooltip>
+                            </v-col>
+                            <v-col
+                              cols="3"
+                              >
                               <v-text-field
-                                label="File"
+                                label="Size (GB)"
                                 variant="outlined"
-                                v-model="episode.relativePath"
+                                :model-value="(episode.sizeOnDisk / 1e9).toFixed(2)"
                                 :disabled="true"
                                 />
                             </v-col>
                           </v-row>
-                          -->
                         </v-list-item-content>
                       </v-list-item>
                     </v-list>
