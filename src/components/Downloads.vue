@@ -265,7 +265,17 @@ onUnmounted(() => {
                       v-for="record in movieRecords"
                       :key="record.title"
                       >
-                      <td>{{ record.title.substr(0, 20) + '...' }}</td>
+                      <td>
+                        <v-tooltip
+                          :text="record.title"
+                          >
+                          <template #activator="{ props }">
+                            <span v-bind="props" style="cursor:pointer;">
+                              {{ record.title.length > 20 ? record.title.slice(0, 20) + '…' : record.title }}
+                            </span>
+                          </template>
+                        </v-tooltip>
+                      </td>
                       <td>{{ record.date }}</td>
                       <!--<td>{{ record.indexer }}</td>-->
                       <!--<td>{{ record.client }}</td>-->
@@ -345,7 +355,17 @@ onUnmounted(() => {
                       v-for="record in movieHistory"
                       :key="record.title"
                       >
-                      <td>{{ record.title.substr(0, 20) + '...' }}</td>
+                      <td>
+                        <v-tooltip
+                          :text="record.title"
+                          >
+                          <template #activator="{ props }">
+                            <span v-bind="props" style="cursor:pointer;">
+                              {{ record.title.length > 20 ? record.title.slice(0, 20) + '…' : record.title }}
+                            </span>
+                          </template>
+                        </v-tooltip>
+                      </td>
                       <td>{{ record.date }}</td>
                       <!--<td>{{ record.client }}</td>-->
                       <!--<td>{{ record.languages }}</td>-->
@@ -420,7 +440,17 @@ onUnmounted(() => {
                       v-for="record in serieRecords"
                       :key="record.title"
                       >
-                      <td>{{ record.title.substr(0, 20) + '...' }}</td>
+                      <td>
+                        <v-tooltip
+                          :text="record.title"
+                          >
+                          <template #activator="{ props }">
+                            <span v-bind="props" style="cursor:pointer;">
+                              {{ record.title.length > 20 ? record.title.slice(0, 20) + '…' : record.title }}
+                            </span>
+                          </template>
+                        </v-tooltip>
+                      </td>
                       <td>{{ record.date }}</td>
                       <!--<td>{{ record.indexer }}</td>-->
                       <!--<td>{{ record.client }}</td>-->
@@ -500,7 +530,17 @@ onUnmounted(() => {
                       v-for="record in serieHistory"
                       :key="record.title"
                       >
-                      <td>{{ record.title.substr(0, 20) + '...' }}</td>
+                      <td>
+                        <v-tooltip
+                          :text="record.title"
+                          >
+                          <template #activator="{ props }">
+                            <span v-bind="props" style="cursor:pointer;">
+                              {{ record.title.length > 20 ? record.title.slice(0, 20) + '…' : record.title }}
+                            </span>
+                          </template>
+                        </v-tooltip>
+                      </td>
                       <td>{{ record.date }}</td>
                       <!--<td>{{ record.client }}</td>-->
                       <!--<td>{{ record.languages }}</td>-->
