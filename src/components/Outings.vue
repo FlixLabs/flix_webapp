@@ -698,12 +698,20 @@ onMounted(() => {
               v-if="selectedMovie.relativePath"
               >
               <v-col>
-                <v-text-field
-                  label="File"
-                  variant="outlined"
-                  v-model="selectedMovie.relativePath"
-                  :disabled="true"
-                  />
+                <v-tooltip
+                  :text="selectedMovie.relativePath"
+                  >
+                  <template #activator="{ props }">
+                    <span v-bind="props" style="cursor:pointer;">
+                      <v-text-field
+                        label="File"
+                        variant="outlined"
+                        v-model="selectedMovie.relativePath"
+                        :disabled="true"
+                        />
+                    </span>
+                  </template>
+                </v-tooltip>
               </v-col>
             </v-row>
           </v-card-text>
