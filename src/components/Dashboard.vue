@@ -402,11 +402,19 @@ watch(selectedInstance, () => {
               <v-list-item-title>
                 {{ item.title }} ({{ item.year }})
               </v-list-item-title>
-              <p
-                class="truncate-overview"
+              <v-tooltip
+                :text="item.overview"
                 >
-                {{ item.overview }}
-              </p>
+                <template #activator="{ props }">
+                  <span v-bind="props" style="cursor:pointer;">
+                    <p
+                      class="truncate-overview"
+                      >
+                      {{ item.overview }}
+                    </p>
+                  </span>
+                </template>
+              </v-tooltip>
               <v-row
                 class="mt-4"
                 >
@@ -509,11 +517,19 @@ watch(selectedInstance, () => {
               <v-list-item-title>
                 {{ item.title }} ({{ item.year }})
               </v-list-item-title>
-              <p
-                class="truncate-overview"
+              <v-tooltip
+                :text="item.overview"
                 >
-                {{ item.overview }}
-              </p>
+                <template #activator="{ props }">
+                  <span v-bind="props" style="cursor:pointer;">
+                    <p
+                      class="truncate-overview"
+                      >
+                      {{ item.overview }}
+                    </p>
+                  </span>
+                </template>
+              </v-tooltip>
               <v-row
                 class="mt-4"
                 >
