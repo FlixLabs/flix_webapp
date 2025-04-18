@@ -145,9 +145,14 @@ function getContent(type) {
 
               for (const item of page_data.results) {
                 let tmdbId = null;
+                let tvdbId = null;
                 let alreadyInLibrary = null;
                 let release_date = null;
                 let title = null;
+                let hasFile = null;
+                let status = null;
+                let relativePath = null;
+                let statistics = null;
 
                 let poster_full = "https://placehold.co/100x150?text=No+Image&font=roboto";
                 if (item.poster_path) {
@@ -165,10 +170,15 @@ function getContent(type) {
 
                 items.push({
                   tmdbId: item.id,
+                  tvdbId: tvdbId,
                   poster: poster_full,
                   title: title,
                   release_date: release_date,
-                  overview: item.overview
+                  overview: item.overview,
+                  hasFile: hasFile,
+                  status: status,
+                  relativePath: relativePath,
+                  statistics: statistics
                 });
               }
             })
