@@ -70,6 +70,12 @@ export function useLibraryChecker(type, items, showErrorAlert, useAPI) {
           if (compare_item.statistics) {
             item.statistics = compare_item.statistics;
           }
+          if (compare_item.qualityProfileId) {
+            item.selected_quality = compare_item.qualityProfileId;
+          }
+          if (compare_item.monitored) {
+            item.monitored = compare_item.monitored;
+          }
         }
       }
     }
