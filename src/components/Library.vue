@@ -639,15 +639,4 @@ watch(selectedInstance, () => {
   line-height: 1.2;
   font-weight: bold;
 }
-
-.dialog-flex {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.dialog-flex-text {
-  flex: 1;
-  overflow-y: auto;
-}
 </style>
