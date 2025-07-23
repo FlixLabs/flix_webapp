@@ -2,8 +2,9 @@
 
 const props = defineProps<{
   modelValue: boolean;
-  mediaType: any | null;
+  mediaType: 'Movie' | 'Serie';
   item: any | null;
+  announcementName: 'Release' | 'Premiere';
   showSearch: boolean;
   showAdd: boolean;
   showRemove: boolean;
@@ -51,10 +52,11 @@ const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove']);
               class="text-center"
               >
               <v-col>
-                Release {{ item.release_date }}
+                {{ announcementName }} {{ item.release_date }}
               </v-col>
             </v-row>
             <v-row
+              v-else
               class="text-center"
               >
               <v-col>

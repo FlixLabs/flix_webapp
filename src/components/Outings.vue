@@ -16,6 +16,7 @@ import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDial
 import MediaDialog from '@/components/common/MediaDialog.vue';
 import EpisodePanel from '@/components/common/EpisodePanel.vue';
 import Loading from '@/components/common/Loading.vue';
+import MediaGrid from '@/components/common/MediaGrid.vue';
 
 const store = useFlixStore();
 
@@ -609,85 +610,16 @@ onMounted(() => {
       <Loading
         :isLoading="isLoadingMovie"
         />
-      <v-row
-        v-if="filtered_movies.length"
-        class="mt-2"
-        dense
-        >
-        <v-col
-          v-for="(item, index) in paginated_movies"
-          :key="index"
-          cols="6"
-          sm="4"
-          md="3"
-          lg="2"
-          class="mb-4"
-          >
-          <v-card
-            @click="handleMovieClick(item.tmdbId)"
-            >
-            <v-img
-              :src="item.poster"
-              class="w-100"
-              height="250"
-              cover
-              />
-            <v-card-title
-              class="title-line text-center"
-              >
-              {{ item.title }}
-            </v-card-title>
-            <v-card-text
-              v-if="!item.year"
-              class="text-center"
-              >
-              Release {{ item.release_date }}
-            </v-card-text>
-            <v-card-text
-              v-else
-              class="text-center"
-              >
-              {{ item.year }}
-            </v-card-text>
-            <v-card-action
-              class="d-flex justify-center pb-2"
-              >
-              <v-chip
-                v-if="item.hasFile"
-                color="green"
-                small
-                >
-                Existing
-              </v-chip>
-              <v-chip
-                v-else
-                color="red"
-                small
-                >
-                Missing
-              </v-chip>
-              <v-chip
-                v-if="item.status"
-                color="blue"
-                small
-                class="ml-1"
-                >
-                {{ item.status.charAt(0).toUpperCase() + item.status.slice(1) }}
-              </v-chip>
-              <v-chip
-                v-else
-                color="blue"
-                small
-                class="ml-1"
-                >
-                Unknown
-              </v-chip>
-            </v-card-action>
-          </v-card>
-        </v-col>
-      </v-row>
+      <MediaGrid
+        :filtered_items="filtered_movies"
+        :paginated_items="paginated_movies"
+        id-field="tmdbId"
+        announcementName="Release"
+        :showHasFile="true"
+        @card-click="handleMovieClick"
+        />
       <v-alert
-        v-else-if="!filtered_movies.length && !isLoadingMovie"
+        v-if="!filtered_movies.length && !isLoadingMovie"
         type="info"
         class="mt-4"
         >
@@ -703,6 +635,7 @@ onMounted(() => {
         v-model="movieDialog"
         mediaType="Movie"
         :item="selectedMovie"
+        announcementName="Release"
         :showSearch="selectedMovie && !selectedMovie.hasFile && selectedMovie.status == 'released'"
         :showAdd="selectedMovie && !selectedMovie.already_in_library"
         :showRemove="selectedMovie && selectedMovie.already_in_library"
@@ -717,71 +650,16 @@ onMounted(() => {
       <Loading
         :isLoading="isLoadingSerie"
         />
-      <v-row
-        v-if="filtered_series.length"
-        class="mt-2"
-        dense
-        >
-        <v-col
-          v-for="(item, index) in paginated_series"
-          :key="index"
-          cols="6"
-          sm="4"
-          md="3"
-          lg="2"
-          class="mb-4"
-          >
-          <v-card
-            @click="handleSerieClick(item.tmdbId)"
-            >
-            <v-img
-              :src="item.poster"
-              class="w-100"
-              height="250"
-              cover
-              />
-            <v-card-title
-              class="title-line text-center"
-              >
-              {{ item.title }}
-            </v-card-title>
-            <v-card-text
-              v-if="!item.year"
-              class="text-center"
-              >
-              Premiere {{ item.release_date }}
-            </v-card-text>
-            <v-card-text
-              v-else
-              class="text-center"
-              >
-              {{ item.year }}
-            </v-card-text>
-            <v-card-action
-              class="d-flex justify-center pb-2"
-              >
-              <v-chip
-                v-if="item.status"
-                color="blue"
-                small
-                class="ml-1"
-                >
-                {{ item.status.charAt(0).toUpperCase() + item.status.slice(1) }}
-              </v-chip>
-              <v-chip
-                v-else
-                color="blue"
-                small
-                class="ml-1"
-                >
-                Unknown
-              </v-chip>
-            </v-card-action>
-          </v-card>
-        </v-col>
-      </v-row>
+      <MediaGrid
+        :filtered_items="filtered_series"
+        :paginated_items="paginated_series"
+        id-field="tmdbId"
+        announcementName="Premiere"
+        :showHasFile="false"
+        @card-click="handleSerieClick"
+        />
       <v-alert
-        v-else-if="!filtered_series.length && !isLoadingSerie"
+        v-if="!filtered_series.length && !isLoadingSerie"
         type="info"
         class="mt-4"
         >
@@ -797,6 +675,7 @@ onMounted(() => {
         v-model="serieDialog"
         mediaType="Serie"
         :item="selectedSerie"
+        announcementName="Premiere"
         :showSearch="selectedSerie && selectedSerie.statistics && selectedSerie.statistics.sizeOnDisk == 0 && selectedSerie.status != 'upcoming'"
         :showAdd="selectedSerie && !selectedSerie.already_in_library"
         :showRemove="selectedSerie && selectedSerie.already_in_library"
@@ -824,11 +703,3 @@ onMounted(() => {
     </div>
   </v-container>
 </template>
-
-<style scoped>
-.title-line {
-  font-size: 1rem;
-  line-height: 1.2;
-  font-weight: bold;
-}
-</style>
