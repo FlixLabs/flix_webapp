@@ -2,12 +2,12 @@
 
 import { ref, watch } from 'vue';
 
-const props = defineProps({
+const props = defineProps<{
   modelValue: {
     type: Boolean,
     required: true
   }
-});
+}>();
 
 const emits = defineEmits(['update:modelValue', 'cancel', 'confirm']);
 
