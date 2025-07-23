@@ -4,8 +4,6 @@
 
 If you wish to enable the optional backend, you can retrieve it here: [flix_api](https://github.com/FlixLabs/flix_api).
 
-This template should help get you started developing with Vue 3 in Vite.
-
 ---
 
 ## Features
