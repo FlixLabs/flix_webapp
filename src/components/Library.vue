@@ -105,16 +105,27 @@ function getContent(type) {
       for (let item of json_data) {
         let tmdbId = null;
         let tvdbId = null;
+        let runTime = null;
+        let quality = null;
         let relativePath = null;
 
         if (type == 'movies') {
           tmdbId = item.tmdbId;
           if (item.movieFile) {
             relativePath = item.movieFile.relativePath;
+
+            if (item.movieFile.mediaInfo) {
+              runTime = item.movieFile.mediaInfo.runTime;
+            }
+
+            if (item.movieFile.quality) {
+              quality = item.movieFile.quality.quality.name;
+            }
           }
         }
         if (type == 'series') {
           tvdbId = item.tvdbId;
+          runTime = item.runtime;
         }
 
         let title = item.title;
@@ -130,10 +141,13 @@ function getContent(type) {
           tvdbId: tvdbId,
           prependAvatar: item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
           title: title,
+          certification: item.certification,
           year: item.year,
+          runTime: runTime,
           overview: item.overview,
           hasFile: item.hasFile,
           status: item.status,
+          quality: quality,
           relativePath: relativePath,
           statistics: item.statistics
         });
@@ -189,7 +203,8 @@ function getSerieEpisodes(serie_id: number) {
         airDate: episode.airDate,
         hasFile: episode.hasFile,
         relativePath: episode.episodeFile ? episode.episodeFile.relativePath : null,
-        sizeOnDisk: episode.episodeFile ? episode.episodeFile.size : null
+        sizeOnDisk: episode.episodeFile ? episode.episodeFile.size : null,
+        quality: episode.episodeFile ? episode.episodeFile.quality.quality.name : null
       }));
 
       isLoadingSerieEpisodes.value = false;
@@ -439,7 +454,7 @@ watch(selectedInstance, () => {
             <v-card-text
               class="text-center"
               >
-              ({{ item.year }})
+              {{ item.year }}
             </v-card-text>
             <v-card-action
               class="d-flex justify-center pb-2"
@@ -516,14 +531,24 @@ watch(selectedInstance, () => {
                 </v-card>
               </v-col>
               <v-col>
-                <v-row>
+                <v-row
+                  class="title-line text-center"
+                  >
                   <v-col>
                     {{ selectedMovie.title }}
                   </v-col>
                 </v-row>
-                <v-row>
+                <v-row
+                  class="text-center"
+                  >
                   <v-col>
-                    ({{ selectedMovie.year }})
+                    {{ selectedMovie.certification }}
+                  </v-col>
+                  <v-col>
+                    {{ selectedMovie.year }}
+                  </v-col>
+                  <v-col>
+                    {{ selectedMovie.runTime }}
                   </v-col>
                 </v-row>
                 <v-row>
@@ -536,33 +561,50 @@ watch(selectedInstance, () => {
             <v-row
               v-if="selectedMovie.relativePath"
               >
-              <v-col
-                cols="9"
-                >
-                <v-tooltip
-                  :text="selectedMovie.relativePath"
+              <v-col>
+                <v-row>
+                  <v-col>
+                    <v-tooltip
+                      :text="selectedMovie.relativePath"
+                      >
+                      <template
+                        #activator="{ props }"
+                        >
+                        <span
+                          v-bind="props"
+                          style="cursor:pointer;"
+                          >
+                          <v-text-field
+                            label="File"
+                            variant="outlined"
+                            v-model="selectedMovie.relativePath"
+                            :disabled="true"
+                            />
+                        </span>
+                      </template>
+                    </v-tooltip>
+                  </v-col>
+                </v-row>
+                <v-row
+                  class="mt-0"
                   >
-                  <template #activator="{ props }">
-                    <span v-bind="props" style="cursor:pointer;">
-                      <v-text-field
-                        label="File"
-                        variant="outlined"
-                        v-model="selectedMovie.relativePath"
-                        :disabled="true"
-                        />
-                    </span>
-                  </template>
-                </v-tooltip>
-              </v-col>
-              <v-col
-                cols="3"
-                >
-                <v-text-field
-                  label="Size (GB)"
-                  variant="outlined"
-                  :model-value="(selectedMovie.statistics.sizeOnDisk / 1e9).toFixed(2)"
-                  :disabled="true"
-                  />
+                  <v-col>
+                    <v-text-field
+                      label="Size (GB)"
+                      variant="outlined"
+                      :model-value="(selectedMovie.statistics.sizeOnDisk / 1e9).toFixed(2)"
+                      :disabled="true"
+                      />
+                  </v-col>
+                  <v-col>
+                    <v-text-field
+                      label="Quality"
+                      variant="outlined"
+                      :model-value="selectedMovie.quality"
+                      :disabled="true"
+                      />
+                  </v-col>
+                </v-row>
               </v-col>
             </v-row>
           </v-card-text>
@@ -641,7 +683,7 @@ watch(selectedInstance, () => {
             <v-card-text
               class="text-center"
               >
-              ({{ item.year }})
+              {{ item.year }}
             </v-card-text>
             <v-card-action
               class="d-flex justify-center pb-2"
@@ -704,14 +746,21 @@ watch(selectedInstance, () => {
                 </v-card>
               </v-col>
               <v-col>
-                <v-row>
+                <v-row
+                  class="title-line text-center"
+                  >
                   <v-col>
                     {{ selectedSerie.title }}
                   </v-col>
                 </v-row>
-                <v-row>
+                <v-row
+                  class="text-center"
+                  >
                   <v-col>
-                    ({{ selectedSerie.year }})
+                    {{ selectedSerie.year }}
+                  </v-col>
+                  <v-col>
+                    {{ selectedSerie.runTime }}
                   </v-col>
                 </v-row>
                 <v-row>
@@ -785,33 +834,50 @@ watch(selectedInstance, () => {
                             v-if="episode.relativePath"
                             class="mt-4"
                             >
-                            <v-col
-                              cols="9"
-                              >
-                              <v-tooltip
-                                :text="episode.relativePath"
+                            <v-col>
+                              <v-row>
+                                <v-col>
+                                  <v-tooltip
+                                    :text="episode.relativePath"
+                                    >
+                                    <template
+                                      #activator="{ props }"
+                                      >
+                                      <span
+                                        v-bind="props"
+                                        style="cursor:pointer;"
+                                        >
+                                        <v-text-field
+                                          label="File"
+                                          variant="outlined"
+                                          v-model="episode.relativePath"
+                                          :disabled="true"
+                                          />
+                                      </span>
+                                    </template>
+                                  </v-tooltip>
+                                </v-col>
+                              </v-row>
+                              <v-row
+                                class="mt-0"
                                 >
-                                <template #activator="{ props }">
-                                  <span v-bind="props" style="cursor:pointer;">
-                                    <v-text-field
-                                      label="File"
-                                      variant="outlined"
-                                      v-model="episode.relativePath"
-                                      :disabled="true"
-                                      />
-                                  </span>
-                                </template>
-                              </v-tooltip>
-                            </v-col>
-                            <v-col
-                              cols="3"
-                              >
-                              <v-text-field
-                                label="Size (GB)"
-                                variant="outlined"
-                                :model-value="(episode.sizeOnDisk / 1e9).toFixed(2)"
-                                :disabled="true"
-                                />
+                                <v-col>
+                                  <v-text-field
+                                    label="Size (GB)"
+                                    variant="outlined"
+                                    :model-value="(episode.sizeOnDisk / 1e9).toFixed(2)"
+                                    :disabled="true"
+                                    />
+                                </v-col>
+                                <v-col>
+                                  <v-text-field
+                                    label="Quality"
+                                    variant="outlined"
+                                    :model-value="episode.quality"
+                                    :disabled="true"
+                                    />
+                                </v-col>
+                              </v-row>
                             </v-col>
                           </v-row>
                         </v-list-item-content>
