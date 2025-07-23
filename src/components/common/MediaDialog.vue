@@ -19,6 +19,7 @@ const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove']);
     @update:model-value="val => emit('update:modelValue', val)"
     max-width="600px"
     max-height="600px"
+    class="blur-dialog"
     >
     <v-card
       class="dialog-flex"
@@ -178,5 +179,9 @@ const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove']);
 .dialog-flex-text {
   flex: 1;
   overflow-y: auto;
+}
+
+.blur-dialog {
+  backdrop-filter: blur(5px);
 }
 </style>
