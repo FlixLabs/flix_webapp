@@ -58,6 +58,15 @@ export function useLibraryChecker(type, items, showErrorAlert, useAPI) {
           if (compare_item.tvdbId) {
             item.tvdbId = compare_item.tvdbId;
           }
+          if (compare_item.certification) {
+            item.certification = compare_item.certification;
+          }
+          if (compare_item.year) {
+            item.year = compare_item.year;
+          }
+          if (compare_item.runtime) {
+            item.runTime = compare_item.runtime;
+          }
           if (compare_item.hasFile) {
             item.hasFile = compare_item.hasFile;
           }
@@ -66,6 +75,14 @@ export function useLibraryChecker(type, items, showErrorAlert, useAPI) {
           }
           if (compare_item.movieFile) {
             item.relativePath = compare_item.movieFile.relativePath;
+
+            if (compare_item.movieFile.mediaInfo) {
+              item.runTime = compare_item.movieFile.mediaInfo.runTime;
+            }
+
+            if (compare_item.movieFile.quality) {
+              item.quality = compare_item.movieFile.quality.quality.name;
+            }
           }
           if (compare_item.statistics) {
             item.statistics = compare_item.statistics;
