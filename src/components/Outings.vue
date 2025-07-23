@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import { ref, computed, onMounted } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useCount } from '@/composables/useCount';
 import { useFilteredItems } from '@/composables/useFilteredItems';
@@ -534,7 +534,37 @@ function searchContent(type, item) {
   });
 }
 
+watch(search, (newValue) => {
+  if (newValue) {
+    localStorage.setItem("outings_search_" + window.location.href, newValue);
+  } else {
+    localStorage.removeItem("outings_search_" + window.location.href);
+  }
+
+  getContent('movies');
+  getContent('series');
+});
+
+watch(selected_view, (newValue) => {
+  if (newValue) {
+    localStorage.setItem("outings_selected_" + window.location.href, newValue);
+  }
+});
+
 onMounted(() => {
+  if (localStorage.getItem('outings_search_' + window.location.href)) {
+    search.value = localStorage.getItem('outings_search_' + window.location.href);
+  }
+
+  if (localStorage.getItem('outings_selected_' + window.location.href)) {
+    selected_view.value = localStorage.getItem('outings_selected_' + window.location.href);
+  }
+
+  getContent('movies');
+  getContent('series');
+});
+
+watch(selectedInstance, () => {
   getContent('movies');
   getContent('series');
 });

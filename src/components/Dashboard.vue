@@ -295,12 +295,12 @@ function confirmDelete() {
 
 watch(search, (newValue) => {
   if (newValue && newValue.length >= 3) {
-    localStorage.setItem("search_" + window.location.href, newValue);
+    localStorage.setItem("dashboard_search_" + window.location.href, newValue);
 
     getContent('movies');
     getContent('series');
   } else {
-    localStorage.removeItem("search_" + window.location.href);
+    localStorage.removeItem("dashboard_search_" + window.location.href);
 
     resetMovieItems();
     resetSerieItems();
@@ -308,8 +308,8 @@ watch(search, (newValue) => {
 });
 
 onMounted(() => {
-  if (localStorage.getItem('search_' + window.location.href)) {
-    search.value = localStorage.getItem('search_' + window.location.href);
+  if (localStorage.getItem('dashboard_search_' + window.location.href)) {
+    search.value = localStorage.getItem('dashboard_search_' + window.location.href);
   }
 
   getQualityProfileList('movies');

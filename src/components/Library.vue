@@ -331,7 +331,32 @@ function searchContent(type, item) {
   });
 }
 
+watch(search, (newValue) => {
+  if (newValue) {
+    localStorage.setItem("library_search_" + window.location.href, newValue);
+  } else {
+    localStorage.removeItem("library_search_" + window.location.href);
+  }
+
+  getContent('movies');
+  getContent('series');
+});
+
+watch(selected_view, (newValue) => {
+  if (newValue) {
+    localStorage.setItem("library_selected_" + window.location.href, newValue);
+  }
+});
+
 onMounted(() => {
+  if (localStorage.getItem('library_search_' + window.location.href)) {
+    search.value = localStorage.getItem('library_search_' + window.location.href);
+  }
+
+  if (localStorage.getItem('library_selected_' + window.location.href)) {
+    selected_view.value = localStorage.getItem('library_selected_' + window.location.href);
+  }
+
   getContent('movies');
   getContent('series');
 });
