@@ -12,6 +12,7 @@ import { useDialog } from '@/composables/useDialog';
 import { useDeleteItem } from '@/composables/useDeleteItem';
 import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
+import MediaDialog from '@/components/common/MediaDialog.vue';
 
 const store = useFlixStore();
 
@@ -506,131 +507,18 @@ watch(selectedInstance, () => {
         :length="movies_total_pages"
         rounded
         />
-      <v-dialog
+      <MediaDialog
+        provider="library"
         v-model="movieDialog"
-        max-width="600px"
-        max-height="600px"
-        >
-        <v-card
-          class="dialog-flex"
-          >
-          <v-card-title>
-            Movie
-          </v-card-title>
-          <v-card-text
-            class="dialog-flex-text"
-            >
-            <v-row>
-              <v-col>
-                <v-card>
-                  <v-img
-                    :src="selectedMovie.prependAvatar"
-                    class="w-100"
-                    cover
-                    />
-                </v-card>
-              </v-col>
-              <v-col>
-                <v-row
-                  class="title-line text-center"
-                  >
-                  <v-col>
-                    {{ selectedMovie.title }}
-                  </v-col>
-                </v-row>
-                <v-row
-                  class="text-center"
-                  >
-                  <v-col>
-                    {{ selectedMovie.certification }}
-                  </v-col>
-                  <v-col>
-                    {{ selectedMovie.year }}
-                  </v-col>
-                  <v-col>
-                    {{ selectedMovie.runTime }}
-                  </v-col>
-                </v-row>
-                <v-row>
-                  <v-col>
-                    {{ selectedMovie.overview }}
-                  </v-col>
-                </v-row>
-              </v-col>
-            </v-row>
-            <v-row
-              v-if="selectedMovie.relativePath"
-              >
-              <v-col>
-                <v-row>
-                  <v-col>
-                    <v-tooltip
-                      :text="selectedMovie.relativePath"
-                      >
-                      <template
-                        #activator="{ props }"
-                        >
-                        <span
-                          v-bind="props"
-                          style="cursor:pointer;"
-                          >
-                          <v-text-field
-                            label="File"
-                            variant="outlined"
-                            v-model="selectedMovie.relativePath"
-                            :disabled="true"
-                            />
-                        </span>
-                      </template>
-                    </v-tooltip>
-                  </v-col>
-                </v-row>
-                <v-row
-                  class="mt-0"
-                  >
-                  <v-col>
-                    <v-text-field
-                      label="Size (GB)"
-                      variant="outlined"
-                      :model-value="(selectedMovie.statistics.sizeOnDisk / 1e9).toFixed(2)"
-                      :disabled="true"
-                      />
-                  </v-col>
-                  <v-col>
-                    <v-text-field
-                      label="Quality"
-                      variant="outlined"
-                      :model-value="selectedMovie.quality"
-                      :disabled="true"
-                      />
-                  </v-col>
-                </v-row>
-              </v-col>
-            </v-row>
-          </v-card-text>
-          <v-card-actions>
-            <v-btn
-              v-if="selectedMovie && !selectedMovie.hasFile && selectedMovie.status == 'released'"
-              @click="searchContent('movies', selectedMovie)"
-              color="primary"
-              >
-              Search
-            </v-btn>
-            <v-btn
-              @click="openDeleteConfirmationDialog('movies', selectedMovie)"
-              color="error"
-              >
-              Remove
-            </v-btn>
-            <v-btn
-              @click="resetMovieDialog()"
-              color="secondary"
-              >
-              Close
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
+        :item="selectedMovie"
+        mediaType="Movie"
+        :showSearch="selectedMovie && !selectedMovie.hasFile && selectedMovie.status == 'released'"
+        :showAdd="false"
+        :showRemove="selectedMovie"
+        @search="searchContent('movies', $event)"
+        @add=""
+        @remove="openDeleteConfirmationDialog('movies', $event)"
+      />
     </div>
     <div
       v-else-if="selected_view == 'series'"
