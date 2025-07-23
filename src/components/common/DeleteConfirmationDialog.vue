@@ -36,6 +36,7 @@ function confirm() {
   <v-dialog
     v-model="internalVisible"
     max-width="600px"
+    class="blur-dialog"
     >
     <v-card>
       <v-card-title>
@@ -61,3 +62,9 @@ function confirm() {
     </v-card>
   </v-dialog>
 </template>
+
+<style scoped>
+.blur-dialog {
+  backdrop-filter: blur(5px);
+}
+</style>
