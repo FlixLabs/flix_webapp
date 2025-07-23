@@ -11,6 +11,7 @@ import { useLibraryChecker } from '@/composables/useLibraryChecker';
 import { useDeleteItem } from '@/composables/useDeleteItem';
 import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
+import Loading from '@/components/common/Loading.vue';
 
 const store = useFlixStore();
 
@@ -455,25 +456,11 @@ watch(selectedInstance, () => {
             </v-list-item-content>
           </v-list-item>
         </v-list>
-        <v-row
-          v-if="isLoadingMovie"
-          justify="center"
-          align="center"
-          class="mt-4"
-          >
-          <v-progress-circular
-            indeterminate
-            color="primary"
-            size="50"
-            />
-          <span
-            class="ml-2"
-            >
-            Research in progress...
-          </span>
-        </v-row>
+        <Loading
+          :isLoading="isLoadingMovie"
+          />
         <v-alert
-          v-else-if="!paginated_movies.length && !isLoadingMovie"
+          v-if="!paginated_movies.length && !isLoadingMovie"
           type="info"
           class="mt-4"
           >
@@ -570,25 +557,11 @@ watch(selectedInstance, () => {
             </v-list-item-content>
           </v-list-item>
         </v-list>
-        <v-row
-          v-if="isLoadingSerie"
-          justify="center"
-          align="center"
-          class="mt-4"
-          >
-          <v-progress-circular
-            indeterminate
-            color="primary"
-            size="50"
-            />
-          <span
-            class="ml-2"
-            >
-            Research in progress...
-          </span>
-        </v-row>
+        <Loading
+          :isLoading="isLoadingSerie"
+          />
         <v-alert
-          v-else-if="!paginated_series.length && !isLoadingSerie"
+          v-if="!paginated_series.length && !isLoadingSerie"
           type="info"
           class="mt-4"
           >

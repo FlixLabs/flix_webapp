@@ -15,6 +15,7 @@ import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
 import MediaDialog from '@/components/common/MediaDialog.vue';
 import EpisodePanel from '@/components/common/EpisodePanel.vue';
+import Loading from '@/components/common/Loading.vue';
 
 const store = useFlixStore();
 
@@ -605,25 +606,11 @@ onMounted(() => {
     </v-row>
     <div
       v-if="selected_view == 'movies'">
+      <Loading
+        :isLoading="isLoadingMovie"
+        />
       <v-row
-        v-if="isLoadingMovie"
-        justify="center"
-        align="center"
-        class="mt-4"
-        >
-        <v-progress-circular
-          indeterminate
-          color="primary"
-          size="50"
-          />
-        <span
-          class="ml-2"
-          >
-          Research in progress...
-        </span>
-      </v-row>
-      <v-row
-        v-else-if="filtered_movies.length"
+        v-if="filtered_movies.length"
         class="mt-2"
         dense
         >
@@ -727,25 +714,11 @@ onMounted(() => {
     <div
       v-else-if="selected_view == 'series'"
       >
+      <Loading
+        :isLoading="isLoadingSerie"
+        />
       <v-row
-        v-if="isLoadingSerie"
-        justify="center"
-        align="center"
-        class="mt-4"
-        >
-        <v-progress-circular
-          indeterminate
-          color="primary"
-          size="50"
-          />
-        <span
-          class="ml-2"
-          >
-          Research in progress...
-        </span>
-      </v-row>
-      <v-row
-        v-else-if="filtered_series.length"
+        v-if="filtered_series.length"
         class="mt-2"
         dense
         >
@@ -837,7 +810,15 @@ onMounted(() => {
           <EpisodePanel
             :grouped_episodes="grouped_episodes"
             :isLoading="isLoadingSerieEpisodes"
-          />
+            >
+            <template
+              #loading
+              >
+              <Loading
+                :isLoading="isLoadingSerieEpisodes"
+                />
+            </template>
+          </EpisodePanel>
         </template>
       </MediaDialog>
     </div>
