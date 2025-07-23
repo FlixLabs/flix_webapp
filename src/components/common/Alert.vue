@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-const props = defineProps({
+const props = defineProps<{
   alert: {
     type: Object,
     required: true,
@@ -11,7 +11,7 @@ const props = defineProps({
       text: ''
     })
   }
-});
+}>();
 
 function hideAlert() {
   emits('update:alert', { ...props.alert, visible: false });
@@ -46,21 +46,26 @@ function hideAlert() {
 }
 
 .fade-enter-active,
+
 .fade-leave-active {
   transition: opacity 0.5s ease, transform 0.5s ease;
 }
+
 .fade-enter-from {
   opacity: 0;
   transform: translateY(-20px);
 }
+
 .fade-enter-to {
   opacity: 1;
   transform: translateY(0);
 }
+
 .fade-leave-from {
   opacity: 1;
   transform: translateY(0);
 }
+
 .fade-leave-to {
   opacity: 0;
   transform: translateY(-20px);

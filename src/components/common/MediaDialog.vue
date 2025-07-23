@@ -1,10 +1,9 @@
 <script setup lang="ts">
 
 const props = defineProps<{
-  provider: any | null;
   modelValue: boolean;
-  item: any | null;
   mediaType: any | null;
+  item: any | null;
   showSearch: boolean;
   showAdd: boolean;
   showRemove: boolean;
@@ -124,6 +123,9 @@ const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove']);
             </v-row>
           </v-col>
         </v-row>
+        <slot
+          name="episodes"
+          />
       </v-card-text>
       <v-card-actions>
         <v-btn
