@@ -5,6 +5,7 @@ import { useFlixStore } from '@/stores/flixStore';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { useDiskAndLogAndHealthList } from '@/composables/useDiskAndLogAndHealthList';
+import Loading from '@/components/common/Loading.vue';
 
 const store = useFlixStore();
 
@@ -555,23 +556,10 @@ onUnmounted(() => {
           >
           No system information found
         </v-alert>
-        <p
-          v-if="isLoadingMovie"
-          justify="center"
-          align="center"
-          class="mt-4"
-          >
-          <v-progress-circular
-            indeterminate
-            color="primary"
-            size="50"
-            />
-          <span
-            class="ml-2"
-            >
-            Loading data...
-          </span>
-        </p>
+        <Loading
+          :isLoading="isLoadingMovie"
+          sentence="Loading data..."
+          />
       </v-col>
       <v-col
         md="6"
@@ -848,23 +836,10 @@ onUnmounted(() => {
           >
           No system information found
         </v-alert>
-        <p
-          v-if="isLoadingSerie"
-          justify="center"
-          align="center"
-          class="mt-4"
-          >
-          <v-progress-circular
-            indeterminate
-            color="primary"
-            size="50"
-            />
-          <span
-            class="ml-2"
-            >
-            Loading data...
-          </span>
-        </p>
+        <Loading
+          :isLoading="isLoadingSerie"
+          sentence="Loading data..."
+          />
       </v-col>
     </v-row>
   </v-container>
