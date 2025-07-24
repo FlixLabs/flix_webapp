@@ -641,7 +641,6 @@ watch(selectedInstance, () => {
         :isLoading="isLoadingMovie"
         />
       <MediaGrid
-        :filtered_items="filtered_movies"
         :paginated_items="paginated_movies"
         id-field="tmdbId"
         announcementName="Release"
@@ -681,7 +680,6 @@ watch(selectedInstance, () => {
         :isLoading="isLoadingSerie"
         />
       <MediaGrid
-        :filtered_items="filtered_series"
         :paginated_items="paginated_series"
         id-field="tmdbId"
         announcementName="Premiere"

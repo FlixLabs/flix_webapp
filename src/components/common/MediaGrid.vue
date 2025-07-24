@@ -1,7 +1,6 @@
 <script setup lang="ts">
 
 const props = defineProps<{
-  filtered_items: any | null;
   paginated_items: any | null;
   idField: 'id' | 'tmdbId';
   announcementName: 'Release' | 'Premiere';
@@ -13,7 +12,7 @@ const emit = defineEmits(['card-click']);
 
 <template>
   <v-row
-    v-if="filtered_items.length"
+    v-if="paginated_items.length"
     class="mt-2"
     dense
     >
