@@ -2,6 +2,7 @@
 
 const props = defineProps<{
   isLoading: boolean;
+  sentence: string;
 }>();
 </script>
 
@@ -20,7 +21,7 @@ const props = defineProps<{
     <span
       class="ml-2"
       >
-      Research in progress...
+      {{ sentence }}
     </span>
   </v-row>
 </template>

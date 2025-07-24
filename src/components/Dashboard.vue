@@ -386,6 +386,7 @@ watch(selectedInstance, () => {
           />
         <Loading
           :isLoading="isLoadingMovie"
+          sentence="Research in progress..."
           />
         <v-alert
           v-if="!paginated_movies.length && !isLoadingMovie"
@@ -414,6 +415,7 @@ watch(selectedInstance, () => {
           />
         <Loading
           :isLoading="isLoadingSerie"
+          sentence="Research in progress..."
           />
         <v-alert
           v-if="!paginated_series.length && !isLoadingSerie"
