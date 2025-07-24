@@ -636,9 +636,11 @@ watch(selectedInstance, () => {
       </v-col>
     </v-row>
     <div
-      v-if="selected_view == 'movies'">
+      v-if="selected_view == 'movies'"
+      >
       <Loading
         :isLoading="isLoadingMovie"
+        sentence="Research in progress..."
         />
       <MediaGrid
         :paginated_items="paginated_movies"
@@ -678,6 +680,7 @@ watch(selectedInstance, () => {
       >
       <Loading
         :isLoading="isLoadingSerie"
+        sentence="Research in progress..."
         />
       <MediaGrid
         :paginated_items="paginated_series"
@@ -723,6 +726,7 @@ watch(selectedInstance, () => {
               >
               <Loading
                 :isLoading="isLoadingSerieEpisodes"
+                sentence="Research in progress..."
                 />
             </template>
           </EpisodePanel>
