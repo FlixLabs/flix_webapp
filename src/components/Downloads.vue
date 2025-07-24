@@ -4,6 +4,7 @@ import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
+import Loading from '@/components/common/Loading.vue';
 
 const store = useFlixStore();
 
@@ -304,22 +305,10 @@ onUnmounted(() => {
                   >
                   No download information found
                 </v-alert>
-                <p
-                  v-if="isLoadingMovieRecords"
-                  justify="center"
-                  align="center"
-                  >
-                  <v-progress-circular
-                    indeterminate
-                    color="primary"
-                    size="50"
-                    />
-                  <span
-                    class="ml-2"
-                    >
-                    Loading data...
-                  </span>
-                </p>
+                <Loading
+                  :isLoading="isLoadingMovieRecords"
+                  sentence="Loading data..."
+                  />
               </v-card-text>
             </v-card>
           </v-col>
@@ -380,22 +369,10 @@ onUnmounted(() => {
                   >
                   No history information found
                 </v-alert>
-                <p
-                  v-if="isLoadingMovieHistory"
-                  justify="center"
-                  align="center"
-                  >
-                  <v-progress-circular
-                    indeterminate
-                    color="primary"
-                    size="50"
-                    />
-                  <span
-                    class="ml-2"
-                    >
-                    Loading data...
-                  </span>
-                </p>
+                <Loading
+                  :isLoading="isLoadingMovieHistory"
+                  sentence="Loading data..."
+                  />
               </v-card-text>
             </v-card>
           </v-col>
@@ -479,22 +456,10 @@ onUnmounted(() => {
                   >
                   No download information found
                 </v-alert>
-                <p
-                  v-if="isLoadingSerieRecords"
-                  justify="center"
-                  align="center"
-                  >
-                  <v-progress-circular
-                    indeterminate
-                    color="primary"
-                    size="50"
-                    />
-                  <span
-                    class="ml-2"
-                    >
-                    Loading data...
-                  </span>
-                </p>
+                <Loading
+                  :isLoading="isLoadingSerieRecords"
+                  sentence="Loading data..."
+                  />
               </v-card-text>
             </v-card>
           </v-col>
@@ -555,22 +520,10 @@ onUnmounted(() => {
                   >
                   No history information found
                 </v-alert>
-                <p
-                  v-if="isLoadingSerieHistory"
-                  justify="center"
-                  align="center"
-                  >
-                  <v-progress-circular
-                    indeterminate
-                    color="primary"
-                    size="50"
-                    />
-                  <span
-                    class="ml-2"
-                    >
-                    Loading data...
-                  </span>
-                </p>
+                <Loading
+                  :isLoading="isLoadingSerieHistory"
+                  sentence="Loading data..."
+                  />
               </v-card-text>
             </v-card>
           </v-col>

@@ -6,6 +6,7 @@ import CryptoJS from 'crypto-js';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import Alert from '@/components/common/Alert.vue';
+import Loading from '@/components/common/Loading.vue';
 
 const router = useRouter();
 
@@ -129,22 +130,9 @@ onMounted(() => {
         </v-btn>
       </div>
     </div>
-    <p
-      v-if="isLoading"
-      justify="center"
-      align="center"
-      class="mt-4"
-      >
-      <v-progress-circular
-        indeterminate
-        color="primary"
-        size="50"
-        />
-      <span
-        class="ml-2"
-        >
-        Loading data...
-      </span>
-    </p>
+    <Loading
+      :isLoading="isLoading"
+      sentence="Loading data..."
+      />
   </v-container>
 </template>
