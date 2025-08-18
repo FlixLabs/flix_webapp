@@ -52,7 +52,7 @@ export function useLibraryChecker(type, items, showErrorAlert, useAPI) {
   const markAsAlreadyInLibrary = (array_items, json_data) => {
     for (let item of array_items) {
       for (let compare_item of json_data) {
-        if (item.tmdbId == compare_item.tmdbId) {
+        if (item.tmdbId !== 0 && item.tmdbId === compare_item.tmdbId) {
           item.already_in_library = true;
           item.id = compare_item.id;
           if (compare_item.tvdbId) {
