@@ -20,6 +20,7 @@ const store = useFlixStore();
 const initialDrawerOptions = [
   { title: 'Dashboard', icon: 'mdi-view-dashboard-outline', value: 'dashboard' },
   { title: 'Library', icon: 'mdi-movie-open-outline', value: 'library' },
+  { title: 'Calendar', icon: 'mdi-calendar-month', value: 'calendar' },
   { title: 'Outings', icon: 'mdi-filmstrip-box', value: 'outings' },
   { title: 'Downloads', icon: 'mdi-download-box-outline', value: 'downloads' },
   { title: 'Settings', icon: 'mdi-cog-outline', value: 'settings' },

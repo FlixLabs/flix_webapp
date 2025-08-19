@@ -1,6 +1,6 @@
 {
   "name": "flix_webapp",
-  "version": "2.11.28",
+  "version": "2.12.0",
   "private": true,
   "type": "module",
   "scripts": {
