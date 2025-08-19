@@ -95,19 +95,31 @@ function getQualityProfileList(type) {
         });
       }
 
-      const any_profile = items.find(i => i.title.toLowerCase() == 'any');
-
-      if (!any_profile) {
-        showErrorAlert("The profile 'Any' does not exist. Please create it in Radarr and Sonarr.");
+      if (!items.length) {
+        showErrorAlert("Profiles does not exist. Please create at least one in Radarr and Sonarr.");
       }
+
+      const any_profile = items.find(i => i.title.toLowerCase() == 'any');
 
       if (type == 'movies') {
         qualityMovieItems.value = items;
-        qualityMovie.value = any_profile.value;
+
+        if (any_profile) {
+          qualityMovie.value = any_profile.value;
+        } else {
+          var index = qualityMovieItems.value.length - 1;
+          qualityMovie.value = qualityMovieItems.value[index];
+        }
       }
       if (type == 'series') {
         qualitySerieItems.value = items;
-        qualitySerie.value = any_profile.value;
+
+        if (any_profile) {
+          qualitySerie.value = any_profile.value;
+        } else {
+          var index = qualitySerieItems.value.length - 1;
+          qualitySerie.value = qualitySerieItems.value[index];
+        }
       }
     })
     .catch(error => {
@@ -318,6 +330,8 @@ onMounted(() => {
 });
 
 watch(selectedInstance, () => {
+  getQualityProfileList('movies');
+  getQualityProfileList('series');
   getContent('movies');
   getContent('series');
 });

@@ -44,6 +44,8 @@ const serie_page = ref(1);
 
 const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
 const { state: movieItems, reset: resetMovieItems } = useResettable([]);
+const { state: qualityMovieItems, reset: resetQualityMovieItems } = useResettable([]);
+const { state: qualityMovie, reset: resetQualityMovie } = useResettable(1);
 const { state: selectedMovie, reset: resetSelectedMovie } = useResettable(null);
 const { dialog: movieDialog, reset: resetMovieDialog } = useDialog();
 const { filteredItems: filtered_movies } = useFilteredItems(movieItems, search);
@@ -56,6 +58,8 @@ const { isAlreadyInLibrary: checkMovies } = useLibraryChecker("movies", movieIte
 
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
 const { state: serieItems, reset: resetSerieItems } = useResettable([]);
+const { state: qualitySerieItems, reset: resetQualitySerieItems } = useResettable([]);
+const { state: qualitySerie, reset: resetQualitySerie } = useResettable(1);
 const { state: selectedSerie, reset: resetSelectedSerie } = useResettable([]);
 const { dialog: serieDialog, reset: resetSerieDialog } = useDialog();
 const { state: serieEpisodes, reset: resetSerieEpisodes } = useResettable([]);
@@ -75,6 +79,73 @@ const { deleteItem } = useDeleteItem({
   showErrorAlert,
   refreshContent: getContent
 });
+
+function getQualityProfileList(type) {
+  let base_url = null;
+  let api_key = null;
+
+  if (type == 'movies') {
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_RADARR_BASE_URL;
+      api_key = import.meta.env.VITE_RADARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.radarr.base_url;
+      api_key = selectedInstanceData.value.radarr.api_key;
+    }
+  }
+  if (type == 'series') {
+    if (!useAPI.value) {
+      base_url = import.meta.env.VITE_SONARR_BASE_URL;
+      api_key = import.meta.env.VITE_SONARR_API_KEY;
+    } else {
+      base_url = selectedInstanceData.value.sonarr.base_url;
+      api_key = selectedInstanceData.value.sonarr.api_key;
+    }
+  }
+
+  fetch(base_url + '/api/v3/qualityProfile?apikey=' + api_key)
+    .then(async response => {
+      const json_data = await response.json();
+
+      let items = [];
+      for (let item of json_data) {
+        items.push({
+          title: item.name,
+          value: item.id
+        });
+      }
+
+      if (!items.length) {
+        showErrorAlert("Profiles does not exist. Please create at least one in Radarr and Sonarr.");
+      }
+
+      const any_profile = items.find(i => i.title.toLowerCase() == 'any');
+
+      if (type == 'movies') {
+        qualityMovieItems.value = items;
+
+        if (any_profile) {
+          qualityMovie.value = any_profile.value;
+        } else {
+          var index = qualityMovieItems.value.length - 1;
+          qualityMovie.value = qualityMovieItems.value[index];
+        }
+      }
+      if (type == 'series') {
+        qualitySerieItems.value = items;
+
+        if (any_profile) {
+          qualitySerie.value = any_profile.value;
+        } else {
+          var index = qualitySerieItems.value.length - 1;
+          qualitySerie.value = qualitySerieItems.value[index];
+        }
+      }
+    })
+    .catch(error => {
+      //showErrorAlert(error);
+    });
+}
 
 function getContent(type) {
   const base_url = import.meta.env.VITE_TMDB_BASE_URL;
@@ -560,11 +631,15 @@ onMounted(() => {
     selected_view.value = localStorage.getItem('outings_selected_' + window.location.href);
   }
 
+  getQualityProfileList('movies');
+  getQualityProfileList('series');
   getContent('movies');
   getContent('series');
 });
 
 watch(selectedInstance, () => {
+  getQualityProfileList('movies');
+  getQualityProfileList('series');
   getContent('movies');
   getContent('series');
 });
@@ -668,7 +743,7 @@ watch(selectedInstance, () => {
         :item="selectedMovie"
         announcementName="Release"
         :showSearch="selectedMovie && !selectedMovie.hasFile && selectedMovie.status == 'released'"
-        :showAdd="selectedMovie && !selectedMovie.already_in_library"
+        :showAdd="selectedMovie && !selectedMovie.already_in_library && qualityMovieItems.length"
         :showRemove="selectedMovie && selectedMovie.already_in_library"
         @search="searchContent('movies', $event)"
         @add="addToList('movies', $event)"
@@ -708,7 +783,7 @@ watch(selectedInstance, () => {
         :item="selectedSerie"
         announcementName="Premiere"
         :showSearch="selectedSerie && selectedSerie.statistics && selectedSerie.statistics.sizeOnDisk == 0 && selectedSerie.status != 'upcoming'"
-        :showAdd="selectedSerie && !selectedSerie.already_in_library"
+        :showAdd="selectedSerie && !selectedSerie.already_in_library && qualitySerieItems.length"
         :showRemove="selectedSerie && selectedSerie.already_in_library"
         @search="searchContent('series', $event)"
         @add="addToList('series', $event)"
