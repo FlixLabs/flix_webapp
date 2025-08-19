@@ -68,7 +68,7 @@ mirror-gitlab:
     - git filter-branch --index-filter 'git rm --cached --ignore-unmatch \.gitlab-ci\.yml' -- --all
     - rm -rf refs/original/ && git reflog expire --all && git gc --prune=now
     - git for-each-ref --format="%(refname)" refs/pipelines/ | xargs -r git update-ref -d
-    - git push --mirror "$WEBAPP_MIRROR_GITLAB_REPO"
+    - git push --prune --force "$WEBAPP_MIRROR_GITLAB_REPO" +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*
   only:
     - master
 
@@ -80,6 +80,6 @@ mirror-github:
     - git filter-branch --index-filter 'git rm --cached --ignore-unmatch \.gitlab-ci\.yml' -- --all
     - rm -rf refs/original/ && git reflog expire --all && git gc --prune=now
     - git for-each-ref --format="%(refname)" refs/pipelines/ | xargs -r git update-ref -d
-    - git push --mirror "$WEBAPP_MIRROR_GITHUB_REPO"
+    - git push --prune --force "$WEBAPP_MIRROR_GITHUB_REPO" +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*
   only:
     - master
