@@ -66,7 +66,7 @@ const emit = defineEmits(['add', 'remove']);
           </v-col>
           <v-col>
             <v-btn
-              v-if="!item.already_in_library"
+              v-if="!item.already_in_library && qualityItems.length"
               color="primary"
               variant="outlined"
               @click="emit('add', mediaType, item)"
@@ -76,7 +76,18 @@ const emit = defineEmits(['add', 'remove']);
               Add
             </v-btn>
             <v-btn
-              v-else
+              v-if="!item.already_in_library && !qualityItems.length"
+              color="primary"
+              variant="outlined"
+              @click="emit('add', mediaType, item)"
+              block
+              style="height: 56px"
+              disabled
+              >
+              Add
+            </v-btn>
+            <v-btn
+              v-if="item.already_in_library"
               color="error"
               variant="outlined"
               @click="emit('remove', mediaType, item)"
