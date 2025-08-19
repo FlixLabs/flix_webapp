@@ -120,7 +120,9 @@ onMounted(() => {
         prepend-icon="mdi-form-textbox-password"
         clearable
         />
-      <div class="d-flex justify-end">
+      <div
+        class="d-flex justify-end"
+        >
         <v-btn
           color="primary"
           variant="outlined"
