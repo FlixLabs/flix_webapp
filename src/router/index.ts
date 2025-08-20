@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import LoginView from '../views/LoginView.vue'
 import DashboardView from '../views/DashboardView.vue'
 import LibraryView from '../views/LibraryView.vue'
+import CalendarView from '../views/CalendarView.vue'
 import OutingsView from '../views/OutingsView.vue'
 import DownloadsView from '../views/DownloadsView.vue'
 import SettingsView from '../views/SettingsView.vue'
@@ -32,6 +33,14 @@ const routes = [
     path: '/library',
     name: 'Library',
     component: LibraryView,
+    meta: {
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/calendar',
+    name: 'Calendar',
+    component: CalendarView,
     meta: {
       requiresAuth: true
     }
