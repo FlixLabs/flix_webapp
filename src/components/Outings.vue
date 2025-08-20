@@ -11,9 +11,11 @@ import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useDialog } from '@/composables/useDialog';
 import { useLibraryChecker } from '@/composables/useLibraryChecker';
 import { useDeleteItem } from '@/composables/useDeleteItem';
+import { useQualitySelection } from '@/composables/useQualitySelection';
 import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
 import MediaDialog from '@/components/common/MediaDialog.vue';
+import QualitySelectionDialog from '@/components/common/QualitySelectionDialog.vue';
 import EpisodePanel from '@/components/common/EpisodePanel.vue';
 import Loading from '@/components/common/Loading.vue';
 import MediaGrid from '@/components/common/MediaGrid.vue';
@@ -34,6 +36,13 @@ const {
   resetItemToDelete
 } = useDeleteConfirmation();
 
+const {
+  qualitySelectionDialog,
+  resetQualitySelectionDialog,
+  itemQuality,
+  resetItemQuality
+} = useQualitySelection();
+
 const { state: search, reset: resetSearch } = useResettable('');
 
 const selected_view = ref<'movies' | 'series'>('movies');
@@ -42,10 +51,13 @@ const items_per_page = 12;
 const movie_page = ref(1);
 const serie_page = ref(1);
 
+const { state: qualityItems, reset: resetQualityItems } = useResettable([]);
+const { state: qualitySelected, reset: resetQualitySelected } = useResettable(null);
+
 const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
 const { state: movieItems, reset: resetMovieItems } = useResettable([]);
 const { state: qualityMovieItems, reset: resetQualityMovieItems } = useResettable([]);
-const { state: qualityMovie, reset: resetQualityMovie } = useResettable(1);
+const { state: qualityMovie, reset: resetQualityMovie } = useResettable(null);
 const { state: selectedMovie, reset: resetSelectedMovie } = useResettable(null);
 const { dialog: movieDialog, reset: resetMovieDialog } = useDialog();
 const { filteredItems: filtered_movies } = useFilteredItems(movieItems, search);
@@ -59,7 +71,7 @@ const { isAlreadyInLibrary: checkMovies } = useLibraryChecker("movies", movieIte
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
 const { state: serieItems, reset: resetSerieItems } = useResettable([]);
 const { state: qualitySerieItems, reset: resetQualitySerieItems } = useResettable([]);
-const { state: qualitySerie, reset: resetQualitySerie } = useResettable(1);
+const { state: qualitySerie, reset: resetQualitySerie } = useResettable(null);
 const { state: selectedSerie, reset: resetSelectedSerie } = useResettable([]);
 const { dialog: serieDialog, reset: resetSerieDialog } = useDialog();
 const { state: serieEpisodes, reset: resetSerieEpisodes } = useResettable([]);
@@ -438,14 +450,38 @@ const grouped_episodes = computed(() => {
   }, {} as Record<number, any[]>);
 });
 
+function openQualityDialog(type, item) {
+  if (type == 'movies') {
+    qualityItems.value = qualityMovieItems.value;
+    qualitySelected.value = qualityMovie.value;
+  }
+  if (type == 'series') {
+    qualityItems.value = qualitySerieItems.value;
+    qualitySelected.value = qualitySerie.value;
+  }
+
+  itemQuality.value = { type, item };
+
+  qualitySelectionDialog.value = true;
+}
+
+function confirmQuality(selectedValue) {
+  qualitySelected.value = selectedValue;
+
+  addToList(itemQuality.value.type, itemQuality.value.item);
+
+  resetItemQuality();
+  resetQualityItems();
+  resetQualitySelected();
+  resetMovieDialog();
+  resetSerieDialog();
+}
+
 function addToList(type, item) {
   let base_url = null;
   let api_key = null;
   let url_type = null;
   let data = {};
-
-  // gerer de maniere generique
-  const qualityProfileId = 1;
 
   if (type == 'movies') {
     if (!useAPI.value) {
@@ -460,7 +496,7 @@ function addToList(type, item) {
       tmdbId: item.tmdbId,
       title: item.title,
       year: item.year,
-      qualityProfileId: qualityProfileId,
+      qualityProfileId: qualitySelected.value,
       rootFolderPath: "/movies",
       monitored: true,
       addOptions: {
@@ -481,7 +517,7 @@ function addToList(type, item) {
       tvdbId: item.tvdbId,
       title: item.title,
       year: item.year,
-      qualityProfileId: qualityProfileId,
+      qualityProfileId: qualitySelected.value,
       rootFolderPath: "/tv",
       monitored: true,
       addOptions: {
@@ -655,6 +691,14 @@ watch(selectedInstance, () => {
     @confirm="confirmDelete"
     @cancel="resetDeleteConfirmationDialog"
     />
+  <QualitySelectionDialog
+    v-model="qualitySelectionDialog"
+    :items="qualityItems"
+    :selected-value="qualitySelected"
+    @update:modelValue="(v) => { if (!v) resetQualitySelected(); }"
+    @confirm="confirmQuality"
+    @cancel="resetQualitySelectionDialog"
+    />
   <v-container>
     <v-row>
       <v-col>
@@ -746,7 +790,7 @@ watch(selectedInstance, () => {
         :showAdd="selectedMovie && !selectedMovie.already_in_library && qualityMovieItems.length"
         :showRemove="selectedMovie && selectedMovie.already_in_library"
         @search="searchContent('movies', $event)"
-        @add="addToList('movies', $event)"
+        @add="openQualityDialog('movies', $event)"
         @remove="openDeleteConfirmationDialog('movies', $event)"
         />
     </div>
@@ -786,7 +830,7 @@ watch(selectedInstance, () => {
         :showAdd="selectedSerie && !selectedSerie.already_in_library && qualitySerieItems.length"
         :showRemove="selectedSerie && selectedSerie.already_in_library"
         @search="searchContent('series', $event)"
-        @add="addToList('series', $event)"
+        @add="openQualityDialog('series', $event)"
         @remove="openDeleteConfirmationDialog('series', $event)"
         >
         <template
