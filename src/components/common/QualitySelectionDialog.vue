@@ -4,11 +4,15 @@ import { ref, watch } from 'vue';
 
 const props = defineProps<{
   modelValue: boolean;
+  items: [] | null;
+  selectedValue?: any | null;
 }>();
 
 const emits = defineEmits(['update:modelValue', 'cancel', 'confirm']);
 
 const internalVisible = ref(props.modelValue);
+
+const selected = ref<any>(null);
 
 watch(() => props.modelValue, (newVal) => {
   internalVisible.value = newVal;
@@ -16,6 +20,16 @@ watch(() => props.modelValue, (newVal) => {
 
 watch(internalVisible, (newVal) => {
   emits('update:modelValue', newVal);
+
+  if (!newVal) {
+    selected.value = null;
+  }
+});
+
+watch(() => props.selectedValue, (v) => {
+  selected.value = v ?? null;
+}, {
+  immediate: true
 });
 
 function cancel() {
@@ -24,7 +38,7 @@ function cancel() {
 }
 
 function confirm() {
-  emits('confirm');
+  emits('confirm', selected.value);
   internalVisible.value = false;
 }
 </script>
@@ -37,10 +51,15 @@ function confirm() {
     >
     <v-card>
       <v-card-title>
-        Confirm deletion
+        Choose quality
       </v-card-title>
       <v-card-text>
-        Are you sure you want to delete this item? This action cannot be undone.
+        <v-select
+          v-model="selected"
+          :items="items"
+          label="Quality"
+          variant="outlined"
+          />
       </v-card-text>
       <v-card-actions>
         <v-btn
