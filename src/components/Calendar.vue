@@ -182,3 +182,19 @@ onMounted(() => {
     </v-col>
   </v-row>
 </template>
+
+<style scoped>
+:deep(.v-calendar .v-chip) {
+  height: auto;
+  width: 100%;
+  border-radius: 8px !important;
+  padding-top:5px;
+  padding-bottom:5px;
+}
+:deep(.v-calendar .v-chip__content) {
+  white-space: normal !important;
+}
+:deep(.v-calendar .v-chip:not(:last-child)) {
+  margin-bottom: 5px;
+}
+</style>
