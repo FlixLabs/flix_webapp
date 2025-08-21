@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import { ref, watch, computed, onMounted } from 'vue';
+import { ref, watch, computed, onMounted, toRaw } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useCount } from '@/composables/useCount';
 import { useFilteredItems } from '@/composables/useFilteredItems';
@@ -331,6 +331,38 @@ function searchContent(type, item) {
   });
 }
 
+function timestamp() {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + '_' + p(d.getHours())+ '-' + p(d.getMinutes());
+}
+
+function downloadBlob(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function exportLibrary() {
+  let exportData;
+  if (selected_view.value == 'movies') {
+    exportData = filtered_movies.value;
+  }
+  if (selected_view.value == 'series') {
+    exportData = filtered_series.value;
+  }
+
+  const rawData = toRaw(exportData);
+  const json = JSON.stringify(rawData, null, 2);
+  const file = 'flix_' + selected_view.value + '_' + timestamp() + '.json';
+  downloadBlob(json, file, 'application/json;charset=utf-8;');
+  showSuccessAlert('JSON export started : ' + selected_view.value);
+}
+
 watch(search, (newValue) => {
   if (newValue) {
     localStorage.setItem("library_search_" + window.location.href, newValue);
@@ -431,6 +463,19 @@ watch(selectedInstance, () => {
           </v-btn>
         </v-btn-toggle>
       </v-col>
+      <v-col
+        v-if="(selected_view == 'movies' && filtered_movies.length > 0) || (selected_view == 'series' && filtered_series.length > 0)"
+        class="d-flex justify-end align-center"
+        >
+        <v-btn
+          color="primary"
+          prepend-icon="mdi-file-export-outline"
+          variant="outlined"
+          @click="exportLibrary()"
+          >
+          Export
+        </v-btn>
+      </v-col>
     </v-row>
     <div
       v-if="selected_view == 'movies'"
@@ -508,7 +553,7 @@ watch(selectedInstance, () => {
         :showAdd="false"
         :showRemove="selectedSerie"
         @search="searchContent('series', $event)"
-        @add="addToList('series', $event)"
+        @add=""
         @remove="openDeleteConfirmationDialog('series', $event)"
         >
         <template
