@@ -1,8 +1,11 @@
 {
   "name": "flix_webapp",
   "version": "2.13.0",
+  "description": "",
+  "author": "Renaud Baivier",
   "private": true,
   "type": "module",
+  "license": "GPLv3",
   "scripts": {
     "dev": "vite",
     "build": "run-p type-check \"build-only {@}\" --",
