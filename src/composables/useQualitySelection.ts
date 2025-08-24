@@ -1,5 +1,8 @@
 import { ref } from 'vue';
 
+export type Category = 'movies' | 'series';
+export interface ItemQualityPayload { type: Category; item: any }
+
 export function useQualitySelection() {
   const initialQualitySelectionDialog = null;
   const qualitySelectionDialog = ref(initialQualitySelectionDialog);
@@ -8,14 +11,11 @@ export function useQualitySelection() {
     qualitySelectionDialog.value = initialQualitySelectionDialog;
   };
 
-  const initialItemQuality = {
-    type: null,
-    item: null
-  };
-  const itemQuality = ref({ ...initialItemQuality });
+  const initialItemQuality = null;
+  const itemQuality = ref<ItemQualityPayload | null>(initialItemQuality);
 
   const resetItemQuality = () => {
-    itemQuality.value = { ...initialItemQuality };
+    itemQuality.value = initialItemQuality;
   };
 
   return {

@@ -1,7 +1,13 @@
 import { computed } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
+import type { Ref } from 'vue';
 
-export function useLibraryChecker(type, items, showErrorAlert, useAPI) {
+export function useLibraryChecker(
+  type: 'movies' | 'series',
+  items: Ref<any[]>,
+  showErrorAlert: (msg: any) => void,
+  useAPI: Ref<boolean>
+) {
   const store = useFlixStore();
   const selectedInstanceData = computed(() => store.selectedInstanceData);
 
@@ -11,16 +17,17 @@ export function useLibraryChecker(type, items, showErrorAlert, useAPI) {
   };
 
   const isAlreadyInLibrary = () => {
-    let base_url = null;
-    let api_key = null;
+    let base_url = '';
+    let api_key = '';
 
     if (type == 'movies') {
       if (!useAPI.value) {
         base_url = import.meta.env.VITE_RADARR_BASE_URL;
         api_key = import.meta.env.VITE_RADARR_API_KEY;
       } else {
-        base_url = selectedInstanceData.value.radarr.base_url;
-        api_key = selectedInstanceData.value.radarr.api_key;
+        const sid = selectedInstanceData.value as any;
+        base_url = sid?.radarr?.base_url ?? '';
+        api_key = sid?.radarr?.api_key ?? '';
       }
     }
 
@@ -29,8 +36,9 @@ export function useLibraryChecker(type, items, showErrorAlert, useAPI) {
         base_url = import.meta.env.VITE_SONARR_BASE_URL;
         api_key = import.meta.env.VITE_SONARR_API_KEY;
       } else {
-        base_url = selectedInstanceData.value.sonarr.base_url;
-        api_key = selectedInstanceData.value.sonarr.api_key;
+        const sid = selectedInstanceData.value as any;
+        base_url = sid?.sonarr?.base_url ?? '';
+        api_key = sid?.sonarr?.api_key ?? '';
       }
     }
 
@@ -38,7 +46,7 @@ export function useLibraryChecker(type, items, showErrorAlert, useAPI) {
 
     fetch(base_url + '/api/v3/' + url_type + '?apikey=' + api_key)
       .then(async (response) => {
-        const json_data = await response.json();
+        const json_data: any[] = await response.json();
 
         if (items.value.length > 0) {
           markAsAlreadyInLibrary(items.value, json_data);
@@ -49,7 +57,7 @@ export function useLibraryChecker(type, items, showErrorAlert, useAPI) {
       });
   };
 
-  const markAsAlreadyInLibrary = (array_items, json_data) => {
+  const markAsAlreadyInLibrary = (array_items: any[], json_data: any[]) => {
     for (let item of array_items) {
       for (let compare_item of json_data) {
         if (item.tmdbId !== 0 && item.tmdbId === compare_item.tmdbId) {

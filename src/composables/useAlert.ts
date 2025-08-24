@@ -14,7 +14,7 @@ export function useAlert() {
     alert.value = { ...initialAlert };
   };
 
-  const showAlert = (type, icon, text) => {
+  const showAlert = (type: string, icon: string, text: string) => {
     alert.value = { visible: true, type, icon, text };
     setTimeout(() => {
       resetAlert();
