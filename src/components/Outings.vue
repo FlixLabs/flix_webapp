@@ -12,6 +12,8 @@ import { useDialog } from '@/composables/useDialog';
 import { useLibraryChecker } from '@/composables/useLibraryChecker';
 import { useDeleteItem } from '@/composables/useDeleteItem';
 import { useQualitySelection } from '@/composables/useQualitySelection';
+import { useAddItem } from '@/composables/useAddItem';
+import { useSearchItem } from '@/composables/useSearchItem';
 import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
 import MediaDialog from '@/components/common/MediaDialog.vue';
@@ -51,14 +53,14 @@ const items_per_page = 12;
 const movie_page = ref(1);
 const serie_page = ref(1);
 
-const { state: qualityItems, reset: resetQualityItems } = useResettable([]);
-const { state: qualitySelected, reset: resetQualitySelected } = useResettable(null);
+const { state: qualityItems, reset: resetQualityItems } = useResettable<any[]>([]);
+const { state: qualitySelected, reset: resetQualitySelected } = useResettable<any | null>(null);
 
 const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
-const { state: movieItems, reset: resetMovieItems } = useResettable([]);
-const { state: qualityMovieItems, reset: resetQualityMovieItems } = useResettable([]);
-const { state: qualityMovie, reset: resetQualityMovie } = useResettable(null);
-const { state: selectedMovie, reset: resetSelectedMovie } = useResettable(null);
+const { state: movieItems, reset: resetMovieItems } = useResettable<any[]>([]);
+const { state: qualityMovieItems, reset: resetQualityMovieItems } = useResettable<any[]>([]);
+const { state: qualityMovie, reset: resetQualityMovie } = useResettable<any | null>(null);
+const { state: selectedMovie, reset: resetSelectedMovie } = useResettable<any | null>(null);
 const { dialog: movieDialog, reset: resetMovieDialog } = useDialog();
 const { filteredItems: filtered_movies } = useFilteredItems(movieItems, search);
 const movies_total_pages = computed(() =>
@@ -69,12 +71,12 @@ const { total: total_movies } = useCount(filtered_movies);
 const { isAlreadyInLibrary: checkMovies } = useLibraryChecker("movies", movieItems, showErrorAlert, useAPI);
 
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
-const { state: serieItems, reset: resetSerieItems } = useResettable([]);
-const { state: qualitySerieItems, reset: resetQualitySerieItems } = useResettable([]);
-const { state: qualitySerie, reset: resetQualitySerie } = useResettable(null);
-const { state: selectedSerie, reset: resetSelectedSerie } = useResettable([]);
+const { state: serieItems, reset: resetSerieItems } = useResettable<any[]>([]);
+const { state: qualitySerieItems, reset: resetQualitySerieItems } = useResettable<any[]>([]);
+const { state: qualitySerie, reset: resetQualitySerie } = useResettable<any | null>(null);
+const { state: selectedSerie, reset: resetSelectedSerie } = useResettable<any | null>(null);
 const { dialog: serieDialog, reset: resetSerieDialog } = useDialog();
-const { state: serieEpisodes, reset: resetSerieEpisodes } = useResettable([]);
+const { state: serieEpisodes, reset: resetSerieEpisodes } = useResettable<any[]>([]);
 const { filteredItems: filtered_series } = useFilteredItems(serieItems, search);
 const series_total_pages = computed(() =>
   Math.ceil(filtered_series.value.length / items_per_page)
@@ -92,17 +94,34 @@ const { deleteItem } = useDeleteItem({
   refreshContent: getContent
 });
 
-function getQualityProfileList(type) {
-  let base_url = null;
-  let api_key = null;
+const { addItem } = useAddItem({
+  useAPI,
+  selectedInstanceData,
+  showSuccessAlert,
+  showErrorAlert,
+  refreshContent: getContent
+});
+
+const { searchItem } = useSearchItem({
+  useAPI,
+  selectedInstanceData,
+  showSuccessAlert,
+  showErrorAlert,
+  refreshContent: getContent
+});
+
+function getQualityProfileList(type: 'movies' | 'series') {
+  let base_url = '';
+  let api_key = '';
 
   if (type == 'movies') {
     if (!useAPI.value) {
       base_url = import.meta.env.VITE_RADARR_BASE_URL;
       api_key = import.meta.env.VITE_RADARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.radarr.base_url;
-      api_key = selectedInstanceData.value.radarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.radarr?.base_url ?? '';
+      api_key = sid?.radarr?.api_key ?? '';
     }
   }
   if (type == 'series') {
@@ -110,8 +129,9 @@ function getQualityProfileList(type) {
       base_url = import.meta.env.VITE_SONARR_BASE_URL;
       api_key = import.meta.env.VITE_SONARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.sonarr.base_url;
-      api_key = selectedInstanceData.value.sonarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.sonarr?.base_url ?? '';
+      api_key = sid?.sonarr?.api_key ?? '';
     }
   }
 
@@ -159,11 +179,11 @@ function getQualityProfileList(type) {
     });
 }
 
-function getContent(type) {
+function getContent(type: 'movies' | 'series') {
   const base_url = import.meta.env.VITE_TMDB_BASE_URL;
   const api_key = import.meta.env.VITE_TMDB_API_KEY;
-  let url_type = null;
-  let url_request = null;
+  let url_type = '';
+  let url_request = '';
 
   if (type == 'movies') {
     isLoadingMovie.value = true;
@@ -301,8 +321,8 @@ function getContent(type) {
 function getSerieEpisodes(serie_id: number) {
   const base_url = import.meta.env.VITE_TMDB_BASE_URL;
   const api_key = import.meta.env.VITE_TMDB_API_KEY;
-  let base_url_sonarr = null;
-  let api_key_sonarr = null;
+  let base_url_sonarr = '';
+  let api_key_sonarr = '';
 
   serieDialog.value = true;
   isLoadingSerieEpisodes.value = true;
@@ -313,8 +333,9 @@ function getSerieEpisodes(serie_id: number) {
     base_url_sonarr = import.meta.env.VITE_SONARR_BASE_URL;
     api_key_sonarr = import.meta.env.VITE_SONARR_API_KEY;
   } else {
-    base_url_sonarr = selectedInstanceData.value.sonarr.base_url;
-    api_key_sonarr = selectedInstanceData.value.sonarr.api_key;
+    const sid = selectedInstanceData.value as any;
+    base_url_sonarr = sid?.sonarr?.base_url ?? '';
+    api_key_sonarr = sid?.sonarr?.api_key ?? '';
   }
 
   fetch(base_url + '/tv/' + serie_id + '?api_key=' + api_key)
@@ -330,14 +351,14 @@ function getSerieEpisodes(serie_id: number) {
 
             if (seasonData && Array.isArray(seasonData.episodes)) {
               tmdbEpisodes = seasonData.episodes
-                .filter(episode =>
+                .filter((episode: any) =>
                   episode &&
                   episode.name &&
                   typeof episode.season_number !== 'undefined' &&
                   episode.episode_number &&
                   episode.air_date
                 )
-                .map(episode => ({
+                .map((episode: any) => ({
                   title: episode.name,
                   season: episode.season_number,
                   episode: episode.episode_number,
@@ -353,13 +374,13 @@ function getSerieEpisodes(serie_id: number) {
                 .then(async (response) => {
                   const json_data_sonarr = await response.json();
 
-                  const lookup = {};
-                  json_data_sonarr.forEach(episodeData => {
+                  const lookup: Record<string, any> = {};
+                  json_data_sonarr.forEach((episodeData: any) => {
                     const key = 'S' + String(episodeData.seasonNumber).padStart(2, '0') + 'E' + String(episodeData.episodeNumber).padStart(2, '0');
                     lookup[key] = episodeData;
                   });
 
-                  tmdbEpisodes.forEach(episodeData => {
+                  tmdbEpisodes.forEach((episodeData: any) => {
                     const key = 'S' + String(episodeData.season).padStart(2, '0') + 'E' + String(episodeData.episode).padStart(2, '0');
                     const matched = lookup[key];
                     if (matched) {
@@ -420,7 +441,7 @@ function handleSerieClick(serie_id: number) {
   }
 }
 
-const getSerieTvdbId = async (serie) => {
+const getSerieTvdbId = async (serie: any) => {
   const base_url = import.meta.env.VITE_TMDB_BASE_URL;
   const api_key = import.meta.env.VITE_TMDB_API_KEY;
   let tvdbId = null;
@@ -441,7 +462,7 @@ const getSerieTvdbId = async (serie) => {
 }
 
 const grouped_episodes = computed(() => {
-  return serieEpisodes.value.reduce((acc, episode) => {
+  return serieEpisodes.value.reduce((acc: Record<number, any[]>, episode: any) => {
     if (!acc[episode.season]) {
       acc[episode.season] = [];
     }
@@ -450,7 +471,7 @@ const grouped_episodes = computed(() => {
   }, {} as Record<number, any[]>);
 });
 
-function openQualityDialog(type, item) {
+function openQualityDialog(type: 'movies' | 'series', item: any) {
   if (type == 'movies') {
     qualityItems.value = qualityMovieItems.value;
     qualitySelected.value = qualityMovie.value;
@@ -462,14 +483,14 @@ function openQualityDialog(type, item) {
 
   itemQuality.value = { type, item };
 
-  qualitySelectionDialog.value = true;
+  (qualitySelectionDialog as any).value = true;
 }
 
-function confirmQuality(selectedValue) {
-  qualitySelected.value = selectedValue;
-
-  addToList(itemQuality.value.type, itemQuality.value.item);
-
+function confirmQuality(selectedValue: any) {
+  if (itemQuality.value?.item) {
+    itemQuality.value.item.qualityProfileId = selectedValue;
+    addItem(itemQuality.value.type, itemQuality.value.item);
+  }
   resetItemQuality();
   resetQualityItems();
   resetQualitySelected();
@@ -477,84 +498,7 @@ function confirmQuality(selectedValue) {
   resetSerieDialog();
 }
 
-function addToList(type, item) {
-  let base_url = null;
-  let api_key = null;
-  let url_type = null;
-  let data = {};
-
-  if (type == 'movies') {
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_RADARR_BASE_URL;
-      api_key = import.meta.env.VITE_RADARR_API_KEY;
-    } else {
-      base_url = selectedInstanceData.value.radarr.base_url;
-      api_key = selectedInstanceData.value.radarr.api_key;
-    }
-    url_type = 'movie';
-    data = {
-      tmdbId: item.tmdbId,
-      title: item.title,
-      year: item.year,
-      qualityProfileId: qualitySelected.value,
-      rootFolderPath: "/movies",
-      monitored: true,
-      addOptions: {
-        searchForMovie: true
-      }
-    }
-  }
-  if (type == 'series') {
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_SONARR_BASE_URL;
-      api_key = import.meta.env.VITE_SONARR_API_KEY;
-    } else {
-      base_url = selectedInstanceData.value.sonarr.base_url;
-      api_key = selectedInstanceData.value.sonarr.api_key;
-    }
-    url_type = 'series';
-    data = {
-      tvdbId: item.tvdbId,
-      title: item.title,
-      year: item.year,
-      qualityProfileId: qualitySelected.value,
-      rootFolderPath: "/tv",
-      monitored: true,
-      addOptions: {
-        searchForMissingEpisodes: true
-      }
-    }
-  }
-
-  fetch(base_url + '/api/v3/' + url_type, {
-		method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json;charset=utf-8',
-      'X-Api-Key': api_key
-    },
-    body: JSON.stringify(data)
-	})
-  .then(async response => {
-    if (response.ok) {
-      showSuccessAlert("Added successfully");
-      getContent(type, true);
-    }
-  })
-	.catch(error => {
-		showErrorAlert("Adding failed");
-	})
-  .finally(() => {
-    if (type == 'movies') {
-      resetMovieDialog();
-    }
-    if (type == 'series') {
-      resetSerieDialog();
-    }
-  });
-}
-
-function openDeleteConfirmationDialog(type, item) {
+function openDeleteConfirmationDialog(type: 'movies' | 'series', item: any) {
   if (!item) {
     if (type == 'movies') {
       item = selectedMovie.value;
@@ -571,9 +515,9 @@ function openDeleteConfirmationDialog(type, item) {
 }
 
 function confirmDelete() {
-  if (itemToDelete.value) {
-    const { type, item } = itemToDelete.value;
-    deleteItem(type, item);
+  const val = itemToDelete.value;
+  if (val && (val.type === 'movies' || val.type === 'series')) {
+    deleteItem((val.type as 'movies' | 'series'), val.item);
     resetDeleteConfirmationDialog();
     resetItemToDelete();
     resetMovieDialog();
@@ -581,64 +525,10 @@ function confirmDelete() {
   }
 }
 
-function searchContent(type, item) {
-  let base_url = null;
-  let api_key = null;
-  let url_type = null;
-  let data = {};
-
-  if (type == 'movies') {
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_RADARR_BASE_URL;
-      api_key = import.meta.env.VITE_RADARR_API_KEY;
-    } else {
-      base_url = selectedInstanceData.value.radarr.base_url;
-      api_key = selectedInstanceData.value.radarr.api_key;
-    }
-    url_type = 'movie';
-    data = {
-      name: "MoviesSearch",
-      movieIds: [item.id]
-    }
-  }
-  if (type == 'series') {
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_SONARR_BASE_URL;
-      api_key = import.meta.env.VITE_SONARR_API_KEY;
-    } else {
-      base_url = selectedInstanceData.value.sonarr.base_url;
-      api_key = selectedInstanceData.value.sonarr.api_key;
-    }
-    url_type = 'series';
-    data = {
-      name: "SeriesSearch",
-      seriesId: item.id
-    }
-  }
-
-  fetch(base_url + '/api/v3/command', {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json;charset=utf-8',
-      'X-Api-Key': api_key
-    },
-    body: JSON.stringify(data)
-  })
-  .then(async response => {
-    if (response.ok) {
-      showSuccessAlert("Start search successfully");
-      if (type == 'movies') {
-        resetMovieDialog();
-      }
-      if (type == 'series') {
-        resetSerieDialog();
-      }
-    }
-  })
-  .catch(error => {
-    showErrorAlert("Search failed");
-  });
+function searchContent(type: 'movies' | 'series', item: any) {
+  searchItem(type, item);
+  resetMovieDialog();
+  resetSerieDialog();
 }
 
 watch(search, (newValue) => {
@@ -660,11 +550,14 @@ watch(selected_view, (newValue) => {
 
 onMounted(() => {
   if (localStorage.getItem('outings_search_' + window.location.href)) {
-    search.value = localStorage.getItem('outings_search_' + window.location.href);
+    search.value = localStorage.getItem('outings_search_' + window.location.href) ?? '';
   }
 
   if (localStorage.getItem('outings_selected_' + window.location.href)) {
-    selected_view.value = localStorage.getItem('outings_selected_' + window.location.href);
+    const sel = localStorage.getItem('outings_selected_' + window.location.href);
+    if (sel === 'movies' || sel === 'series') {
+      selected_view.value = sel;
+    }
   }
 
   getQualityProfileList('movies');
@@ -736,8 +629,9 @@ watch(selectedInstance, () => {
       <v-col>
         <v-btn-toggle
           v-model="selected_view"
+          color="primary"
+          variant="outlined"
           mandatory
-          rounded="xl"
           >
           <v-btn
             value="movies"
@@ -786,9 +680,9 @@ watch(selectedInstance, () => {
         mediaType="Movie"
         :item="selectedMovie"
         announcementName="Release"
-        :showSearch="selectedMovie && !selectedMovie.hasFile && selectedMovie.status == 'released'"
-        :showAdd="selectedMovie && !selectedMovie.already_in_library && qualityMovieItems.length"
-        :showRemove="selectedMovie && selectedMovie.already_in_library"
+        :showSearch="!!selectedMovie && !selectedMovie.hasFile && selectedMovie.status == 'released'"
+        :showAdd="!!selectedMovie && !selectedMovie.already_in_library && qualityMovieItems.length > 0"
+        :showRemove="!!selectedMovie && selectedMovie.already_in_library"
         @search="searchContent('movies', $event)"
         @add="openQualityDialog('movies', $event)"
         @remove="openDeleteConfirmationDialog('movies', $event)"
@@ -826,9 +720,9 @@ watch(selectedInstance, () => {
         mediaType="Serie"
         :item="selectedSerie"
         announcementName="Premiere"
-        :showSearch="selectedSerie && selectedSerie.statistics && selectedSerie.statistics.sizeOnDisk == 0 && selectedSerie.status != 'upcoming'"
-        :showAdd="selectedSerie && !selectedSerie.already_in_library && qualitySerieItems.length"
-        :showRemove="selectedSerie && selectedSerie.already_in_library"
+        :showSearch="!!selectedSerie && selectedSerie.statistics && selectedSerie.statistics.sizeOnDisk == 0 && selectedSerie.status != 'upcoming'"
+        :showAdd="!!selectedSerie && !selectedSerie.already_in_library && qualitySerieItems.length > 0"
+        :showRemove="!!selectedSerie && selectedSerie.already_in_library"
         @search="searchContent('series', $event)"
         @add="openQualityDialog('series', $event)"
         @remove="openDeleteConfirmationDialog('series', $event)"

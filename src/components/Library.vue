@@ -10,6 +10,8 @@ import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useDialog } from '@/composables/useDialog';
 import { useDeleteItem } from '@/composables/useDeleteItem';
+import { useAddItem } from '@/composables/useAddItem';
+import { useSearchItem } from '@/composables/useSearchItem';
 import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
 import MediaDialog from '@/components/common/MediaDialog.vue';
@@ -42,8 +44,8 @@ const movie_page = ref(1);
 const serie_page = ref(1);
 
 const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
-const { state: movieItems, reset: resetMovieItems } = useResettable([]);
-const { state: selectedMovie, reset: resetSelectedMovie } = useResettable(null);
+const { state: movieItems, reset: resetMovieItems } = useResettable<any[]>([]);
+const { state: selectedMovie, reset: resetSelectedMovie } = useResettable<any | null>(null);
 const { dialog: movieDialog, reset: resetMovieDialog } = useDialog();
 const { filteredItems: filtered_movies } = useFilteredItems(movieItems, search);
 const movies_total_pages = computed(() =>
@@ -53,10 +55,10 @@ const { paginatedItems: paginated_movies } = usePagination(filtered_movies, movi
 const { total: total_movies } = useCount(filtered_movies);
 
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
-const { state: serieItems, reset: resetSerieItems } = useResettable([]);
-const { state: selectedSerie, reset: resetSelectedSerie } = useResettable([]);
+const { state: serieItems, reset: resetSerieItems } = useResettable<any[]>([]);
+const { state: selectedSerie, reset: resetSelectedSerie } = useResettable<any | null>(null);
 const { dialog: serieDialog, reset: resetSerieDialog } = useDialog();
-const { state: serieEpisodes, reset: resetSerieEpisodes } = useResettable([]);
+const { state: serieEpisodes, reset: resetSerieEpisodes } = useResettable<any[]>([]);
 const { filteredItems: filtered_series } = useFilteredItems(serieItems, search);
 const series_total_pages = computed(() =>
   Math.ceil(filtered_series.value.length / items_per_page)
@@ -73,10 +75,29 @@ const { deleteItem } = useDeleteItem({
   refreshContent: getContent
 });
 
-function getContent(type) {
-  let base_url = null;
-  let api_key = null;
-  let url_type = null;
+const { addItem } = useAddItem({
+  useAPI,
+  selectedInstanceData,
+  showSuccessAlert,
+  showErrorAlert,
+  refreshContent: getContent
+});
+
+const { searchItem } = useSearchItem({
+  useAPI,
+  selectedInstanceData,
+  showSuccessAlert,
+  showErrorAlert,
+  refreshContent: getContent
+});
+
+const { state: showFileUpload, reset: resetShowFileUpload } = useResettable(false);
+const { state: fileUpload, reset: resetFileUpload } = useResettable<File | undefined>(undefined);
+
+function getContent(type: 'movies' | 'series') {
+  let base_url = '';
+  let api_key = '';
+  let url_type = '';
 
   if (type == 'movies') {
     isLoadingMovie.value = true;
@@ -84,8 +105,9 @@ function getContent(type) {
       base_url = import.meta.env.VITE_RADARR_BASE_URL;
       api_key = import.meta.env.VITE_RADARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.radarr.base_url;
-      api_key = selectedInstanceData.value.radarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.radarr?.base_url ?? '';
+      api_key = sid?.radarr?.api_key ?? '';
     }
     url_type = 'movie';
   }
@@ -95,8 +117,9 @@ function getContent(type) {
       base_url = import.meta.env.VITE_SONARR_BASE_URL;
       api_key = import.meta.env.VITE_SONARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.sonarr.base_url;
-      api_key = selectedInstanceData.value.sonarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.sonarr?.base_url ?? '';
+      api_key = sid?.sonarr?.api_key ?? '';
     }
     url_type = 'series';
   }
@@ -143,7 +166,7 @@ function getContent(type) {
           id: item.id,
           tmdbId: tmdbId,
           tvdbId: tvdbId,
-          prependAvatar: item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
+          prependAvatar: item.images?.find((img: any) => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
           title: title,
           certification: item.certification,
           year: item.year,
@@ -151,6 +174,7 @@ function getContent(type) {
           overview: item.overview,
           hasFile: item.hasFile,
           status: item.status,
+          qualityProfileId: item.qualityProfileId,
           quality: quality,
           relativePath: relativePath,
           statistics: item.statistics
@@ -180,8 +204,8 @@ function getContent(type) {
 }
 
 function getSerieEpisodes(serie_id: number) {
-  let base_url = null;
-  let api_key = null;
+  let base_url = '';
+  let api_key = '';
 
   serieDialog.value = true;
   isLoadingSerieEpisodes.value = true;
@@ -192,15 +216,16 @@ function getSerieEpisodes(serie_id: number) {
     base_url = import.meta.env.VITE_SONARR_BASE_URL;
     api_key = import.meta.env.VITE_SONARR_API_KEY;
   } else {
-    base_url = selectedInstanceData.value.sonarr.base_url;
-    api_key = selectedInstanceData.value.sonarr.api_key;
+    const sid = selectedInstanceData.value as any;
+    base_url = sid?.sonarr?.base_url ?? '';
+    api_key = sid?.sonarr?.api_key ?? '';
   }
 
   fetch(base_url + '/api/v3/episode?includeEpisodeFile=true&apikey=' + api_key + '&seriesId=' + serie_id)
     .then(async (response) => {
       const json_data = await response.json();
 
-      serieEpisodes.value = json_data.map((episode) => ({
+      serieEpisodes.value = json_data.map((episode: any) => ({
         title: episode.title,
         season: episode.seasonNumber,
         episode: episode.episodeNumber,
@@ -244,10 +269,10 @@ const grouped_episodes = computed(() => {
   }, {} as Record<number, any[]>);
 });
 
-function openDeleteConfirmationDialog(type, item) {
+function openDeleteConfirmationDialog(type: 'movies' | 'series', item: any) {
   if (!item) {
     if (type == 'movies') {
-      item = selectedMovie.value
+      item = selectedMovie.value;
     }
     if (type == 'series') {
       item = selectedSerie.value;
@@ -261,9 +286,9 @@ function openDeleteConfirmationDialog(type, item) {
 }
 
 function confirmDelete() {
-  if (itemToDelete.value) {
-    const { type, item } = itemToDelete.value;
-    deleteItem(type, item);
+  const val = itemToDelete.value;
+  if (val && (val.type === 'movies' || val.type === 'series')) {
+    deleteItem((val.type as 'movies' | 'series'), val.item);
     resetDeleteConfirmationDialog();
     resetItemToDelete();
     resetMovieDialog();
@@ -271,64 +296,10 @@ function confirmDelete() {
   }
 }
 
-function searchContent(type, item) {
-  let base_url = null;
-  let api_key = null;
-  let url_type = null;
-  let data = {};
-
-  if (type == 'movies') {
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_RADARR_BASE_URL;
-      api_key = import.meta.env.VITE_RADARR_API_KEY;
-    } else {
-      base_url = selectedInstanceData.value.radarr.base_url;
-      api_key = selectedInstanceData.value.radarr.api_key;
-    }
-    url_type = 'movie';
-    data = {
-      name: "MoviesSearch",
-      movieIds: [item.id]
-    }
-  }
-  if (type == 'series') {
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_SONARR_BASE_URL;
-      api_key = import.meta.env.VITE_SONARR_API_KEY;
-    } else {
-      base_url = selectedInstanceData.value.sonarr.base_url;
-      api_key = selectedInstanceData.value.sonarr.api_key;
-    }
-    url_type = 'series';
-    data = {
-      name: "SeriesSearch",
-      seriesId: item.id
-    }
-  }
-
-  fetch(base_url + '/api/v3/command', {
-    method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json;charset=utf-8',
-      'X-Api-Key': api_key
-    },
-    body: JSON.stringify(data)
-  })
-  .then(async response => {
-    if (response.ok) {
-      showSuccessAlert("Start search successfully");
-      if (type == 'movies') {
-        resetMovieDialog();
-      }
-      if (type == 'series') {
-        resetSerieDialog();
-      }
-    }
-  })
-  .catch(error => {
-    showErrorAlert("Search failed");
-  });
+function searchContent(type: 'movies' | 'series', item: any) {
+  searchItem(type, item);
+  resetMovieDialog();
+  resetSerieDialog();
 }
 
 function timestamp() {
@@ -337,7 +308,7 @@ function timestamp() {
   return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + '_' + p(d.getHours())+ '-' + p(d.getMinutes());
 }
 
-function downloadBlob(content, filename, mime) {
+function downloadBlob(content: string, filename: string, mime: string) {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -348,19 +319,60 @@ function downloadBlob(content, filename, mime) {
 }
 
 function exportLibrary() {
-  let exportData;
-  if (selected_view.value == 'movies') {
-    exportData = filtered_movies.value;
-  }
-  if (selected_view.value == 'series') {
-    exportData = filtered_series.value;
-  }
+  const exportData = selected_view.value === 'movies'
+    ? filtered_movies.value
+    : filtered_series.value;
 
   const rawData = toRaw(exportData);
   const json = JSON.stringify(rawData, null, 2);
   const file = 'flix_' + selected_view.value + '_' + timestamp() + '.json';
   downloadBlob(json, file, 'application/json;charset=utf-8;');
-  showSuccessAlert('JSON export started : ' + selected_view.value);
+  showSuccessAlert('JSON export started : ' + rawData.length + ' ' + selected_view.value);
+}
+
+function switchShowFileUpload() {
+  if (!showFileUpload.value) {
+    showFileUpload.value = true;
+  } else {
+    showFileUpload.value = false;
+  }
+}
+
+async function handleFileUpload() {
+  const file = fileUpload.value as File | null;
+  if (!file) return;
+
+  const lname = file.name.toLowerCase();
+  const match = /(movies|series)/.exec(lname);
+  if (!match) {
+    showErrorAlert('Filename must contain "movies" or "series".');
+    return;
+  }
+
+  const selected = (match[1] as 'movies' | 'series');
+
+  showSuccessAlert('JSON import started : ' + file.name);
+
+  try {
+    const text = await file.text();
+
+    try {
+      const json_data = JSON.parse(text);
+
+      for (let item of json_data) {
+        addItem(selected, item);
+      }
+
+      showSuccessAlert('JSON import finished : ' + json_data.length + ' ' + selected);
+    } catch {
+      showErrorAlert('JSON read error : ' + text);
+    }
+  } catch (e) {
+    showErrorAlert('JSON read error : ' + e);
+  }
+
+  resetFileUpload();
+  resetShowFileUpload();
 }
 
 watch(search, (newValue) => {
@@ -382,11 +394,14 @@ watch(selected_view, (newValue) => {
 
 onMounted(() => {
   if (localStorage.getItem('library_search_' + window.location.href)) {
-    search.value = localStorage.getItem('library_search_' + window.location.href);
+    search.value = localStorage.getItem('library_search_' + window.location.href) ?? '';
   }
 
   if (localStorage.getItem('library_selected_' + window.location.href)) {
-    selected_view.value = localStorage.getItem('library_selected_' + window.location.href);
+    const sel = localStorage.getItem('library_selected_' + window.location.href);
+    if (sel === 'movies' || sel === 'series') {
+      selected_view.value = sel;
+    }
   }
 
   getContent('movies');
@@ -446,8 +461,9 @@ watch(selectedInstance, () => {
       <v-col>
         <v-btn-toggle
           v-model="selected_view"
+          color="primary"
+          variant="outlined"
           mandatory
-          rounded="xl"
           >
           <v-btn
             value="movies"
@@ -467,14 +483,39 @@ watch(selectedInstance, () => {
         v-if="(selected_view == 'movies' && filtered_movies.length > 0) || (selected_view == 'series' && filtered_series.length > 0)"
         class="d-flex justify-end align-center"
         >
-        <v-btn
-          color="primary"
-          prepend-icon="mdi-file-export-outline"
-          variant="outlined"
-          @click="exportLibrary()"
-          >
-          Export
-        </v-btn>
+        <v-btn-group>
+          <v-btn
+            color="primary"
+            prepend-icon="mdi-file-export-outline"
+            variant="outlined"
+            @click="exportLibrary()"
+            >
+            Export
+          </v-btn>
+          <v-btn
+            color="primary"
+            prepend-icon="mdi-file-import-outline"
+            variant="outlined"
+            @click="switchShowFileUpload"
+            >
+            Import
+          </v-btn>
+        </v-btn-group>
+      </v-col>
+    </v-row>
+    <v-row
+      v-if="showFileUpload"
+      >
+      <v-col
+        class="d-flex justify-end align-center"
+        >
+        <v-file-upload
+          v-model="fileUpload"
+          @update:model-value="handleFileUpload"
+          accept=".json,application/json"
+          density="compact"
+          variant="compact"
+          />
       </v-col>
     </v-row>
     <div
@@ -509,9 +550,9 @@ watch(selectedInstance, () => {
         mediaType="Movie"
         :item="selectedMovie"
         announcementName="Release"
-        :showSearch="selectedMovie && !selectedMovie.hasFile && selectedMovie.status == 'released'"
+        :showSearch="!!selectedMovie && !selectedMovie.hasFile && selectedMovie.status == 'released'"
         :showAdd="false"
-        :showRemove="selectedMovie"
+        :showRemove="!!selectedMovie"
         @search="searchContent('movies', $event)"
         @add=""
         @remove="openDeleteConfirmationDialog('movies', $event)"
@@ -549,9 +590,9 @@ watch(selectedInstance, () => {
         mediaType="Serie"
         :item="selectedSerie"
         announcementName="Premiere"
-        :showSearch="selectedSerie && selectedSerie.statistics && selectedSerie.statistics.sizeOnDisk == 0 && selectedSerie.status != 'upcoming'"
+        :showSearch="!!selectedSerie && selectedSerie.statistics && selectedSerie.statistics.sizeOnDisk == 0 && selectedSerie.status != 'upcoming'"
         :showAdd="false"
-        :showRemove="selectedSerie"
+        :showRemove="!!selectedSerie"
         @search="searchContent('series', $event)"
         @add=""
         @remove="openDeleteConfirmationDialog('series', $event)"
