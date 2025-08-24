@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
+import type { Ref } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
@@ -16,22 +17,22 @@ const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
 const { state: isLoadingMovieRecords, reset: resetIsLoadingMovieRecords } = useResettable(false);
-const { state: movieRecords, reset: resetMovieRecords } = useResettable([]);
+const { state: movieRecords, reset: resetMovieRecords } = useResettable<any[]>([]);
 const { state: movieRecordsInterval, reset: resetMovieRecordsInterval } = useResettable(60);
 const { state: isLoadingMovieHistory, reset: resetIsLoadingMovieHistory } = useResettable(false);
-const { state: movieHistory, reset: resetMovieHistory } = useResettable([]);
+const { state: movieHistory, reset: resetMovieHistory } = useResettable<any[]>([]);
 const { state: movieHistoryInterval, reset: resetMovieHistoryInterval } = useResettable(60);
 
 const { state: isLoadingSerieRecords, reset: resetIsLoadingSerieRecords } = useResettable(false);
-const { state: serieRecords, reset: resetSerieRecords } = useResettable([]);
+const { state: serieRecords, reset: resetSerieRecords } = useResettable<any[]>([]);
 const { state: serieRecordsInterval, reset: resetSerieRecordsInterval } = useResettable(60);
 const { state: isLoadingSerieHistory, reset: resetIsLoadingSerieHistory } = useResettable(false);
-const { state: serieHistory, reset: resetSerieHistory } = useResettable([]);
+const { state: serieHistory, reset: resetSerieHistory } = useResettable<any[]>([]);
 const { state: serieHistoryInterval, reset: resetSerieHistoryInterval } = useResettable(60);
 
-function getDownload(type) {
-  let base_url = null;
-  let api_key = null;
+function getDownload(type: 'movies' | 'series') {
+  let base_url = '';
+  let api_key = '';
 
   if (type == 'movies') {
     isLoadingMovieRecords.value = true;
@@ -40,8 +41,9 @@ function getDownload(type) {
       base_url = import.meta.env.VITE_RADARR_BASE_URL;
       api_key = import.meta.env.VITE_RADARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.radarr.base_url;
-      api_key = selectedInstanceData.value.radarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.radarr?.base_url ?? '';
+      api_key = sid?.radarr?.api_key ?? '';
     }
   }
   if (type == 'series') {
@@ -51,8 +53,9 @@ function getDownload(type) {
       base_url = import.meta.env.VITE_SONARR_BASE_URL;
       api_key = import.meta.env.VITE_SONARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.sonarr.base_url;
-      api_key = selectedInstanceData.value.sonarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.sonarr?.base_url ?? '';
+      api_key = sid?.sonarr?.api_key ?? '';
     }
   }
 
@@ -102,9 +105,9 @@ function getDownload(type) {
     });
 }
 
-function getHistory(type) {
-  let base_url = null;
-  let api_key = null;
+function getHistory(type: 'movies' | 'series') {
+  let base_url = '';
+  let api_key = '';
 
   if (type == 'movies') {
     isLoadingMovieHistory.value = true;
@@ -113,8 +116,9 @@ function getHistory(type) {
       base_url = import.meta.env.VITE_RADARR_BASE_URL;
       api_key = import.meta.env.VITE_RADARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.radarr.base_url;
-      api_key = selectedInstanceData.value.radarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.radarr?.base_url ?? '';
+      api_key = sid?.radarr?.api_key ?? '';
     }
   }
   if (type == 'series') {
@@ -124,8 +128,9 @@ function getHistory(type) {
       base_url = import.meta.env.VITE_SONARR_BASE_URL;
       api_key = import.meta.env.VITE_SONARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.sonarr.base_url;
-      api_key = selectedInstanceData.value.sonarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.sonarr?.base_url ?? '';
+      api_key = sid?.sonarr?.api_key ?? '';
     }
   }
 
@@ -170,13 +175,12 @@ function getHistory(type) {
     });
 }
 
-const intervalIds = {};
+const intervalIds: Record<string, ReturnType<typeof setInterval>> = {};
 
-const startInterval = (category, refVar, callback) => {
-  const key = category;
-
-  if (intervalIds[key]) {
-    clearInterval(intervalIds[key]);
+const startInterval = (key: string, refVar: Ref<number>, callback: () => void) => {
+  const existing = intervalIds[key];
+  if (existing) {
+    clearInterval(existing);
   }
 
   intervalIds[key] = setInterval(() => {
@@ -184,43 +188,42 @@ const startInterval = (category, refVar, callback) => {
   }, refVar.value * 1000);
 };
 
-const watchAndStartInterval = (category, refVar, callback) => {
+const watchAndStartInterval = (key: string, refVar: Ref<number>, callback: () => void) => {
   watch(refVar, () => {
-    if (!isNaN(refVar.value) && refVar.value > 0) {
-      startInterval(category, refVar, callback);
+    const v = Number(refVar.value);
+    if (!Number.isNaN(v) && v > 0) {
+      startInterval(key, refVar, callback);
     }
   });
 };
 
-const tasks = [
-  { category: 'movies', refVar: movieRecordsInterval, callback: () => getDownload('movies') },
-  { category: 'movies', refVar: movieHistoryInterval, callback: () => getHistory('movies') },
-  { category: 'series', refVar: serieRecordsInterval, callback: () => getDownload('series') },
-  { category: 'series', refVar: serieHistoryInterval, callback: () => getHistory('series') }
+const tasks: { key: string; refVar: Ref<number>; callback: () => void }[] = [
+  { key: 'movies:queue', refVar: movieRecordsInterval, callback: () => getDownload('movies') },
+  { key: 'movies:history', refVar: movieHistoryInterval, callback: () => getHistory('movies') },
+  { key: 'series:queue', refVar: serieRecordsInterval, callback: () => getDownload('series') },
+  { key: 'series:history', refVar: serieHistoryInterval, callback: () => getHistory('series') }
 ];
 
-tasks.forEach(({ category, refVar, callback }) => {
-  watchAndStartInterval(category, refVar, callback);
+tasks.forEach(({ key, refVar, callback }) => {
+  watchAndStartInterval(key, refVar, callback);
 });
 
-const fetchDataOnMount = [
-  { category: 'movies' },
-  { category: 'series' }
-];
-
 onMounted(() => {
-  fetchDataOnMount.forEach(({ category }) => getDownload(category));
-  fetchDataOnMount.forEach(({ category }) => getHistory(category));
+  getDownload('movies');
+  getDownload('series');
+  getHistory('movies');
+  getHistory('series');
 
-  tasks.forEach(({ category, refVar, callback }) => {
-    if (!isNaN(refVar.value) && refVar.value > 0) {
-      startInterval(category, refVar, callback);
+  tasks.forEach(({ key, refVar, callback }) => {
+    const v = Number(refVar.value);
+    if (!Number.isNaN(v) && v > 0) {
+      startInterval(key, refVar, callback);
     }
   });
 });
 
 onUnmounted(() => {
-  Object.values(intervalIds).forEach(clearInterval);
+  Object.values(intervalIds).forEach(id => clearInterval(id));
 });
 </script>
 

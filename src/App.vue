@@ -37,7 +37,7 @@ const filteredDrawerOptions = computed(() => {
   });
 });
 
-const drawerSelectOption = (option) => {
+const drawerSelectOption = (option: any) => {
   if (option == 'signout') {
     sessionStorage.removeItem('flix_webapp_is_authenticated');
     router.push('/login');
@@ -77,6 +77,7 @@ onMounted(() => {
       density="compact"
       >
       <template
+        v-if="$route.meta.requiresAuth === true"
         v-slot:prepend
         >
         <v-app-bar-nav-icon
@@ -105,6 +106,7 @@ onMounted(() => {
     </v-app-bar>
 
     <v-navigation-drawer
+      v-if="$route.meta.requiresAuth === true"
       v-model="drawer"
       >
       <v-list>

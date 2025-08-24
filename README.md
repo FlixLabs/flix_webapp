@@ -11,13 +11,15 @@ If you wish to enable the optional backend, you can retrieve it here: [flix_api]
 ### Without the Optional Backend
 - **Search, Add, and Remove** movies and TV series
 - **Manage Libraries** for Radarr and Sonarr
+- **Calendar** movie releases and TV episode schedules in a calendar
 - **Track Upcoming** movie releases and TV episode schedules
 - **Monitor Ongoing Downloads** for films and series
 - **View System Information** for Radarr and Sonarr (host, system status, disk space, logs, and alerts)
 
 ### With the Optional Backend
 - **Multi-Instance Management** for Radarr and Sonarr
-- **Basic Authentication** options for enhanced security
+- **Authentication** options for enhanced security
+- **Color** options for enhanced UI
 
 This project is developed entirely in my free time, and while it is already functional, improvements in **security** and **code factorization** are always welcome. Contributions and feedback are greatly appreciated!
 

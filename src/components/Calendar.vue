@@ -15,16 +15,16 @@ const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
-const { state: calendarValue, reset: resetCalendarValue } = useResettable(null);
-const { state: calendarType, reset: resetCalendarType } = useResettable('month');
-const { state: events, reset: resetEvents } = useResettable([]);
+const { state: calendarValue, reset: resetCalendarValue } = useResettable<any[]>([]);
+const { state: calendarType, reset: resetCalendarType } = useResettable<'month' | 'week' | 'day'>('month');
+const { state: events, reset: resetEvents } = useResettable<any[]>([]);
 
 const { state: showMovies, reset: resetShowMovies } = useResettable(true);
 const { state: showSeries, reset: resetShowSeries } = useResettable(true);
 
-function getContent(type) {
-  let base_url = null;
-  let api_key = null;
+function getContent(type: 'movies' | 'series') {
+  let base_url = '';
+  let api_key = '';
   let url_type = 'calendar';
   let include = '';
 
@@ -33,8 +33,9 @@ function getContent(type) {
       base_url = import.meta.env.VITE_RADARR_BASE_URL;
       api_key = import.meta.env.VITE_RADARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.radarr.base_url;
-      api_key = selectedInstanceData.value.radarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.radarr?.base_url ?? '';
+      api_key = sid?.radarr?.api_key ?? '';
     }
   }
   if (type == 'series') {
@@ -42,16 +43,19 @@ function getContent(type) {
       base_url = import.meta.env.VITE_SONARR_BASE_URL;
       api_key = import.meta.env.VITE_SONARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.sonarr.base_url;
-      api_key = selectedInstanceData.value.sonarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.sonarr?.base_url ?? '';
+      api_key = sid?.sonarr?.api_key ?? '';
     }
 
     include = '&includeSeries=true';
   }
 
-  var date = new Date();
-  if (calendarValue.value) {
-    date = new Date(calendarValue.value);
+  let date = new Date();
+  const cv = calendarValue.value;
+  if (Array.isArray(cv) && cv.length > 0) {
+    const first = cv[0] as string | Date;
+    date = new Date(first);
   }
 
   var y = date.getFullYear();

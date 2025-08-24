@@ -1,16 +1,25 @@
 <script setup lang="ts">
 
-const props = defineProps<{
-  alert: {
-    type: Object,
-    required: true,
-    default: () => ({
-      visible: false,
-      type: 'info',
-      icon: '',
-      text: ''
-    })
-  }
+type AlertState = {
+  visible: boolean;
+  type: string | null;
+  icon: string | null;
+  text: string;
+};
+
+const props = withDefaults(defineProps<{
+  alert: AlertState;
+}>(), {
+  alert: () => ({
+    visible: false,
+    type: 'info',
+    icon: '',
+    text: ''
+  })
+});
+
+const emits = defineEmits<{
+  (e: 'update:alert', value: AlertState): void
 }>();
 
 function hideAlert() {
@@ -21,14 +30,11 @@ function hideAlert() {
 <template>
   <transition
     name="fade"
-    @before-enter="before-enter"
-    @enter="enter"
-    @leave="leave"
     >
     <v-alert
       v-if="alert.visible"
-      :type="alert.type"
-      :icon="alert.icon"
+      :type="(alert.type as 'success' | 'error' | 'info' | 'warning' | undefined) || undefined"
+      :icon="alert.icon || undefined"
       class="fixed-alert"
       :text="alert.text"
       @click="hideAlert"

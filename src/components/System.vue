@@ -45,9 +45,12 @@ function progressColor(ratio: number): string {
   return ratio >= threshold ? 'red' : 'blue';
 }
 
-function getData(type, endpoint) {
-  let base_url = null;
-  let api_key = null;
+function getData(
+  type: 'movies' | 'series',
+  endpoint: 'config/host' | 'system/status' | 'diskspace' | 'log' | 'health'
+) {
+  let base_url = '';
+  let api_key = '';
 
   const ignoreLoading = [
     'diskspace',
@@ -63,8 +66,9 @@ function getData(type, endpoint) {
       base_url = import.meta.env.VITE_RADARR_BASE_URL;
       api_key = import.meta.env.VITE_RADARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.radarr.base_url;
-      api_key = selectedInstanceData.value.radarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.radarr?.base_url ?? '';
+      api_key = sid?.radarr?.api_key ?? '';
     }
   }
   if (type == 'series') {
@@ -75,8 +79,9 @@ function getData(type, endpoint) {
       base_url = import.meta.env.VITE_SONARR_BASE_URL;
       api_key = import.meta.env.VITE_SONARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.sonarr.base_url;
-      api_key = selectedInstanceData.value.sonarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.sonarr?.base_url ?? '';
+      api_key = sid?.sonarr?.api_key ?? '';
     }
   }
 
@@ -96,16 +101,16 @@ function getData(type, endpoint) {
       if (endpoint == 'system/status') {
         if (type == 'movies') {
           systemStatusMovie.value = json_data;
-          systemStatusMovie.value.uptime = null;
-          if (systemStatusMovie.value.startTime) {
-            systemStatusMovie.value.uptime = calculateUptime(systemStatusMovie.value.startTime);
+          (systemStatusMovie.value as any).uptime = null;
+          if ((systemStatusMovie.value as any)?.startTime) {
+            (systemStatusMovie.value as any).uptime = calculateUptime((systemStatusMovie.value as any).startTime as string);
           }
         }
         if (type == 'series') {
           systemStatusSerie.value = json_data;
-          systemStatusSerie.value.uptime = null;
-          if (systemStatusSerie.value.startTime) {
-            systemStatusSerie.value.uptime = calculateUptime(systemStatusSerie.value.startTime);
+          (systemStatusSerie.value as any).uptime = null;
+          if ((systemStatusSerie.value as any)?.startTime) {
+            (systemStatusSerie.value as any).uptime = calculateUptime((systemStatusSerie.value as any).startTime as string);
           }
         }
       }
@@ -182,7 +187,7 @@ function getData(type, endpoint) {
     });
 }
 
-function calculateUptime(startTimeStr) {
+function calculateUptime(startTimeStr: string): string {
   const startTime = new Date(startTimeStr);
   const now = new Date();
   const diff = now.getTime() - startTime.getTime();
@@ -198,9 +203,14 @@ function calculateUptime(startTimeStr) {
   return days + ' days, ' + hours + ' hours, ' + minutes + ' minutes, ' + seconds + ' seconds';
 }
 
-const intervalIds = {};
+const intervalIds: Record<string, number> = {};
 
-const startInterval = (category, type, refVar, callback) => {
+const startInterval = (
+  category: 'movies' | 'series',
+  type: string,
+  refVar: { value: number },
+  callback: () => void
+) => {
   const key = category + '_' + type;
 
   if (intervalIds[key]) {
@@ -212,7 +222,15 @@ const startInterval = (category, type, refVar, callback) => {
   }, refVar.value * 1000);
 };
 
-const watchAndStartInterval = (category, type, refVar, callback) => {
+type Category = 'movies' | 'series';
+type Endpoint = 'config/host' | 'system/status' | 'diskspace' | 'log' | 'health';
+
+const watchAndStartInterval = (
+  category: Category,
+  type: string,
+  refVar: { value: number },
+  callback: () => void
+) => {
   watch(refVar, () => {
     if (!isNaN(refVar.value) && refVar.value > 0) {
       startInterval(category, type, refVar, callback);
@@ -220,12 +238,17 @@ const watchAndStartInterval = (category, type, refVar, callback) => {
   });
 };
 
-const tasks = [
-  { category: 'movies', type: 'systemStatus', refVar: systemStatusMovieInterval, callback: () => { systemStatusMovie.value.uptime = calculateUptime(systemStatusMovie.value.startTime); }},
+const tasks: Array<{
+  category: Category;
+  type: string;
+  refVar: { value: number };
+  callback: () => void;
+}> = [
+  { category: 'movies', type: 'systemStatus', refVar: systemStatusMovieInterval, callback: () => { (systemStatusMovie.value as any).uptime = calculateUptime((systemStatusMovie.value as any).startTime as string); }},
   { category: 'movies', type: 'diskList', refVar: diskListMovieInterval, callback: () => getData('movies', 'diskspace') },
   { category: 'movies', type: 'logList', refVar: logListMovieInterval, callback: () => getData('movies', 'log') },
   { category: 'movies', type: 'healthList', refVar: healthListMovieInterval, callback: () => getData('movies', 'health') },
-  { category: 'series', type: 'systemStatus', refVar: systemStatusSerieInterval, callback: () => { systemStatusSerie.value.uptime = calculateUptime(systemStatusSerie.value.startTime); }},
+  { category: 'series', type: 'systemStatus', refVar: systemStatusSerieInterval, callback: () => { (systemStatusSerie.value as any).uptime = calculateUptime((systemStatusSerie.value as any).startTime as string); }},
   { category: 'series', type: 'diskList', refVar: diskListSerieInterval, callback: () => getData('series', 'diskspace') },
   { category: 'series', type: 'logList', refVar: logListSerieInterval, callback: () => getData('series', 'log') },
   { category: 'series', type: 'healthList', refVar: healthListSerieInterval, callback: () => getData('series', 'health') },
@@ -235,7 +258,7 @@ tasks.forEach(({ category, type, refVar, callback }) => {
   watchAndStartInterval(category, type, refVar, callback);
 });
 
-const fetchDataOnMount = [
+const fetchDataOnMount: Array<{ category: Category; endpoint: Endpoint }> = [
   { category: 'movies', endpoint: 'config/host' },
   { category: 'movies', endpoint: 'system/status' },
   { category: 'movies', endpoint: 'diskspace' },
