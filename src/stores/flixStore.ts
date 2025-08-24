@@ -2,8 +2,10 @@ import { defineStore } from 'pinia';
 import { computed, watch } from 'vue';
 import { useResettable } from '@/composables/useResettable';
 
+type Instance = { name: string };
+
 export const useFlixStore = defineStore('flix', () => {
-  const { state: instances, reset: resetInstances } = useResettable([]);
+  const { state: instances, reset: resetInstances } = useResettable<Instance[]>([]);
 
   const initialInstance = sessionStorage.getItem('selectedInstance') || null;
   const { state: selectedInstance, reset: resetSelectedInstance } = useResettable(initialInstance);
@@ -12,7 +14,7 @@ export const useFlixStore = defineStore('flix', () => {
     return instances.value.find(instance => instance.name === selectedInstance.value) || null;
   });
 
-  function setInstances(data) {
+  function setInstances(data: Instance[]) {
     instances.value = data;
     if (data.length > 0 && !selectedInstance.value) {
       selectedInstance.value = data[0].name;

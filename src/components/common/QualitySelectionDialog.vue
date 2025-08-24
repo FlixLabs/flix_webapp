@@ -2,9 +2,11 @@
 
 import { ref, watch } from 'vue';
 
+type QualityItem = { title: string; value: any };
+
 const props = defineProps<{
-  modelValue: boolean;
-  items: [] | null;
+  modelValue: any;
+  items: QualityItem[];
   selectedValue?: any | null;
 }>();
 

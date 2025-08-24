@@ -1,6 +1,6 @@
 import type { Ref } from 'vue';
 
-interface DeleteItemOptions {
+interface SearchItemOptions {
   useAPI: Ref<boolean>;
   selectedInstanceData: any;
   showSuccessAlert: (msg: string) => void;
@@ -8,11 +8,11 @@ interface DeleteItemOptions {
   refreshContent: (type: 'movies' | 'series') => void;
 }
 
-export function useDeleteItem(options: DeleteItemOptions) {
-  const deleteItem = (type: 'movies' | 'series', item: any) => {
+export function useSearchItem(options: SearchItemOptions) {
+  const searchItem = (type: 'movies' | 'series', item: any) => {
     let base_url = '';
     let api_key = '';
-    let url_type = '';
+    let data: any = {};
 
     if (type === 'movies') {
       if (!options.useAPI.value) {
@@ -22,7 +22,10 @@ export function useDeleteItem(options: DeleteItemOptions) {
         base_url = options.selectedInstanceData.value.radarr.base_url;
         api_key = options.selectedInstanceData.value.radarr.api_key;
       }
-      url_type = 'movie';
+      data = {
+        name: "MoviesSearch",
+        movieIds: [item.id]
+      }
     }
 
     if (type === 'series') {
@@ -33,26 +36,32 @@ export function useDeleteItem(options: DeleteItemOptions) {
         base_url = options.selectedInstanceData.value.sonarr.base_url;
         api_key = options.selectedInstanceData.value.sonarr.api_key;
       }
-      url_type = 'series';
+      data = {
+        name: "SeriesSearch",
+        seriesId: item.id
+      }
     }
 
-    fetch(base_url + '/api/v3/' + url_type + '/' + item.id + '?apikey=' + api_key + '&deleteFiles=true', {
-      method: 'DELETE',
+    fetch(base_url + '/api/v3/command', {
+      method: 'POST',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json;charset=utf-8',
+        'X-Api-Key': api_key
       },
+      body: JSON.stringify(data)
     })
     .then(async response => {
       if (response.ok) {
-        options.showSuccessAlert("Deleted successfully");
+        options.showSuccessAlert("Start search successfully");
         options.refreshContent(type);
       }
     })
     .catch(error => {
-      options.showErrorAlert("Deletion failed");
+      console.log(error);
+      options.showErrorAlert("Search failed");
     });
   };
 
-  return { deleteItem };
+  return { searchItem };
 }

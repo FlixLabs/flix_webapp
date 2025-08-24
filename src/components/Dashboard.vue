@@ -9,6 +9,7 @@ import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useLibraryChecker } from '@/composables/useLibraryChecker';
 import { useDeleteItem } from '@/composables/useDeleteItem';
+import { useAddItem } from '@/composables/useAddItem';
 import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
 import Loading from '@/components/common/Loading.vue';
@@ -37,17 +38,17 @@ const movie_page = ref(1);
 const serie_page = ref(1);
 
 const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
-const { state: movieItems, reset: resetMovieItems } = useResettable([]);
-const { state: qualityMovieItems, reset: resetQualityMovieItems } = useResettable([]);
-const { state: qualityMovie, reset: resetQualityMovie } = useResettable(1);
+const { state: movieItems, reset: resetMovieItems } = useResettable<any[]>([]);
+const { state: qualityMovieItems, reset: resetQualityMovieItems } = useResettable<any[]>([]);
+const { state: qualityMovie, reset: resetQualityMovie } = useResettable<number>(1);
 const { paginatedItems: paginated_movies } = usePagination(movieItems, movie_page, items_per_page);
 const { total: total_movies } = useCount(movieItems);
 const { isAlreadyInLibrary: checkMovies } = useLibraryChecker("movies", movieItems, showErrorAlert, useAPI);
 
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
-const { state: serieItems, reset: resetSerieItems } = useResettable([]);
-const { state: qualitySerieItems, reset: resetQualitySerieItems } = useResettable([]);
-const { state: qualitySerie, reset: resetQualitySerie } = useResettable(1);
+const { state: serieItems, reset: resetSerieItems } = useResettable<any[]>([]);
+const { state: qualitySerieItems, reset: resetQualitySerieItems } = useResettable<any[]>([]);
+const { state: qualitySerie, reset: resetQualitySerie } = useResettable<number>(1);
 const { paginatedItems: paginated_series } = usePagination(serieItems, serie_page, items_per_page);
 const { total: total_series } = useCount(serieItems);
 const { isAlreadyInLibrary: checkSeries } = useLibraryChecker("series", serieItems, showErrorAlert, useAPI);
@@ -60,17 +61,26 @@ const { deleteItem } = useDeleteItem({
   refreshContent: getContent
 });
 
-function getQualityProfileList(type) {
-  let base_url = null;
-  let api_key = null;
+const { addItem } = useAddItem({
+  useAPI,
+  selectedInstanceData,
+  showSuccessAlert,
+  showErrorAlert,
+  refreshContent: getContent
+});
+
+function getQualityProfileList(type: 'movies' | 'series') {
+  let base_url = '';
+  let api_key = '';
 
   if (type == 'movies') {
     if (!useAPI.value) {
       base_url = import.meta.env.VITE_RADARR_BASE_URL;
       api_key = import.meta.env.VITE_RADARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.radarr.base_url;
-      api_key = selectedInstanceData.value.radarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.radarr?.base_url ?? '';
+      api_key = sid?.radarr?.api_key ?? '';
     }
   }
   if (type == 'series') {
@@ -78,8 +88,9 @@ function getQualityProfileList(type) {
       base_url = import.meta.env.VITE_SONARR_BASE_URL;
       api_key = import.meta.env.VITE_SONARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.sonarr.base_url;
-      api_key = selectedInstanceData.value.sonarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.sonarr?.base_url ?? '';
+      api_key = sid?.sonarr?.api_key ?? '';
     }
   }
 
@@ -127,10 +138,10 @@ function getQualityProfileList(type) {
     });
 }
 
-function getContent(type) {
-  let base_url = null;
-  let api_key = null;
-  let url_type = null;
+function getContent(type: 'movies' | 'series') {
+  let base_url = '';
+  let api_key = '';
+  let url_type = '';
 
   if (type == 'movies') {
     isLoadingMovie.value = true;
@@ -138,8 +149,9 @@ function getContent(type) {
       base_url = import.meta.env.VITE_RADARR_BASE_URL;
       api_key = import.meta.env.VITE_RADARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.radarr.base_url;
-      api_key = selectedInstanceData.value.radarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.radarr?.base_url ?? '';
+      api_key = sid?.radarr?.api_key ?? '';
     }
     url_type = 'movie';
   }
@@ -149,8 +161,9 @@ function getContent(type) {
       base_url = import.meta.env.VITE_SONARR_BASE_URL;
       api_key = import.meta.env.VITE_SONARR_API_KEY;
     } else {
-      base_url = selectedInstanceData.value.sonarr.base_url;
-      api_key = selectedInstanceData.value.sonarr.api_key;
+      const sid = selectedInstanceData.value as any;
+      base_url = sid?.sonarr?.base_url ?? '';
+      api_key = sid?.sonarr?.api_key ?? '';
     }
     url_type = 'series';
   }
@@ -161,21 +174,6 @@ function getContent(type) {
 
       let items = [];
       for (let item of json_data) {
-        let tmdbId = null;
-        let tvdbId = null;
-        let alreadyInLibrary = null;
-        let quality = null;
-
-        if (type == 'movies') {
-          tmdbId = item.tmdbId;
-          quality = qualityMovie;
-        }
-        if (type == 'series') {
-          tmdbId = item.tmdbId;
-          tvdbId = item.tvdbId;
-          quality = qualitySerie;
-        }
-
         let title = item.title;
         const year_str = '(' + item.year + ')';
 
@@ -183,15 +181,17 @@ function getContent(type) {
           title = title.replace(year_str, '').trim();
         }
 
+        const selectedQuality = (type === 'movies') ? qualityMovie.value : qualitySerie.value;
+
         items.push({
           id: item.id,
-          tmdbId: tmdbId,
+          tmdbId: item.tmdbId,
           tvdbId: item.tvdbId,
-          prependAvatar: item.images?.find(img => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
+          prependAvatar: item.images?.find((img: any) => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
           title: title,
           year: item.year,
           overview: item.overview,
-          selected_quality: quality.value,
+          selected_quality: selectedQuality,
           already_in_library: false
         });
       }
@@ -220,76 +220,12 @@ function getContent(type) {
     });
 }
 
-function addToList(type, item) {
-  let base_url = null;
-  let api_key = null;
-  let url_type = null;
-  let data = {};
-
-  if (type == 'movies') {
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_RADARR_BASE_URL;
-      api_key = import.meta.env.VITE_RADARR_API_KEY;
-    } else {
-      base_url = selectedInstanceData.value.radarr.base_url;
-      api_key = selectedInstanceData.value.radarr.api_key;
-    }
-    url_type = 'movie';
-    data = {
-      tmdbId: item.tmdbId,
-      title: item.title,
-      year: item.year,
-      qualityProfileId: item.selected_quality,
-      rootFolderPath: "/movies",
-      monitored: true,
-      addOptions: {
-        searchForMovie: true
-      }
-    }
-  }
-  if (type == 'series') {
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_SONARR_BASE_URL;
-      api_key = import.meta.env.VITE_SONARR_API_KEY;
-    } else {
-      base_url = selectedInstanceData.value.sonarr.base_url;
-      api_key = selectedInstanceData.value.sonarr.api_key;
-    }
-    url_type = 'series';
-    data = {
-      tvdbId: item.tvdbId,
-      title: item.title,
-      year: item.year,
-      qualityProfileId: item.selected_quality,
-      rootFolderPath: "/tv",
-      monitored: true,
-      addOptions: {
-        searchForMissingEpisodes: true
-      }
-    }
-  }
-
-  fetch(base_url + '/api/v3/' + url_type, {
-		method: 'POST',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json;charset=utf-8',
-      'X-Api-Key': api_key
-    },
-    body: JSON.stringify(data)
-	})
-  .then(async response => {
-    if (response.ok) {
-      showSuccessAlert("Added successfully");
-      getContent(type, true);
-    }
-  })
-	.catch(error => {
-		showErrorAlert("Adding failed");
-	});
+function addToList(type: 'movies' | 'series', item: any) {
+  item.qualityProfileId = item.selected_quality;
+  addItem(type, item);
 }
 
-function openDeleteConfirmationDialog(type, item) {
+function openDeleteConfirmationDialog(type: 'movies' | 'series', item: any) {
   itemToDelete.value = {
     type: type,
     item: item
@@ -298,9 +234,9 @@ function openDeleteConfirmationDialog(type, item) {
 }
 
 function confirmDelete() {
-  if (itemToDelete.value) {
-    const { type, item } = itemToDelete.value;
-    deleteItem(type, item);
+  const v = itemToDelete.value;
+  if (v && (v.type === 'movies' || v.type === 'series')) {
+    deleteItem(v.type, v.item);
     resetDeleteConfirmationDialog();
     resetItemToDelete();
   }
@@ -322,7 +258,7 @@ watch(search, (newValue) => {
 
 onMounted(() => {
   if (localStorage.getItem('dashboard_search_' + window.location.href)) {
-    search.value = localStorage.getItem('dashboard_search_' + window.location.href);
+    search.value = localStorage.getItem('dashboard_search_' + window.location.href) ?? '';
   }
 
   getQualityProfileList('movies');

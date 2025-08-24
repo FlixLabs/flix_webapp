@@ -1,5 +1,8 @@
 import { ref } from 'vue';
 
+type DeleteKind = 'movies' | 'series';
+type DeletePayload = { type: DeleteKind | null; item: any | null };
+
 export function useDeleteConfirmation() {
   const initialDeleteConfirmationDialog = false;
   const deleteConfirmationDialog = ref(initialDeleteConfirmationDialog);
@@ -8,7 +11,7 @@ export function useDeleteConfirmation() {
     deleteConfirmationDialog.value = initialDeleteConfirmationDialog;
   };
 
-  const initialItemToDelete = {
+  const initialItemToDelete: DeletePayload = {
     type: null,
     item: null
   };

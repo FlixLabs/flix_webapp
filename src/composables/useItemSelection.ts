@@ -1,4 +1,5 @@
 import { ref } from 'vue';
+import type { Ref } from 'vue';
 
 export function useItemSelection<T extends { sourceId: number }>() {
   const selectedItem = ref<T | null>(null);
@@ -8,7 +9,7 @@ export function useItemSelection<T extends { sourceId: number }>() {
     items: Ref<T[]>,
     callback?: (item: T) => void
   ) {
-    const item = items.value.find(el => el.sourceId === id);
+    const item = items.value.find((el: T) => el.sourceId === id);
     if (item) {
       selectedItem.value = item;
       if (callback) callback(item);
