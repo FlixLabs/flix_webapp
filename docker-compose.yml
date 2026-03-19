@@ -7,3 +7,26 @@ services:
     volumes:
       - .:/app
       - /app/node_modules
+
+  deploy-agent:
+    image: alpine:3.20
+    restart: unless-stopped
+    profiles:
+      - production
+    ports:
+      - "${DEPLOY_AGENT_PORT}:9009"
+    environment:
+      COMPOSE_FILE: /app/docker-compose.yml
+      COMPOSE_PROJECT_NAME: ${COMPOSE_PROJECT_NAME}
+      DEPLOY_TOKEN: ${DEPLOY_TOKEN}
+      REGISTRY_URL: ${REGISTRY_URL}
+      REGISTRY_USER: ${REGISTRY_USER}
+      REGISTRY_PASSWORD: ${REGISTRY_PASSWORD}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/app
+      - ./deploy-agent/hooks.json:/hooks/hooks.json:ro
+      - ./deploy-agent/deploy.sh:/scripts/deploy.sh:ro
+    command: >
+      sh -c "apk add --no-cache docker-cli docker-cli-compose curl ca-certificates webhook &&
+             /usr/bin/webhook -hooks /hooks/hooks.json -port 9009 -verbose"

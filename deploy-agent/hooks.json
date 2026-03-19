@@ -1,0 +1,11 @@
+[
+  {
+    "id": "deploy",
+    "execute-command": "/scripts/deploy.sh",
+    "command-working-directory": "/app",
+    "pass-arguments-to-command": [
+      { "source": "header", "name": "X-Deploy-Token" }
+    ],
+    "response-message": "deploy triggered"
+  }
+]

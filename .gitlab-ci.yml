@@ -1,70 +1,43 @@
 stages:
+  - build
   - deploy
   - mirror
+
+variables:
+  IMAGE: $CI_REGISTRY_IMAGE
+  TAG: $CI_COMMIT_SHA
+
+build:
+  stage: build
+  tags:
+    - build
+  script: |
+    docker login -u gitlab-ci-token -p "$CI_JOB_TOKEN" "$CI_REGISTRY"
+    docker build -f Dockerfile.prod -t "$IMAGE:$TAG" -t "$IMAGE:latest" .
+    docker push "$IMAGE:$TAG"
+    docker push "$IMAGE:latest"
+  only:
+    - master
 
 deploy:
   stage: deploy
   tags:
     - deploy
-  variables:
-    DEPLOY_NAME: "flix_webapp"
-    DEPLOY_PATH: "docker/flix"
-    ENV_FILE: ".env"
-    VITE_RADARR_BASE_URL: "http://62.210.136.137:7878"
-    VITE_RADARR_API_KEY: "325d724593e2427a9c085df1e5905788"
-    VITE_RADARR_ROOT_FOLDER_PATH: "/movies"
-    VITE_SONARR_BASE_URL: "http://62.210.136.137:8989"
-    VITE_SONARR_API_KEY: "86df9c927b744a74a4a4dbed9c6e8768"
-    VITE_SONARR_ROOT_FOLDER_PATH: "/tv"
-    VITE_TMDB_BASE_URL: "https://api.themoviedb.org/3"
-    VITE_TMDB_API_KEY: "0d1dc24ae91481452ec415924333e3e9"
-    VITE_CRYPT_KEY: "zmSKMpnF2cH5XZB3ufb6CA"
-    VITE_FLIX_API_USE: true
-    VITE_FLIX_API_URL: "http://192.168.2.203:3051"
-  script:
-    - cp .env.dist $ENV_FILE
-    - ssh-keyscan -p "$SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
-    - sshpass -p "$SSH_PASSWORD" scp -r -C -P "$SSH_PORT" $(ls -A | grep -vE '^(\.git|\.gitlab-ci\.yml|\.gitignore)$') $SSH_USER@$SSH_HOST:$DEPLOY_PATH/$DEPLOY_NAME/
-    - |
-      sshpass -p "$SSH_PASSWORD" ssh -T -o StrictHostKeyChecking=no "$SSH_USER@$SSH_HOST" -p "$SSH_PORT" \
-      "
-      DEPLOY_NAME='$DEPLOY_NAME' \
-      DEPLOY_PATH='$DEPLOY_PATH' \
-      ENV_FILE='$ENV_FILE' \
-      VITE_HTTP_PROTOCOL='$VITE_HTTP_PROTOCOL' \
-      VITE_HOST_NAME='$VITE_HOST_NAME' \
-      VITE_RADARR_BASE_URL='$VITE_RADARR_BASE_URL' \
-      VITE_RADARR_API_KEY='$VITE_RADARR_API_KEY' \
-      VITE_RADARR_ROOT_FOLDER_PATH='$VITE_RADARR_ROOT_FOLDER_PATH' \
-      VITE_SONARR_BASE_URL='$VITE_SONARR_BASE_URL' \
-      VITE_SONARR_API_KEY='$VITE_SONARR_API_KEY' \
-      VITE_SONARR_ROOT_FOLDER_PATH='$VITE_SONARR_ROOT_FOLDER_PATH' \
-      VITE_TMDB_BASE_URL='$VITE_TMDB_BASE_URL' \
-      VITE_TMDB_API_KEY='$VITE_TMDB_API_KEY' \
-      VITE_CRYPT_KEY='$VITE_CRYPT_KEY' \
-      VITE_FLIX_API_USE='$VITE_FLIX_API_USE' \
-      VITE_FLIX_API_URL='$VITE_FLIX_API_URL' \
-      bash -s
-      " << 'EOF'
-
-      cd "$DEPLOY_PATH"/"$DEPLOY_NAME"
-
-      sed -i "s|^VITE_HTTP_PROTOCOL=.*|VITE_HTTP_PROTOCOL=\"$VITE_HTTP_PROTOCOL\"|" "$ENV_FILE"
-      sed -i "s|^VITE_HOST_NAME=.*|VITE_HOST_NAME=\"$VITE_HOST_NAME\"|" "$ENV_FILE"
-      sed -i "s|^VITE_RADARR_BASE_URL=.*|VITE_RADARR_BASE_URL=\"$VITE_RADARR_BASE_URL\"|" "$ENV_FILE"
-      sed -i "s|^VITE_RADARR_API_KEY=.*|VITE_RADARR_API_KEY=\"$VITE_RADARR_API_KEY\"|" "$ENV_FILE"
-      sed -i "s|^VITE_RADARR_ROOT_FOLDER_PATH=.*|VITE_RADARR_ROOT_FOLDER_PATH=\"$VITE_RADARR_ROOT_FOLDER_PATH\"|" "$ENV_FILE"
-      sed -i "s|^VITE_SONARR_BASE_URL=.*|VITE_SONARR_BASE_URL=\"$VITE_SONARR_BASE_URL\"|" "$ENV_FILE"
-      sed -i "s|^VITE_SONARR_API_KEY=.*|VITE_SONARR_API_KEY=\"$VITE_SONARR_API_KEY\"|" "$ENV_FILE"
-      sed -i "s|^VITE_SONARR_ROOT_FOLDER_PATH=.*|VITE_SONARR_ROOT_FOLDER_PATH=\"$VITE_SONARR_ROOT_FOLDER_PATH\"|" "$ENV_FILE"
-      sed -i "s|^VITE_TMDB_BASE_URL=.*|VITE_TMDB_BASE_URL=\"$VITE_TMDB_BASE_URL\"|" "$ENV_FILE"
-      sed -i "s|^VITE_TMDB_API_KEY=.*|VITE_TMDB_API_KEY=\"$VITE_TMDB_API_KEY\"|" "$ENV_FILE"
-      sed -i "s|^VITE_CRYPT_KEY=.*|VITE_CRYPT_KEY=\"$VITE_CRYPT_KEY\"|" "$ENV_FILE"
-      sed -i "s|^VITE_FLIX_API_USE=.*|VITE_FLIX_API_USE=\"$VITE_FLIX_API_USE\"|" "$ENV_FILE"
-      sed -i "s|^VITE_FLIX_API_URL=.*|VITE_FLIX_API_URL=\"$VITE_FLIX_API_URL\"|" "$ENV_FILE"
-
-      ./restart.sh
-      EOF
+  script: |
+    test -n "$DEPLOY_WEBHOOK_URL" || (echo "DEPLOY_WEBHOOK_URL is required" && exit 1)
+    test -n "$DEPLOY_WEBHOOK_TOKEN" || (echo "DEPLOY_WEBHOOK_TOKEN is required" && exit 1)
+    HEALTHCHECK_URL="${HEALTHCHECK_URL}"
+    curl -fsS -X POST -H "X-Deploy-Token: $DEPLOY_WEBHOOK_TOKEN" "$DEPLOY_WEBHOOK_URL"
+    for i in 1 2 3 4 5; do
+      if curl -fsS "$HEALTHCHECK_URL" > /dev/null; then
+        echo "healthcheck ok";
+        exit 0;
+      fi
+      echo "healthcheck retry $i";
+      sleep 5;
+    done
+    echo "healthcheck failed";
+    exit 1
   only:
     - master
 
@@ -77,7 +50,19 @@ mirror-gitlab:
   script:
     - git clone --mirror "$WEBAPP_SOURCE_GITLAB_REPO" repo-mirror
     - cd repo-mirror
-    - git filter-branch --index-filter 'git rm --cached --ignore-unmatch \.gitlab-ci\.yml' -- --all
+    - |
+      git filter-branch --tree-filter '
+        rm -f .gitlab-ci.yml
+        rm -rf deploy-agent
+        if [ -f docker-compose.yml ]; then
+          awk '"'"'
+            BEGIN { skip=0 }
+            /^  deploy-agent:/ { skip=1; next }
+            skip && /^  [A-Za-z0-9_.-]+:/ { skip=0 }
+            !skip { print }
+          '"'"' docker-compose.yml > docker-compose.yml.tmp && mv docker-compose.yml.tmp docker-compose.yml
+        fi
+      ' -- --all
     - rm -rf refs/original/ && git reflog expire --all && git gc --prune=now
     - git for-each-ref --format="%(refname)" refs/pipelines/ | xargs -r git update-ref -d
     - git push --prune --force "$WEBAPP_MIRROR_GITLAB_REPO" +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*
@@ -93,7 +78,19 @@ mirror-github:
   script:
     - git clone --mirror "$WEBAPP_SOURCE_GITLAB_REPO" repo-mirror
     - cd repo-mirror
-    - git filter-branch --index-filter 'git rm --cached --ignore-unmatch \.gitlab-ci\.yml' -- --all
+    - |
+      git filter-branch --tree-filter '
+        rm -f .gitlab-ci.yml
+        rm -rf deploy-agent
+        if [ -f docker-compose.yml ]; then
+          awk '"'"'
+            BEGIN { skip=0 }
+            /^  deploy-agent:/ { skip=1; next }
+            skip && /^  [A-Za-z0-9_.-]+:/ { skip=0 }
+            !skip { print }
+          '"'"' docker-compose.yml > docker-compose.yml.tmp && mv docker-compose.yml.tmp docker-compose.yml
+        fi
+      ' -- --all
     - rm -rf refs/original/ && git reflog expire --all && git gc --prune=now
     - git for-each-ref --format="%(refname)" refs/pipelines/ | xargs -r git update-ref -d
     - git push --prune --force "$WEBAPP_MIRROR_GITHUB_REPO" +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*
