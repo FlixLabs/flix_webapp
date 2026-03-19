@@ -4,6 +4,8 @@ stages:
 
 deploy:
   stage: deploy
+  tags:
+    - deploy
   variables:
     DEPLOY_NAME: "flix_webapp"
     DEPLOY_PATH: "docker/flix"
@@ -68,6 +70,10 @@ deploy:
 
 mirror-gitlab:
   stage: mirror
+  needs: []
+  when: always
+  tags:
+    - mirror
   script:
     - git clone --mirror "$WEBAPP_SOURCE_GITLAB_REPO" repo-mirror
     - cd repo-mirror
@@ -80,6 +86,10 @@ mirror-gitlab:
 
 mirror-github:
   stage: mirror
+  needs: []
+  when: always
+  tags:
+    - mirror
   script:
     - git clone --mirror "$WEBAPP_SOURCE_GITLAB_REPO" repo-mirror
     - cd repo-mirror
