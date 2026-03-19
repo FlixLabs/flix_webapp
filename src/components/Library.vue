@@ -269,6 +269,17 @@ const grouped_episodes = computed(() => {
   }, {} as Record<number, any[]>);
 });
 
+const totalSerieSizeOnDisk = computed(() => {
+  return serieEpisodes.value.reduce((sum: number, episode: any) => {
+    const episodeSize = typeof episode?.sizeOnDisk === 'number' ? episode.sizeOnDisk : 0;
+    return sum + episodeSize;
+  }, 0);
+});
+
+function formatSizeGb(sizeInBytes: number) {
+  return (sizeInBytes / 1e9).toFixed(2);
+}
+
 function openDeleteConfirmationDialog(type: 'movies' | 'series', item: any) {
   if (!item) {
     if (type == 'movies') {
@@ -598,11 +609,28 @@ watch(selectedInstance, () => {
         @remove="openDeleteConfirmationDialog('series', $event)"
         >
         <template
+          #details
+          >
+          <v-row
+            v-if="serieDialog && !isLoadingSerieEpisodes && totalSerieSizeOnDisk > 0"
+            >
+            <v-col>
+              <v-text-field
+                label="Size (GB)"
+                variant="outlined"
+                :model-value="formatSizeGb(totalSerieSizeOnDisk)"
+                :disabled="true"
+                />
+            </v-col>
+          </v-row>
+        </template>
+        <template
           #episodes
           >
           <EpisodePanel
             :grouped_episodes="grouped_episodes"
             :isLoading="isLoadingSerieEpisodes"
+            :hasTotalSize="totalSerieSizeOnDisk > 0"
             >
             <template
               #loading

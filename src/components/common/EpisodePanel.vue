@@ -1,9 +1,27 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   grouped_episodes: Record<number, any[]>;
   isLoading: boolean;
-}>();
+  hasTotalSize?: boolean;
+}>(), {
+  hasTotalSize: true
+});
+
+const seasonSizes = computed(() => {
+  return Object.entries(props.grouped_episodes).reduce((acc, [season, episodes]) => {
+    acc[season] = episodes.reduce((sum: number, episode: any) => {
+      const episodeSize = typeof episode?.sizeOnDisk === 'number' ? episode.sizeOnDisk : 0;
+      return sum + episodeSize;
+    }, 0);
+    return acc;
+  }, {} as Record<string, number>);
+});
+
+function formatSizeGb(sizeInBytes: number) {
+  return (sizeInBytes / 1e9).toFixed(2);
+}
 </script>
 
 <template>
@@ -12,7 +30,7 @@ const props = defineProps<{
     />
   <div
     v-if="Object.keys(grouped_episodes).length && !isLoading"
-    class="mt-4"
+    :class="props.hasTotalSize ? 'mt-4' : 'mt-6'"
     >
     <v-expansion-panels>
       <v-expansion-panel
@@ -20,7 +38,20 @@ const props = defineProps<{
         :key="season"
         >
         <v-expansion-panel-title>
-          Season {{ season }}
+          <div class="d-flex align-center w-100">
+            <span>Season {{ season }}</span>
+            <v-spacer />
+            <v-text-field
+              v-if="(seasonSizes[String(season)] || 0) > 0"
+              class="season-size-field"
+              label="Size (GB)"
+              variant="outlined"
+              density="compact"
+              hide-details
+              :model-value="formatSizeGb(seasonSizes[String(season)] || 0)"
+              :disabled="true"
+              />
+          </div>
         </v-expansion-panel-title>
         <v-expansion-panel-text>
           <v-list>
@@ -121,3 +152,10 @@ const props = defineProps<{
     </v-alert>
   </div>
 </template>
+
+<style scoped>
+.season-size-field {
+  max-width: 170px;
+  margin-inline-end: 8px;
+}
+</style>
