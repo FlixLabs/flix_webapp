@@ -1,10 +1,12 @@
 services:
   app:
-    build: .
+    image: ${APP_IMAGE}
+    build:
+      context: .
+      dockerfile: ${APP_DOCKERFILE}
     restart: unless-stopped
     ports:
       - ${APP_PORT}:5173
-    volumes:
-      - .:/app
-      - /app/node_modules
+    environment:
+      NODE_ENV: ${NODE_ENV}
 
