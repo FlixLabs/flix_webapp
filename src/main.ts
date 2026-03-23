@@ -12,7 +12,6 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 import colors from 'vuetify/util/colors'
-import { VCalendar } from 'vuetify/labs/VCalendar'
 import { VFileUpload } from 'vuetify/labs/VFileUpload'
 
 import { DEFAULT_THEME_NAME, DEFAULT_PRIMARY, isCustomPrimary } from '@/theme/constants'
@@ -20,7 +19,6 @@ import { DEFAULT_THEME_NAME, DEFAULT_PRIMARY, isCustomPrimary } from '@/theme/co
 const vuetify = createVuetify({
   components: {
     ...components,
-    VCalendar,
     VFileUpload,
   },
   directives,
