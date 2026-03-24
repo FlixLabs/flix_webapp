@@ -22,6 +22,11 @@ const vuetify = createVuetify({
     VFileUpload,
   },
   directives,
+  defaults: {
+    VContainer: {
+      fluid: true,
+    },
+  },
   theme: {
     defaultTheme: DEFAULT_THEME_NAME,
     themes: {
