@@ -24,6 +24,10 @@ export default ({ mode }: { mode: string }) => {
       proxy: {
 
       }
+    },
+    preview: {
+      port: 5173,
+      allowedHosts: true,
     }
   })
 }
