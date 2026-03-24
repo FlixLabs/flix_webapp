@@ -13,7 +13,20 @@ build:
     - build
   script: |
     docker login -u gitlab-ci-token -p "$CI_JOB_TOKEN" "$CI_REGISTRY"
-    docker build -f Dockerfile.prod -t "$IMAGE:$TAG" -t "$IMAGE:latest" .
+    docker build \
+      --build-arg VITE_RADARR_BASE_URL="$VITE_RADARR_BASE_URL" \
+      --build-arg VITE_RADARR_API_KEY="$VITE_RADARR_API_KEY" \
+      --build-arg VITE_RADARR_ROOT_FOLDER_PATH="$VITE_RADARR_ROOT_FOLDER_PATH" \
+      --build-arg VITE_SONARR_BASE_URL="$VITE_SONARR_BASE_URL" \
+      --build-arg VITE_SONARR_API_KEY="$VITE_SONARR_API_KEY" \
+      --build-arg VITE_SONARR_ROOT_FOLDER_PATH="$VITE_SONARR_ROOT_FOLDER_PATH" \
+      --build-arg VITE_TMDB_BASE_URL="$VITE_TMDB_BASE_URL" \
+      --build-arg VITE_TMDB_API_KEY="$VITE_TMDB_API_KEY" \
+      --build-arg VITE_SYSTEM_STORAGE_SPACE_TRESHOLD="$VITE_SYSTEM_STORAGE_SPACE_TRESHOLD" \
+      --build-arg VITE_CRYPT_KEY="$VITE_CRYPT_KEY" \
+      --build-arg VITE_FLIX_API_USE="$VITE_FLIX_API_USE" \
+      --build-arg VITE_FLIX_API_URL="$VITE_FLIX_API_URL" \
+      -f Dockerfile.prod -t "$IMAGE:$TAG" -t "$IMAGE:latest" .
     docker push "$IMAGE:$TAG"
     docker push "$IMAGE:latest"
   only:
