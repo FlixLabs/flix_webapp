@@ -17,6 +17,7 @@ ENV NODE_ENV=production
 COPY --from=build /app/package.json /app/yarn.lock ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
+COPY --from=build /app/vite.config.ts ./vite.config.ts
 
 EXPOSE 5173
 
