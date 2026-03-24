@@ -1,6 +1,6 @@
 import colors from 'vuetify/util/colors'
 
-export const DEFAULT_THEME_NAME = 'light';
+export const DEFAULT_THEME_NAME = 'flixDark';
 
 export const DEFAULT_PRIMARY = colors.orange.darken1
 
