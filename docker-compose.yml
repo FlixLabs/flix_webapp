@@ -16,7 +16,6 @@ services:
     profiles:
       - production
     ports:
-      - "${DEPLOY_AGENT_PORT}:9009"
       - ${DEPLOY_AGENT_PORT}:9009
     environment:
       COMPOSE_FILE: /app/docker-compose.yml
