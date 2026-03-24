@@ -28,6 +28,9 @@ export default ({ mode }: { mode: string }) => {
     preview: {
       port: 5173,
       allowedHosts: true
+    },
+    build: {
+      cssMinify: false
     }
   })
 }
