@@ -12,6 +12,24 @@ build:
   tags:
     - build
   script: |
+    test -n "$VITE_FLIX_API_USE" || (echo "VITE_FLIX_API_USE is required" && exit 1)
+    test -n "$VITE_TMDB_BASE_URL" || (echo "VITE_TMDB_BASE_URL is required" && exit 1)
+    test -n "$VITE_TMDB_API_KEY" || (echo "VITE_TMDB_API_KEY is required" && exit 1)
+    test -n "$VITE_SYSTEM_STORAGE_SPACE_TRESHOLD" || (echo "VITE_SYSTEM_STORAGE_SPACE_TRESHOLD is required" && exit 1)
+    test -n "$VITE_CRYPT_KEY" || (echo "VITE_CRYPT_KEY is required" && exit 1)
+    if [ "$VITE_FLIX_API_USE" = "true" ]; then
+      test -n "$VITE_FLIX_API_URL" || (echo "VITE_FLIX_API_URL is required when VITE_FLIX_API_USE=true" && exit 1)
+    elif [ "$VITE_FLIX_API_USE" = "false" ]; then
+      test -n "$VITE_RADARR_BASE_URL" || (echo "VITE_RADARR_BASE_URL is required when VITE_FLIX_API_USE=false" && exit 1)
+      test -n "$VITE_RADARR_API_KEY" || (echo "VITE_RADARR_API_KEY is required when VITE_FLIX_API_USE=false" && exit 1)
+      test -n "$VITE_RADARR_ROOT_FOLDER_PATH" || (echo "VITE_RADARR_ROOT_FOLDER_PATH is required when VITE_FLIX_API_USE=false" && exit 1)
+      test -n "$VITE_SONARR_BASE_URL" || (echo "VITE_SONARR_BASE_URL is required when VITE_FLIX_API_USE=false" && exit 1)
+      test -n "$VITE_SONARR_API_KEY" || (echo "VITE_SONARR_API_KEY is required when VITE_FLIX_API_USE=false" && exit 1)
+      test -n "$VITE_SONARR_ROOT_FOLDER_PATH" || (echo "VITE_SONARR_ROOT_FOLDER_PATH is required when VITE_FLIX_API_USE=false" && exit 1)
+    else
+      echo "VITE_FLIX_API_USE must be 'true' or 'false'"
+      exit 1
+    fi
     docker login -u gitlab-ci-token -p "$CI_JOB_TOKEN" "$CI_REGISTRY"
     docker build \
       --build-arg VITE_RADARR_BASE_URL="$VITE_RADARR_BASE_URL" \
