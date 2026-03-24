@@ -1,0 +1,50 @@
+html,
+body,
+#app {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+#app {
+  max-width: none;
+}
+
+@media (min-width: 1024px) {
+  body {
+    display: block;
+    place-items: initial;
+  }
+
+  #app {
+    display: block;
+    grid-template-columns: none;
+    padding: 0;
+  }
+}
+
+/*
+  Fallback vars to keep dark theme rendering stable even if Vuetify
+  runtime theme style is delayed or missing.
+*/
+:root {
+  color-scheme: dark;
+  --v-theme-background: 18, 18, 18;
+  --v-theme-surface: 33, 33, 33;
+  --v-theme-surface-bright: 204, 191, 214;
+  --v-theme-surface-light: 66, 66, 66;
+  --v-theme-surface-variant: 200, 200, 200;
+  --v-theme-on-background: 255, 255, 255;
+  --v-theme-on-surface: 255, 255, 255;
+  --v-theme-on-surface-variant: 0, 0, 0;
+  --v-theme-primary: 234, 144, 52;
+  --v-theme-on-primary: 255, 255, 255;
+  --v-theme-primary-overlay-multiplier: 1;
+  --v-theme-surface-overlay-multiplier: 1;
+  --v-theme-background-overlay-multiplier: 1;
+  --v-border-color: 255, 255, 255;
+  --v-border-opacity: 0.12;
+  --v-high-emphasis-opacity: 1;
+  --v-medium-emphasis-opacity: 0.7;
+}

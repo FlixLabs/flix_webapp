@@ -123,9 +123,7 @@ onMounted(() => {
     </v-navigation-drawer>
 
     <v-main>
-      <div class="app-page-shell">
-        <RouterView/>
-      </div>
+      <RouterView/>
     </v-main>
 
     <v-footer
@@ -150,35 +148,5 @@ onMounted(() => {
   top: 50%;
   transform: translate(-50%, -50%);
   margin: 0;
-}
-</style>
-
-<style>
-#app {
-  max-width: none !important;
-  margin: 0 !important;
-  padding: 0 !important;
-}
-
-body {
-  display: block !important;
-  place-items: initial !important;
-}
-
-.app-page-shell {
-  width: min(100%, 1360px);
-  margin: 0 auto;
-  padding: 16px 24px;
-}
-
-.app-page-shell > .v-container {
-  max-width: 100% !important;
-  padding-inline: 0 !important;
-}
-
-@media (max-width: 959px) {
-  .app-page-shell {
-    padding: 12px 16px;
-  }
 }
 </style>
