@@ -8,11 +8,12 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 export default ({ mode }: { mode: string }) => {
 
   process.env = {...process.env, ...loadEnv(mode, process.cwd())};
+  const enableVueDevTools = process.env.VITE_ENABLE_VUE_DEVTOOLS === 'true'
 
   return defineConfig({
     plugins: [
       vue(),
-      vueDevTools(),
+      ...(enableVueDevTools ? [vueDevTools()] : []),
     ],
     resolve: {
       alias: {

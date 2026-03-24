@@ -154,6 +154,17 @@ onMounted(() => {
 </style>
 
 <style>
+#app {
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body {
+  display: block !important;
+  place-items: initial !important;
+}
+
 .app-page-shell {
   width: min(100%, 1360px);
   margin: 0 auto;
