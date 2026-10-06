@@ -13,31 +13,38 @@
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
     "lint": "eslint . --fix",
-    "format": "prettier --write src/"
+    "format": "prettier --write src/",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@vue/devtools-api": "^8.1.5",
     "crypto-js": "^4.2.0",
-    "pinia": "^3.0.4",
-    "vue": "^3.5.30",
-    "vue-router": "^5.0.3",
-    "vuetify": "^4.0.2"
+    "pinia": "^4.0.3",
+    "vue": "^3.5.43",
+    "vue-router": "^5.3.1",
+    "vuetify": "^4.2.4"
   },
   "devDependencies": {
     "@mdi/font": "^7.4.47",
-    "@tsconfig/node22": "^22.0.5",
+    "@tsconfig/node24": "^24.0.0",
     "@types/crypto-js": "^4.2.2",
-    "@types/node": "^25.5.0",
-    "@vitejs/plugin-vue": "^6.0.5",
+    "@types/node": "^24.0.0",
+    "@vitejs/plugin-vue": "^6.0.9",
     "@vue/eslint-config-prettier": "^10.2.0",
-    "@vue/eslint-config-typescript": "^14.7.0",
-    "@vue/tsconfig": "^0.9.0",
-    "eslint": "^10.0.3",
-    "eslint-plugin-vue": "^10.8.0",
-    "npm-run-all2": "^8.0.4",
-    "prettier": "^3.8.1",
+    "@vue/eslint-config-typescript": "^14.9.0",
+    "@vue/tsconfig": "^0.9.1",
+    "eslint": "^10.12.0",
+    "eslint-plugin-vue": "^10.11.1",
+    "npm-run-all2": "^9.0.3",
+    "prettier": "^3.9.9",
     "typescript": "~5.9.3",
-    "vite": "^8.0.0",
-    "vite-plugin-vue-devtools": "^8.1.0",
-    "vue-tsc": "^3.2.6"
+    "vite": "^8.3.3",
+    "vite-plugin-vue-devtools": "^8.2.1",
+    "vitest": "^5.0.3",
+    "vue-eslint-parser": "^10.3.0",
+    "vue-tsc": "^3.3.12"
+  },
+  "engines": {
+    "node": ">=24 <25"
   }
 }

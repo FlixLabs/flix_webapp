@@ -2,7 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, watch } from 'vue';
 import { useResettable } from '@/composables/useResettable';
 
-type Instance = { name: string };
+import type { MediaInstance as Instance } from '@/composables/useMediaService';
 
 export const useFlixStore = defineStore('flix', () => {
   const { state: instances, reset: resetInstances } = useResettable<Instance[]>([]);

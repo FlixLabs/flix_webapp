@@ -33,7 +33,7 @@ const emit = defineEmits(['add', 'remove']);
             />
         </v-avatar>
       </template>
-      <v-list-item-content>
+      <div>
         <v-list-item-title>
           {{ item.title }} ({{ item.year }})
         </v-list-item-title>
@@ -98,7 +98,7 @@ const emit = defineEmits(['add', 'remove']);
             </v-btn>
           </v-col>
         </v-row>
-      </v-list-item-content>
+      </div>
     </v-list-item>
   </v-list>
 </template>

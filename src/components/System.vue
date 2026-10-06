@@ -2,6 +2,7 @@
 
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
+import { useMediaService } from '@/composables/useMediaService';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { useDiskAndLogAndHealthList } from '@/composables/useDiskAndLogAndHealthList';
@@ -13,6 +14,7 @@ const selectedInstance = computed(() => store.selectedInstance);
 const selectedInstanceData = computed(() => store.selectedInstanceData);
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
+const { getConfig } = useMediaService({ useAPI, selectedInstanceData });
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
@@ -62,27 +64,13 @@ function getData(
     if (!ignoreLoading.includes(endpoint)) {
       isLoadingMovie.value = true;
     }
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_RADARR_BASE_URL;
-      api_key = import.meta.env.VITE_RADARR_API_KEY;
-    } else {
-      const sid = selectedInstanceData.value as any;
-      base_url = sid?.radarr?.base_url ?? '';
-      api_key = sid?.radarr?.api_key ?? '';
-    }
+    ({ base_url, api_key } = getConfig('movies'));
   }
   if (type == 'series') {
     if (!ignoreLoading.includes(endpoint)) {
       isLoadingSerie.value = true;
     }
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_SONARR_BASE_URL;
-      api_key = import.meta.env.VITE_SONARR_API_KEY;
-    } else {
-      const sid = selectedInstanceData.value as any;
-      base_url = sid?.sonarr?.base_url ?? '';
-      api_key = sid?.sonarr?.api_key ?? '';
-    }
+    ({ base_url, api_key } = getConfig('series'));
   }
 
   fetch(base_url + '/api/v3/' + endpoint + '?apikey=' + api_key)

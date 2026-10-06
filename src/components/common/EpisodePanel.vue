@@ -59,14 +59,14 @@ function formatSizeGb(sizeInBytes: number) {
               v-for="(episode, index) in episodes"
               :key="index"
               >
-              <v-list-item-content>
+              <div>
                 <v-list-item-title>
                   {{ episode.title }}
                 </v-list-item-title>
                 <v-list-item-subtitle>
                   Episode {{ episode.episode }} - {{ episode.airDate || "Date unknown" }}
                 </v-list-item-subtitle>
-                <v-list-item-action
+                <div
                   class="pt-2"
                   >
                   <v-chip
@@ -83,7 +83,7 @@ function formatSizeGb(sizeInBytes: number) {
                     >
                     Missing
                   </v-chip>
-                </v-list-item-action>
+                </div>
                 <v-row
                   v-if="episode.relativePath"
                   class="mt-4"
@@ -134,7 +134,7 @@ function formatSizeGb(sizeInBytes: number) {
                     </v-row>
                   </v-col>
                 </v-row>
-              </v-list-item-content>
+              </div>
             </v-list-item>
           </v-list>
         </v-expansion-panel-text>

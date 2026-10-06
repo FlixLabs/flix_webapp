@@ -1,6 +1,7 @@
 import { computed } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import type { Ref } from 'vue';
+import { useMediaService } from '@/composables/useMediaService';
 
 export function useLibraryChecker(
   type: 'movies' | 'series',
@@ -11,36 +12,15 @@ export function useLibraryChecker(
   const store = useFlixStore();
   const selectedInstanceData = computed(() => store.selectedInstanceData);
 
+  const { getConfig } = useMediaService({ useAPI, selectedInstanceData });
+
   const URL_TYPES = {
     movies: 'movie',
     series: 'series',
   };
 
   const isAlreadyInLibrary = () => {
-    let base_url = '';
-    let api_key = '';
-
-    if (type == 'movies') {
-      if (!useAPI.value) {
-        base_url = import.meta.env.VITE_RADARR_BASE_URL;
-        api_key = import.meta.env.VITE_RADARR_API_KEY;
-      } else {
-        const sid = selectedInstanceData.value as any;
-        base_url = sid?.radarr?.base_url ?? '';
-        api_key = sid?.radarr?.api_key ?? '';
-      }
-    }
-
-    if (type =='series') {
-      if (!useAPI.value) {
-        base_url = import.meta.env.VITE_SONARR_BASE_URL;
-        api_key = import.meta.env.VITE_SONARR_API_KEY;
-      } else {
-        const sid = selectedInstanceData.value as any;
-        base_url = sid?.sonarr?.base_url ?? '';
-        api_key = sid?.sonarr?.api_key ?? '';
-      }
-    }
+    const { base_url, api_key } = getConfig(type);
 
     const url_type = URL_TYPES[type];
 
