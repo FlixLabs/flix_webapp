@@ -44,10 +44,10 @@ describe("media service configuration", () => {
     expect(getConfig("series").api_key).toBe("series-key");
   });
 
-  it("handles an instance that has not loaded yet", () => {
+  it.each(["movies", "series"] as const)("handles unloaded instances for %s", (type) => {
     const options = createOptions();
     options.selectedInstanceData.value = null;
-    expect(useMediaService(options).getConfig("series").base_url).toBe("");
+    expect(useMediaService(options).getConfig(type).base_url).toBe("");
   });
 });
 

@@ -26,7 +26,8 @@ const routes = [
     name: 'Dashboard',
     component: DashboardView,
     meta: {
-      requiresAuth: true
+      requiresAuth: true,
+      requiresInstance: true
     }
   },
   {
@@ -34,7 +35,8 @@ const routes = [
     name: 'Library',
     component: LibraryView,
     meta: {
-      requiresAuth: true
+      requiresAuth: true,
+      requiresInstance: true
     }
   },
   {
@@ -42,7 +44,8 @@ const routes = [
     name: 'Calendar',
     component: CalendarView,
     meta: {
-      requiresAuth: true
+      requiresAuth: true,
+      requiresInstance: true
     }
   },
   {
@@ -50,7 +53,8 @@ const routes = [
     name: 'Outings',
     component: OutingsView,
     meta: {
-      requiresAuth: true
+      requiresAuth: true,
+      requiresInstance: true
     }
   },
   {
@@ -58,7 +62,8 @@ const routes = [
     name: 'Downloads',
     component: DownloadsView,
     meta: {
-      requiresAuth: true
+      requiresAuth: true,
+      requiresInstance: true
     }
   },
   {
@@ -74,7 +79,8 @@ const routes = [
     name: 'System',
     component: SystemView,
     meta: {
-      requiresAuth: true
+      requiresAuth: true,
+      requiresInstance: true
     }
   }
 ];
