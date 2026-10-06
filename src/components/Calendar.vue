@@ -5,6 +5,7 @@ import { useFlixStore } from '@/stores/flixStore';
 import { useMediaService } from '@/composables/useMediaService';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
+import { useDialog } from '@/composables/useDialog';
 import Alert from '@/components/common/Alert.vue';
 
 const store = useFlixStore();
@@ -19,7 +20,31 @@ const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
 const { state: calendarValue, reset: resetCalendarValue } = useResettable<string | number | Date>(new Date());
 const { state: calendarType, reset: resetCalendarType } = useResettable<'month' | 'week' | 'day'>('month');
-const { state: events, reset: resetEvents } = useResettable<any[]>([]);
+interface CalendarEvent {
+  title: string;
+  start: Date;
+  end: Date;
+  color: string;
+}
+
+const { state: events, reset: resetEvents } = useResettable<CalendarEvent[]>([]);
+const { dialog: dayEventsDialog, reset: resetDayEventsDialog } = useDialog();
+const { state: selectedDay } = useResettable('');
+
+const selectedDayEvents = computed(() => events.value.filter(event => {
+  const date = event.start;
+  const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return day === selectedDay.value;
+}));
+
+const selectedDayTitle = computed(() => selectedDay.value
+  ? new Date(selectedDay.value + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'long' })
+  : '');
+
+function openDayEvents(_event: Event, day: { date: string }) {
+  selectedDay.value = day.date;
+  dayEventsDialog.value = true;
+}
 
 const { state: showMovies, reset: resetShowMovies } = useResettable(true);
 const { state: showSeries, reset: resetShowSeries } = useResettable(true);
@@ -128,6 +153,7 @@ function loadContent() {
 }
 
 watch([calendarValue, selectedInstance, showMovies, showSeries], () => {
+  resetDayEventsDialog();
   resetEvents();
   loadContent();
 });
@@ -143,31 +169,67 @@ onMounted(() => {
     :alert="alert"
     @update:alert="alert = $event"
     />
-  <v-row>
-    <v-switch
-      label="Movies"
-      inset
-      v-model="showMovies"
-      :color="showMovies ? 'green-lighten-1' : 'gray'"
-      class="ml-5"
-      />
-    <v-switch
-      label="Series"
-      inset
-      v-model="showSeries"
-      :color="showSeries ? 'green-lighten-1' : 'gray'"
-      class="ml-15"
-      />
-  </v-row>
-  <v-row>
-    <v-col>
-      <v-calendar
-        v-model="calendarValue"
-        :events="events"
-        :view-mode="calendarType"
+  <v-container>
+    <v-row>
+      <v-switch
+        label="Movies"
+        inset
+        v-model="showMovies"
+        :color="showMovies ? 'green-lighten-1' : 'gray'"
+        class="ml-5"
         />
-    </v-col>
-  </v-row>
+      <v-switch
+        label="Series"
+        inset
+        v-model="showSeries"
+        :color="showSeries ? 'green-lighten-1' : 'gray'"
+        class="ml-15"
+        />
+    </v-row>
+    <v-row>
+      <v-col>
+        <v-sheet height="600">
+          <v-calendar
+            v-model="calendarValue"
+            :events="events"
+            event-name="title"
+            :type="calendarType"
+            @click:more="openDayEvents"
+            @click:event="(event, { day }) => openDayEvents(event, day)"
+            >
+            <template #event="{ event }">
+              <v-tooltip :text="event.title" location="top">
+                <template #activator="{ props }">
+                  <span v-bind="props" class="d-block text-truncate px-1">
+                    {{ event.title }}
+                  </span>
+                </template>
+              </v-tooltip>
+            </template>
+          </v-calendar>
+        </v-sheet>
+      </v-col>
+    </v-row>
+  </v-container>
+  <v-dialog v-model="dayEventsDialog" max-width="600" scrollable>
+    <v-card>
+      <v-card-title>{{ selectedDayTitle }}</v-card-title>
+      <v-card-text>
+        <v-list>
+          <v-list-item v-for="(event, index) in selectedDayEvents" :key="index">
+            <template #prepend>
+              <v-icon :color="event.color" icon="mdi-circle" size="small" />
+            </template>
+            <v-list-item-title class="text-wrap">{{ event.title }}</v-list-item-title>
+          </v-list-item>
+        </v-list>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn color="primary" @click="resetDayEventsDialog">Close</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <style scoped>
