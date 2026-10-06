@@ -16,8 +16,8 @@ export const useFlixStore = defineStore('flix', () => {
 
   function setInstances(data: Instance[]) {
     instances.value = data;
-    if (data.length > 0 && !selectedInstance.value) {
-      selectedInstance.value = data[0].name;
+    if (!data.some(instance => instance.name === selectedInstance.value)) {
+      selectedInstance.value = data[0]?.name ?? null;
     }
   }
 
