@@ -14,7 +14,7 @@ const emit = defineEmits(['card-click']);
   <v-row
     v-if="paginated_items.length"
     class="mt-2"
-    dense
+    density="compact"
     >
     <v-col
       v-for="(item, index) in paginated_items"
@@ -51,7 +51,7 @@ const emit = defineEmits(['card-click']);
           >
           {{ item.year }}
         </v-card-text>
-        <v-card-action
+        <div
           class="d-flex justify-center pb-2"
           >
           <v-chip
@@ -84,7 +84,7 @@ const emit = defineEmits(['card-click']);
             >
             Unknown
           </v-chip>
-        </v-card-action>
+        </div>
       </v-card>
     </v-col>
   </v-row>

@@ -39,6 +39,8 @@ See [Vite Configuration Reference](https://vite.dev/config/).
 
 ## Project Setup
 
+Use Node.js 24 LTS and Yarn Classic (1.x).
+
 ```sh
 yarn
 ```
@@ -59,4 +61,10 @@ yarn build
 
 ```sh
 yarn lint
+```
+
+### Test Shared Media Actions
+
+```sh
+yarn test
 ```

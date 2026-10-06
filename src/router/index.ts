@@ -84,17 +84,13 @@ const router = createRouter({
   routes: routes
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach((to) => {
   if (useAPI.value) {
     const is_authenticated = sessionStorage.getItem('flix_webapp_is_authenticated') === 'true';
 
     if (to.meta.requiresAuth && !is_authenticated) {
-      next('/login');
-    } else {
-      next();
+      return '/login';
     }
-  } else {
-    next();
   }
 });
 

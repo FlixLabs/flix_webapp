@@ -1,4 +1,4 @@
-FROM node:20-bullseye-slim AS build
+FROM node:24-bookworm-slim AS build
 
 WORKDIR /app
 
@@ -30,9 +30,9 @@ ENV VITE_SYSTEM_STORAGE_SPACE_TRESHOLD=$VITE_SYSTEM_STORAGE_SPACE_TRESHOLD
 ENV VITE_CRYPT_KEY=$VITE_CRYPT_KEY
 ENV VITE_FLIX_API_USE=$VITE_FLIX_API_USE
 ENV VITE_FLIX_API_URL=$VITE_FLIX_API_URL
-RUN yarn build-only
+RUN yarn test && yarn build
 
-FROM node:20-bullseye-slim
+FROM node:24-bookworm-slim
 
 WORKDIR /app
 

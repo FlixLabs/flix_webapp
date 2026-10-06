@@ -2,25 +2,28 @@
 
 import { ref, watch, computed, onMounted } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
+import { useMediaService } from '@/composables/useMediaService';
 import { useCount } from '@/composables/useCount';
 import { useFilteredItems } from '@/composables/useFilteredItems';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
+import { useMediaActions } from '@/composables/useMediaActions';
 import { useDialog } from '@/composables/useDialog';
 import { useLibraryChecker } from '@/composables/useLibraryChecker';
-import { useDeleteItem } from '@/composables/useDeleteItem';
 import { useQualitySelection } from '@/composables/useQualitySelection';
-import { useAddItem } from '@/composables/useAddItem';
-import { useSearchItem } from '@/composables/useSearchItem';
+import { useQualityProfiles } from '@/composables/useQualityProfiles';
 import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
 import MediaDialog from '@/components/common/MediaDialog.vue';
 import QualitySelectionDialog from '@/components/common/QualitySelectionDialog.vue';
 import EpisodePanel from '@/components/common/EpisodePanel.vue';
 import Loading from '@/components/common/Loading.vue';
-import MediaGrid from '@/components/common/MediaGrid.vue';
+import MediaBrowserToolbar from '@/components/common/MediaBrowserToolbar.vue';
+import MediaBrowserResults from '@/components/common/MediaBrowserResults.vue';
+import SeriesSizeField from '@/components/common/SeriesSizeField.vue';
+import { useEpisodeSummary } from '@/composables/useEpisodeSummary';
 
 const store = useFlixStore();
 
@@ -28,15 +31,9 @@ const selectedInstance = computed(() => store.selectedInstance);
 const selectedInstanceData = computed(() => store.selectedInstanceData);
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
+const { getConfig } = useMediaService({ useAPI, selectedInstanceData });
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
-
-const {
-  deleteConfirmationDialog,
-  resetDeleteConfirmationDialog,
-  itemToDelete,
-  resetItemToDelete
-} = useDeleteConfirmation();
 
 const {
   qualitySelectionDialog,
@@ -58,8 +55,6 @@ const { state: qualitySelected, reset: resetQualitySelected } = useResettable<an
 
 const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
 const { state: movieItems, reset: resetMovieItems } = useResettable<any[]>([]);
-const { state: qualityMovieItems, reset: resetQualityMovieItems } = useResettable<any[]>([]);
-const { state: qualityMovie, reset: resetQualityMovie } = useResettable<any | null>(null);
 const { state: selectedMovie, reset: resetSelectedMovie } = useResettable<any | null>(null);
 const { dialog: movieDialog, reset: resetMovieDialog } = useDialog();
 const { filteredItems: filtered_movies } = useFilteredItems(movieItems, search);
@@ -72,8 +67,6 @@ const { isAlreadyInLibrary: checkMovies } = useLibraryChecker("movies", movieIte
 
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
 const { state: serieItems, reset: resetSerieItems } = useResettable<any[]>([]);
-const { state: qualitySerieItems, reset: resetQualitySerieItems } = useResettable<any[]>([]);
-const { state: qualitySerie, reset: resetQualitySerie } = useResettable<any | null>(null);
 const { state: selectedSerie, reset: resetSelectedSerie } = useResettable<any | null>(null);
 const { dialog: serieDialog, reset: resetSerieDialog } = useDialog();
 const { state: serieEpisodes, reset: resetSerieEpisodes } = useResettable<any[]>([]);
@@ -86,98 +79,19 @@ const { total: total_series } = useCount(filtered_series);
 const { isAlreadyInLibrary: checkSeries } = useLibraryChecker("series", serieItems, showErrorAlert, useAPI);
 const { state: isLoadingSerieEpisodes, reset: resetIsLoadingSerieEpisodes } = useResettable(false);
 
-const { deleteItem } = useDeleteItem({
-  useAPI,
-  selectedInstanceData,
-  showSuccessAlert,
-  showErrorAlert,
-  refreshContent: getContent
+const { qualityMovieItems, qualitySerieItems, qualityMovie, qualitySerie, getQualityProfileList } = useQualityProfiles({
+  useAPI, selectedInstanceData, showErrorAlert
 });
 
-const { addItem } = useAddItem({
-  useAPI,
-  selectedInstanceData,
-  showSuccessAlert,
-  showErrorAlert,
-  refreshContent: getContent
+const { addItem, deleteItem, searchItem } = useMediaActions({
+  useAPI, selectedInstanceData, showSuccessAlert, showErrorAlert, refreshContent: getContent
 });
 
-const { searchItem } = useSearchItem({
-  useAPI,
-  selectedInstanceData,
-  showSuccessAlert,
-  showErrorAlert,
-  refreshContent: getContent
+const { deleteConfirmationDialog, resetDeleteConfirmationDialog, openDeleteConfirmationDialog, confirmDelete } = useDeleteConfirmation({
+  deleteItem,
+  selectedItem: type => type === 'movies' ? selectedMovie.value : selectedSerie.value,
+  onConfirm: () => { resetMovieDialog(); resetSerieDialog(); },
 });
-
-function getQualityProfileList(type: 'movies' | 'series') {
-  let base_url = '';
-  let api_key = '';
-
-  if (type == 'movies') {
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_RADARR_BASE_URL;
-      api_key = import.meta.env.VITE_RADARR_API_KEY;
-    } else {
-      const sid = selectedInstanceData.value as any;
-      base_url = sid?.radarr?.base_url ?? '';
-      api_key = sid?.radarr?.api_key ?? '';
-    }
-  }
-  if (type == 'series') {
-    if (!useAPI.value) {
-      base_url = import.meta.env.VITE_SONARR_BASE_URL;
-      api_key = import.meta.env.VITE_SONARR_API_KEY;
-    } else {
-      const sid = selectedInstanceData.value as any;
-      base_url = sid?.sonarr?.base_url ?? '';
-      api_key = sid?.sonarr?.api_key ?? '';
-    }
-  }
-
-  fetch(base_url + '/api/v3/qualityProfile?apikey=' + api_key)
-    .then(async response => {
-      const json_data = await response.json();
-
-      let items = [];
-      for (let item of json_data) {
-        items.push({
-          title: item.name,
-          value: item.id
-        });
-      }
-
-      if (!items.length) {
-        showErrorAlert("Profiles does not exist. Please create at least one in Radarr and Sonarr.");
-      }
-
-      const any_profile = items.find(i => i.title.toLowerCase() == 'any');
-
-      if (type == 'movies') {
-        qualityMovieItems.value = items;
-
-        if (any_profile) {
-          qualityMovie.value = any_profile.value;
-        } else {
-          var index = qualityMovieItems.value.length - 1;
-          qualityMovie.value = qualityMovieItems.value[index];
-        }
-      }
-      if (type == 'series') {
-        qualitySerieItems.value = items;
-
-        if (any_profile) {
-          qualitySerie.value = any_profile.value;
-        } else {
-          var index = qualitySerieItems.value.length - 1;
-          qualitySerie.value = qualitySerieItems.value[index];
-        }
-      }
-    })
-    .catch(error => {
-      //showErrorAlert(error);
-    });
-}
 
 function getContent(type: 'movies' | 'series') {
   const base_url = import.meta.env.VITE_TMDB_BASE_URL;
@@ -321,22 +235,12 @@ function getContent(type: 'movies' | 'series') {
 function getSerieEpisodes(serie_id: number) {
   const base_url = import.meta.env.VITE_TMDB_BASE_URL;
   const api_key = import.meta.env.VITE_TMDB_API_KEY;
-  let base_url_sonarr = '';
-  let api_key_sonarr = '';
+  const { base_url: base_url_sonarr, api_key: api_key_sonarr } = getConfig('series');
 
   serieDialog.value = true;
   isLoadingSerieEpisodes.value = true;
 
   serieEpisodes.value = [];
-
-  if (!useAPI.value) {
-    base_url_sonarr = import.meta.env.VITE_SONARR_BASE_URL;
-    api_key_sonarr = import.meta.env.VITE_SONARR_API_KEY;
-  } else {
-    const sid = selectedInstanceData.value as any;
-    base_url_sonarr = sid?.sonarr?.base_url ?? '';
-    api_key_sonarr = sid?.sonarr?.api_key ?? '';
-  }
 
   fetch(base_url + '/tv/' + serie_id + '?api_key=' + api_key)
     .then(async (response) => {
@@ -461,26 +365,7 @@ const getSerieTvdbId = async (serie: any) => {
   return tvdbId;
 }
 
-const grouped_episodes = computed(() => {
-  return serieEpisodes.value.reduce((acc: Record<number, any[]>, episode: any) => {
-    if (!acc[episode.season]) {
-      acc[episode.season] = [];
-    }
-    acc[episode.season].push(episode);
-    return acc;
-  }, {} as Record<number, any[]>);
-});
-
-const totalSerieSizeOnDisk = computed(() => {
-  return serieEpisodes.value.reduce((sum: number, episode: any) => {
-    const episodeSize = typeof episode?.sizeOnDisk === 'number' ? episode.sizeOnDisk : 0;
-    return sum + episodeSize;
-  }, 0);
-});
-
-function formatSizeGb(sizeInBytes: number) {
-  return (sizeInBytes / 1e9).toFixed(2);
-}
+const { grouped_episodes, totalSerieSizeOnDisk } = useEpisodeSummary(serieEpisodes);
 
 function openQualityDialog(type: 'movies' | 'series', item: any) {
   if (type == 'movies') {
@@ -509,32 +394,6 @@ function confirmQuality(selectedValue: any) {
   resetSerieDialog();
 }
 
-function openDeleteConfirmationDialog(type: 'movies' | 'series', item: any) {
-  if (!item) {
-    if (type == 'movies') {
-      item = selectedMovie.value;
-    }
-    if (type == 'series') {
-      item = selectedSerie.value;
-    }
-  }
-  itemToDelete.value = {
-    type: type,
-    item: item
-  };
-  deleteConfirmationDialog.value = true;
-}
-
-function confirmDelete() {
-  const val = itemToDelete.value;
-  if (val && (val.type === 'movies' || val.type === 'series')) {
-    deleteItem((val.type as 'movies' | 'series'), val.item);
-    resetDeleteConfirmationDialog();
-    resetItemToDelete();
-    resetMovieDialog();
-    resetSerieDialog();
-  }
-}
 
 function searchContent(type: 'movies' | 'series', item: any) {
   searchItem(type, item);
@@ -604,88 +463,28 @@ watch(selectedInstance, () => {
     @cancel="resetQualitySelectionDialog"
     />
   <v-container>
-    <v-row>
-      <v-col>
-        <v-text-field
-          v-model="search"
-          label="Search"
-          variant="outlined"
-          prepend-icon="mdi-magnify"
-          clearable
-          />
-      </v-col>
-      <v-col
-        v-if="$vuetify.display.smAndUp"
-        cols="2"
-        >
-        <v-text-field
-          v-if="selected_view == 'movies'"
-          label="Number"
-          variant="outlined"
-          v-model="total_movies"
-          :disabled="true"
-          prepend-icon="mdi-information-outline"
-          />
-        <v-text-field
-          v-if="selected_view == 'series'"
-          label="Number"
-          variant="outlined"
-          v-model="total_series"
-          :disabled="true"
-          prepend-icon="mdi-information-outline"
-          />
-      </v-col>
-    </v-row>
-    <v-row>
-      <v-col>
-        <v-btn-toggle
-          v-model="selected_view"
-          color="primary"
-          variant="outlined"
-          mandatory
-          >
-          <v-btn
-            value="movies"
-            prepend-icon="mdi-movie-open-outline"
-            >
-            Movies
-          </v-btn>
-          <v-btn
-            value="series"
-            prepend-icon="mdi-television-classic"
-            >
-            Series
-          </v-btn>
-        </v-btn-toggle>
-      </v-col>
-    </v-row>
+    <MediaBrowserToolbar
+      v-model:search="search"
+      v-model:selected-view="selected_view"
+      :total-movies="total_movies"
+      :total-series="total_series"
+    >
+    </MediaBrowserToolbar>
     <div
       v-if="selected_view == 'movies'"
       >
-      <Loading
-        :isLoading="isLoadingMovie"
-        sentence="Research in progress..."
-        />
-      <MediaGrid
-        :paginated_items="paginated_movies"
+      <MediaBrowserResults
+        v-model:page="movie_page"
+        :items="paginated_movies"
+        :total="total_movies"
+        :total-pages="movies_total_pages"
+        :is-loading="isLoadingMovie"
         id-field="tmdbId"
         announcementName="Release"
         :showHasFile="true"
+        empty-message="No upcoming movies found"
         @card-click="handleMovieClick"
-        />
-      <v-alert
-        v-if="!filtered_movies.length && !isLoadingMovie"
-        type="info"
-        class="mt-4"
-        >
-        No upcoming movies found
-      </v-alert>
-      <v-pagination
-        v-if="filtered_movies.length > 0"
-        v-model="movie_page"
-        :length="movies_total_pages"
-        rounded
-        />
+      />
       <MediaDialog
         v-model="movieDialog"
         mediaType="Movie"
@@ -702,30 +501,18 @@ watch(selectedInstance, () => {
     <div
       v-else-if="selected_view == 'series'"
       >
-      <Loading
-        :isLoading="isLoadingSerie"
-        sentence="Research in progress..."
-        />
-      <MediaGrid
-        :paginated_items="paginated_series"
+      <MediaBrowserResults
+        v-model:page="serie_page"
+        :items="paginated_series"
+        :total="total_series"
+        :total-pages="series_total_pages"
+        :is-loading="isLoadingSerie"
         id-field="tmdbId"
         announcementName="Premiere"
         :showHasFile="false"
+        empty-message="No upcoming series found"
         @card-click="handleSerieClick"
-        />
-      <v-alert
-        v-if="!filtered_series.length && !isLoadingSerie"
-        type="info"
-        class="mt-4"
-        >
-        No upcoming series found
-      </v-alert>
-      <v-pagination
-        v-if="filtered_series.length > 0"
-        v-model="serie_page"
-        :length="series_total_pages"
-        rounded
-        />
+      />
       <MediaDialog
         v-model="serieDialog"
         mediaType="Serie"
@@ -741,18 +528,11 @@ watch(selectedInstance, () => {
         <template
           #details
           >
-          <v-row
-            v-if="serieDialog && !isLoadingSerieEpisodes && totalSerieSizeOnDisk > 0"
-            >
-            <v-col>
-              <v-text-field
-                label="Size (GB)"
-                variant="outlined"
-                :model-value="formatSizeGb(totalSerieSizeOnDisk)"
-                :disabled="true"
-                />
-            </v-col>
-          </v-row>
+          <SeriesSizeField
+            :size="totalSerieSizeOnDisk"
+            :is-loading="isLoadingSerieEpisodes"
+            :is-open="serieDialog"
+          />
         </template>
         <template
           #episodes
