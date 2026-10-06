@@ -5,6 +5,8 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
+import Alert from '@/components/common/Alert.vue';
+import Loading from '@/components/common/Loading.vue';
 
 const router = useRouter();
 
@@ -16,6 +18,7 @@ const { state: drawer, reset: resetDrawer } = useResettable(false);
 const { state: drawerSelected, reset: resetDrawerSelected } = useResettable('dashboard');
 
 const store = useFlixStore();
+const isLoadingInstances = ref(false);
 
 const initialDrawerOptions = [
   { title: 'Dashboard', icon: 'mdi-view-dashboard-outline', value: 'dashboard' },
@@ -49,10 +52,12 @@ const drawerSelectOption = (option: any) => {
 };
 
 function getData() {
+  isLoadingInstances.value = true;
   let base_url = import.meta.env.VITE_FLIX_API_URL;
 
   fetch(base_url + '/instances')
     .then(async (response) => {
+      if (!response.ok) throw new Error('Unable to load instances');
       const json_data = await response.json();
       store.setInstances(json_data);
     })
@@ -60,6 +65,7 @@ function getData() {
       showErrorAlert(error);
     })
     .finally(() => {
+      isLoadingInstances.value = false;
     });
 }
 
@@ -123,7 +129,15 @@ onMounted(() => {
     </v-navigation-drawer>
 
     <v-main>
-      <RouterView/>
+      <Alert :alert="alert" @update:alert="alert = $event" />
+      <RouterView v-if="!useAPI || !$route.meta.requiresInstance || store.selectedInstanceData" />
+      <v-container v-else>
+        <Loading :is-loading="isLoadingInstances" sentence="Loading instances..." />
+        <v-alert v-if="!isLoadingInstances" type="warning">
+          No instance available. Please check the API configuration.
+          <v-btn variant="text" @click="getData">Retry</v-btn>
+        </v-alert>
+      </v-container>
     </v-main>
 
     <v-footer
