@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MediaImage from './MediaImage.vue';
 
 const props = defineProps<{
   mediaType: 'movies' | 'series';
@@ -26,7 +27,7 @@ const emit = defineEmits(['add', 'remove']);
         <v-avatar
           class="custom-avatar"
           >
-          <v-img
+          <MediaImage
             :src="item.prependAvatar"
             alt="Poster"
             class="custom-img"
