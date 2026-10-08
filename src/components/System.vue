@@ -7,6 +7,8 @@ import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { useDiskAndLogAndHealthList } from '@/composables/useDiskAndLogAndHealthList';
 import Loading from '@/components/common/Loading.vue';
+import StorageLocations from '@/components/common/StorageLocations.vue';
+import { useStorageLocations, type RootFolder } from '@/composables/useStorageLocations';
 
 const store = useFlixStore();
 
@@ -25,6 +27,8 @@ const configHostMovie = ref<Record<string, any> | null>({});
 const systemStatusMovie = ref<Record<string, any> | null>({});
 const { state: systemStatusMovieInterval, reset: resetSystemStatusMovieInterval } = useResettable(60);
 const diskListMovie = createDiskList();
+const rootFoldersMovie = ref<RootFolder[]>([]);
+const storageLocationsMovie = useStorageLocations(rootFoldersMovie, diskListMovie);
 const { state: diskListMovieInterval, reset: resetDiskListMovieInterval } = useResettable(60);
 const logListMovie = createLogList();
 const { state: logListMovieInterval, reset: resetLogListMovieInterval } = useResettable(60);
@@ -36,6 +40,8 @@ const configHostSerie = ref<Record<string, any> | null>({});
 const systemStatusSerie = ref<Record<string, any> | null>({});
 const { state: systemStatusSerieInterval, reset: resetSystemStatusSerieInterval } = useResettable(60);
 const diskListSerie = createDiskList();
+const rootFoldersSerie = ref<RootFolder[]>([]);
+const storageLocationsSerie = useStorageLocations(rootFoldersSerie, diskListSerie);
 const { state: diskListSerieInterval, reset: resetDiskListSerieInterval } = useResettable(60);
 const logListSerie = createLogList();
 const { state: logListSerieInterval, reset: resetLogListSerieInterval } = useResettable(60);
@@ -49,13 +55,14 @@ function progressColor(ratio: number): string {
 
 function getData(
   type: 'movies' | 'series',
-  endpoint: 'config/host' | 'system/status' | 'diskspace' | 'log' | 'health'
+  endpoint: Endpoint
 ) {
   let base_url = '';
   let api_key = '';
 
   const ignoreLoading = [
     'diskspace',
+    'rootfolder',
     'log',
     'health'
   ]
@@ -75,7 +82,15 @@ function getData(
 
   fetch(base_url + '/api/v3/' + endpoint + '?apikey=' + api_key)
     .then(async (response) => {
+      if (!response.ok) throw new Error(`Unable to load ${endpoint}`);
       const json_data = await response.json();
+      const currentConfig = getConfig(type);
+      if (currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
+
+      if (endpoint === 'rootfolder') {
+        if (type === 'movies') rootFoldersMovie.value = json_data;
+        else rootFoldersSerie.value = json_data;
+      }
 
       if (endpoint == 'config/host') {
         if (type == 'movies') {
@@ -211,7 +226,7 @@ const startInterval = (
 };
 
 type Category = 'movies' | 'series';
-type Endpoint = 'config/host' | 'system/status' | 'diskspace' | 'log' | 'health';
+type Endpoint = 'config/host' | 'system/status' | 'diskspace' | 'rootfolder' | 'log' | 'health';
 
 const watchAndStartInterval = (
   category: Category,
@@ -233,11 +248,11 @@ const tasks: Array<{
   callback: () => void;
 }> = [
   { category: 'movies', type: 'systemStatus', refVar: systemStatusMovieInterval, callback: () => { (systemStatusMovie.value as any).uptime = calculateUptime((systemStatusMovie.value as any).startTime as string); }},
-  { category: 'movies', type: 'diskList', refVar: diskListMovieInterval, callback: () => getData('movies', 'diskspace') },
+  { category: 'movies', type: 'diskList', refVar: diskListMovieInterval, callback: () => { getData('movies', 'diskspace'); getData('movies', 'rootfolder'); } },
   { category: 'movies', type: 'logList', refVar: logListMovieInterval, callback: () => getData('movies', 'log') },
   { category: 'movies', type: 'healthList', refVar: healthListMovieInterval, callback: () => getData('movies', 'health') },
   { category: 'series', type: 'systemStatus', refVar: systemStatusSerieInterval, callback: () => { (systemStatusSerie.value as any).uptime = calculateUptime((systemStatusSerie.value as any).startTime as string); }},
-  { category: 'series', type: 'diskList', refVar: diskListSerieInterval, callback: () => getData('series', 'diskspace') },
+  { category: 'series', type: 'diskList', refVar: diskListSerieInterval, callback: () => { getData('series', 'diskspace'); getData('series', 'rootfolder'); } },
   { category: 'series', type: 'logList', refVar: logListSerieInterval, callback: () => getData('series', 'log') },
   { category: 'series', type: 'healthList', refVar: healthListSerieInterval, callback: () => getData('series', 'health') },
 ];
@@ -250,11 +265,13 @@ const fetchDataOnMount: Array<{ category: Category; endpoint: Endpoint }> = [
   { category: 'movies', endpoint: 'config/host' },
   { category: 'movies', endpoint: 'system/status' },
   { category: 'movies', endpoint: 'diskspace' },
+  { category: 'movies', endpoint: 'rootfolder' },
   { category: 'movies', endpoint: 'log' },
   { category: 'movies', endpoint: 'health' },
   { category: 'series', endpoint: 'config/host' },
   { category: 'series', endpoint: 'system/status' },
   { category: 'series', endpoint: 'diskspace' },
+  { category: 'series', endpoint: 'rootfolder' },
   { category: 'series', endpoint: 'log' },
   { category: 'series', endpoint: 'health' },
 ];
@@ -270,6 +287,10 @@ onMounted(() => {
 });
 
 watch(selectedInstance, () => {
+  rootFoldersMovie.value = [];
+  rootFoldersSerie.value = [];
+  diskListMovie.value = [];
+  diskListSerie.value = [];
   fetchDataOnMount.forEach(({ category, endpoint }) => getData(category, endpoint));
 });
 
@@ -470,6 +491,11 @@ onUnmounted(() => {
                 </tbody>
               </v-table>
             </v-card>
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col>
+            <StorageLocations title="Movie Storage" :locations="storageLocationsMovie" />
           </v-col>
         </v-row>
         <v-row
@@ -762,6 +788,11 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
+        <v-row>
+          <v-col>
+            <StorageLocations title="Series Storage" :locations="storageLocationsSerie" />
+          </v-col>
+        </v-row>
         <v-row
           v-if="logListSerie.length > 0"
           >
@@ -851,6 +882,16 @@ onUnmounted(() => {
           :isLoading="isLoadingSerie"
           sentence="Loading data..."
           />
+      </v-col>
+    </v-row>
+    <v-row>
+      <v-col>
+        <v-card>
+          <v-card-title>Download Storage</v-card-title>
+          <v-card-text>
+            Unavailable: the download storage has not been identified in Radarr/Sonarr.
+          </v-card-text>
+        </v-card>
       </v-col>
     </v-row>
   </v-container>
