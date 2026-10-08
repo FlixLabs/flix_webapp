@@ -11,6 +11,8 @@ import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useDownloadActions } from '@/composables/useDownloadActions';
+import { downloadDetails } from '@/composables/useDownloadDetails';
+import DownloadDetails from '@/components/common/DownloadDetails.vue';
 
 const store = useFlixStore();
 
@@ -72,11 +74,8 @@ function getDownload(type: 'movies' | 'series') {
       let items = [];
       for (let item of json_data.records) {
         let languages = [];
-        const ratio = item.size > 0
-          ? Number(((1 - item.sizeleft / item.size) * 100).toFixed(2))
-          : 0;
 
-        for (let language of item.languages) {
+        for (let language of item.languages ?? []) {
           languages.push(language.name);
         }
 
@@ -88,7 +87,7 @@ function getDownload(type: 'movies' | 'series') {
           client: item.downloadClient,
           languages: languages.join(', '),
           status: item.status,
-          ratio: ratio
+          ...downloadDetails(item),
         });
       }
 
@@ -312,6 +311,7 @@ watch(selectedInstance, () => {
                             {{ Math.ceil(record.ratio) }} %
                           </strong>
                         </v-progress-linear>
+                        <DownloadDetails :record="record" />
                       </td>
                       <td class="download-actions">
                         <v-btn
@@ -475,6 +475,7 @@ watch(selectedInstance, () => {
                             {{ Math.ceil(record.ratio) }} %
                           </strong>
                         </v-progress-linear>
+                        <DownloadDetails :record="record" />
                       </td>
                       <td class="download-actions">
                         <v-btn
