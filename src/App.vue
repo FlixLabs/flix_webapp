@@ -7,8 +7,10 @@ import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import Alert from '@/components/common/Alert.vue';
 import Loading from '@/components/common/Loading.vue';
+import { useDisplay } from 'vuetify';
 
 const router = useRouter();
+const { xs } = useDisplay();
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
 
@@ -91,7 +93,7 @@ onMounted(() => {
           />
       </template>
       <v-toolbar-title
-        class="app-bar-title"
+        :class="xs ? 'mx-3' : 'app-bar-title'"
         >
         <strong>Flix</strong> | WebApp
       </v-toolbar-title>
@@ -100,6 +102,8 @@ onMounted(() => {
         >
         <v-select
           v-if="useAPI"
+          :width="xs ? 160 : undefined"
+          :max-width="xs ? '45vw' : undefined"
           v-model="store.selectedInstance"
           :items="store.instances"
           item-title="name"
