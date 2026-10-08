@@ -26,6 +26,7 @@ const emit = defineEmits(['card-click']);
       class="mb-4"
       >
       <v-card
+        class="media-card"
         @click="emit('card-click', item[idField])"
         >
         <v-img
@@ -40,16 +41,9 @@ const emit = defineEmits(['card-click']);
           {{ item.title }}
         </v-card-title>
         <v-card-text
-          v-if="!item.year"
-          class="text-center"
+          class="media-date text-center d-flex align-center justify-center"
           >
-          {{ announcementName }} {{ item.release_date }}
-        </v-card-text>
-        <v-card-text
-          v-else
-          class="text-center"
-          >
-          {{ item.year }}
+          {{ item.year || `${announcementName} ${item.release_date ?? ''}` }}
         </v-card-text>
         <div
           class="d-flex justify-center pb-2"
@@ -57,21 +51,21 @@ const emit = defineEmits(['card-click']);
           <v-chip
             v-if="showHasFile && item.hasFile"
             color="green"
-            small
+            size="small"
             >
             Existing
           </v-chip>
           <v-chip
             v-if="showHasFile && !item.hasFile"
             color="red"
-            small
+            size="small"
             >
             Missing
           </v-chip>
           <v-chip
             v-if="item.status"
             color="blue"
-            small
+            size="small"
             class="ml-1"
             >
             {{ item.status.charAt(0).toUpperCase() + item.status.slice(1) }}
@@ -79,7 +73,7 @@ const emit = defineEmits(['card-click']);
           <v-chip
             v-else
             color="blue"
-            small
+            size="small"
             class="ml-1"
             >
             Unknown
@@ -95,5 +89,9 @@ const emit = defineEmits(['card-click']);
   font-size: 1rem;
   line-height: 1.2;
   font-weight: bold;
+}
+
+.media-date {
+  height: 56px;
 }
 </style>

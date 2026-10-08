@@ -42,6 +42,10 @@ const filteredDrawerOptions = computed(() => {
   });
 });
 
+const currentPage = computed(() => initialDrawerOptions.find(
+  option => router.currentRoute.value.path === '/' + option.value
+));
+
 const drawerSelectOption = (option: any) => {
   if (option == 'signout') {
     sessionStorage.removeItem('flix_webapp_is_authenticated');
@@ -79,10 +83,11 @@ onMounted(() => {
 </script>
 
 <template>
-  <v-app>
+  <v-app class="flix-app">
     <v-app-bar
-      color="primary"
-      density="compact"
+      color="surface"
+      :elevation="0"
+      class="flix-app-bar"
       >
       <template
         v-if="$route.meta.requiresAuth === true"
@@ -95,13 +100,15 @@ onMounted(() => {
       <v-toolbar-title
         :class="xs ? 'mx-3' : 'app-bar-title'"
         >
-        <strong>Flix</strong> | WebApp
+        <strong class="flix-brand text-primary">Flix</strong>
+        <span v-if="!xs" class="text-caption text-medium-emphasis ml-3">WebApp</span>
       </v-toolbar-title>
       <template
         v-slot:append
         >
         <v-select
           v-if="useAPI"
+          class="mr-3"
           :width="xs ? 160 : undefined"
           :max-width="xs ? '45vw' : undefined"
           v-model="store.selectedInstance"
@@ -110,6 +117,7 @@ onMounted(() => {
           item-value="name"
           label="Instance"
           variant="outlined"
+          density="compact"
           hide-details
           />
       </template>
@@ -118,22 +126,29 @@ onMounted(() => {
     <v-navigation-drawer
       v-if="$route.meta.requiresAuth === true"
       v-model="drawer"
+      color="surface"
       >
-      <v-list>
+      <v-list class="pa-3" nav>
         <v-list-item
           v-for="option in filteredDrawerOptions"
           :key="option.value"
           :prepend-icon="option.icon"
           :title="option.title"
           :to="option.value != 'signout' ? '/' + option.value : undefined"
-          :class="{ 'bg-blue-lighten-4': $route.path === '/' + option.value }"
+          color="primary"
           @click="drawerSelectOption(option.value)"
           />
       </v-list>
     </v-navigation-drawer>
 
-    <v-main>
+    <v-main class="flix-main">
       <Alert :alert="alert" @update:alert="alert = $event" />
+      <v-container v-if="currentPage" class="flix-page-heading pb-0">
+        <div class="d-flex align-center ga-3">
+          <v-icon :icon="currentPage.icon" color="primary" size="28" />
+          <h1 class="flix-page-title">{{ currentPage.title }}</h1>
+        </div>
+      </v-container>
       <RouterView v-if="!useAPI || !$route.meta.requiresInstance || store.selectedInstanceData" />
       <v-container v-else>
         <Loading :is-loading="isLoadingInstances" sentence="Loading instances..." />
@@ -146,13 +161,14 @@ onMounted(() => {
 
     <v-footer
       app
-      color="primary"
+      color="background"
+      class="flix-footer"
       >
       <v-row>
         <v-col
           class="text-right"
           >
-          {{ new Date().getFullYear() }} | <strong>Flix</strong>
+          <span class="text-caption text-medium-emphasis">{{ new Date().getFullYear() }} &middot; Flix</span>
         </v-col>
       </v-row>
     </v-footer>
