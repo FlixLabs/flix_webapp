@@ -6,12 +6,22 @@ import { useMediaService } from '@/composables/useMediaService';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { useDiskAndLogAndHealthList } from '@/composables/useDiskAndLogAndHealthList';
+import SectionNavigation from '@/components/common/SectionNavigation.vue';
+import MediaTypeToggle from '@/components/common/MediaTypeToggle.vue';
 import Loading from '@/components/common/Loading.vue';
 import StorageLocations from '@/components/common/StorageLocations.vue';
 import { useStorageLocations, type RootFolder } from '@/composables/useStorageLocations';
 import { useAgentStorage } from '@/composables/useAgentStorage';
 
 const store = useFlixStore();
+const selectedMedia = ref<'movies' | 'series'>('movies');
+const section = ref('storage');
+const sections = [
+  { title: 'Storage', value: 'storage', icon: 'mdi-database-outline' },
+  { title: 'Status', value: 'status', icon: 'mdi-server-outline' },
+  { title: 'Logs', value: 'logs', icon: 'mdi-text-box-outline' },
+  { title: 'Health', value: 'health', icon: 'mdi-heart-outline' },
+];
 
 const selectedInstance = computed(() => store.selectedInstance);
 const selectedInstanceData = computed(() => store.selectedInstanceData);
@@ -309,13 +319,16 @@ onUnmounted(() => {
 
 <template>
   <v-container>
-    <v-row>
+    <SectionNavigation v-model="section" :sections="sections">
+      <MediaTypeToggle v-model="selectedMedia" />
+    </SectionNavigation>
+    <v-row class="mt-4">
       <v-col
-        md="6"
+        v-show="selectedMedia === 'movies'" cols="12"
         >
         <h3>Radarr</h3>
         <v-row
-          v-if="configHostMovie && Object.keys(configHostMovie).length > 0"
+          v-if="section === 'status' && configHostMovie && Object.keys(configHostMovie).length > 0"
           >
           <v-col>
             <v-card
@@ -354,7 +367,7 @@ onUnmounted(() => {
           </v-col>
         </v-row>
         <v-row
-          v-if="systemStatusMovie && Object.keys(systemStatusMovie).length > 0"
+          v-if="section === 'status' && systemStatusMovie && Object.keys(systemStatusMovie).length > 0"
           >
           <v-col>
             <v-card>
@@ -445,7 +458,7 @@ onUnmounted(() => {
           </v-col>
         </v-row>
         <v-row
-          v-if="diskListMovie.length > 0"
+          v-if="section === 'storage' && diskListMovie.length > 0"
           >
           <v-col>
             <v-card>
@@ -500,7 +513,7 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
-        <v-row>
+        <v-row v-show="section === 'storage'">
           <v-col>
             <StorageLocations title="Movie Storage" :locations="displayedMovieStorage"
               :interval="storageAgent.enabled.value ? storageAgentInterval : undefined"
@@ -509,7 +522,7 @@ onUnmounted(() => {
           </v-col>
         </v-row>
         <v-row
-          v-if="logListMovie.length > 0"
+          v-if="section === 'logs' && logListMovie.length > 0"
           >
           <v-col>
             <v-card>
@@ -551,14 +564,14 @@ onUnmounted(() => {
           </v-col>
         </v-row>
         <v-row
-          v-if="healthListMovie.length > 0"
+          v-if="section === 'health' && healthListMovie.length > 0"
           >
           <v-col>
             <v-card>
               <v-card-title>
                 <v-row>
                   <v-col>
-                    About
+                    Health
                   </v-col>
                   <v-col>
                     <v-text-field
@@ -603,17 +616,19 @@ onUnmounted(() => {
           >
           No system information found
         </v-alert>
+        <v-alert v-if="section === 'logs' && !isLoadingMovie && !logListMovie.length" type="info" class="mt-4">No logs found</v-alert>
+        <v-alert v-if="section === 'health' && !isLoadingMovie && !healthListMovie.length" type="info" class="mt-4">No health issues reported</v-alert>
         <Loading
           :isLoading="isLoadingMovie"
           sentence="Loading data..."
           />
       </v-col>
       <v-col
-        md="6"
+        v-show="selectedMedia === 'series'" cols="12"
         >
         <h3>Sonarr</h3>
         <v-row
-          v-if="configHostSerie && Object.keys(configHostSerie).length > 0"
+          v-if="section === 'status' && configHostSerie && Object.keys(configHostSerie).length > 0"
           >
           <v-col>
             <v-card
@@ -652,7 +667,7 @@ onUnmounted(() => {
           </v-col>
         </v-row>
         <v-row
-          v-if="systemStatusSerie && Object.keys(systemStatusSerie).length > 0"
+          v-if="section === 'status' && systemStatusSerie && Object.keys(systemStatusSerie).length > 0"
           >
           <v-col>
             <v-card>
@@ -743,7 +758,7 @@ onUnmounted(() => {
           </v-col>
         </v-row>
         <v-row
-          v-if="diskListSerie.length > 0"
+          v-if="section === 'storage' && diskListSerie.length > 0"
           >
           <v-col>
             <v-card>
@@ -798,7 +813,7 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
-        <v-row>
+        <v-row v-show="section === 'storage'">
           <v-col>
             <StorageLocations title="Series Storage" :locations="displayedSerieStorage"
               :interval="storageAgent.enabled.value ? storageAgentInterval : undefined"
@@ -807,7 +822,7 @@ onUnmounted(() => {
           </v-col>
         </v-row>
         <v-row
-          v-if="logListSerie.length > 0"
+          v-if="section === 'logs' && logListSerie.length > 0"
           >
           <v-col>
             <v-card>
@@ -849,14 +864,14 @@ onUnmounted(() => {
           </v-col>
         </v-row>
         <v-row
-          v-if="healthListSerie.length > 0"
+          v-if="section === 'health' && healthListSerie.length > 0"
           >
           <v-col>
             <v-card>
               <v-card-title>
                 <v-row>
                   <v-col>
-                    About
+                    Health
                   </v-col>
                   <v-col>
                     <v-text-field
@@ -891,13 +906,15 @@ onUnmounted(() => {
           >
           No system information found
         </v-alert>
+        <v-alert v-if="section === 'logs' && !isLoadingSerie && !logListSerie.length" type="info" class="mt-4">No logs found</v-alert>
+        <v-alert v-if="section === 'health' && !isLoadingSerie && !healthListSerie.length" type="info" class="mt-4">No health issues reported</v-alert>
         <Loading
           :isLoading="isLoadingSerie"
           sentence="Loading data..."
           />
       </v-col>
     </v-row>
-    <v-row>
+    <v-row v-show="section === 'storage'">
       <v-col>
         <StorageLocations v-if="storageAgent.enabled.value" title="Download Storage"
           v-model:interval="storageAgentInterval"
@@ -910,7 +927,7 @@ onUnmounted(() => {
         </v-card>
       </v-col>
     </v-row>
-    <v-row v-if="storageAgent.enabled.value" align="center">
+    <v-row v-if="section === 'storage' && storageAgent.enabled.value" align="center">
       <v-col>
         <v-btn :loading="storageAgent.loading.value" @click="storageAgent.refresh">Refresh Storage</v-btn>
         <div v-if="storageAgent.collectedAt.value" class="text-caption mt-2">
