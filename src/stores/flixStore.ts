@@ -1,14 +1,17 @@
 import { defineStore } from 'pinia';
 import { computed, watch } from 'vue';
 import { useResettable } from '@/composables/useResettable';
+import { usePersistentPreference } from '@/composables/usePersistentPreference';
 
 import type { MediaInstance as Instance } from '@/composables/useMediaService';
 
 export const useFlixStore = defineStore('flix', () => {
   const { state: instances, reset: resetInstances } = useResettable<Instance[]>([]);
 
-  const initialInstance = sessionStorage.getItem('selectedInstance') || null;
-  const { state: selectedInstance, reset: resetSelectedInstance } = useResettable(initialInstance);
+  let initialInstance: string | null = null;
+  try { initialInstance = sessionStorage.getItem('selectedInstance') || null; } catch {}
+  const selectedInstance = usePersistentPreference('instance', initialInstance,
+    (value): value is string | null => value === null || typeof value === 'string');
 
   const selectedInstanceData = computed(() => {
     return instances.value.find(instance => instance.name === selectedInstance.value) || null;
@@ -22,11 +25,13 @@ export const useFlixStore = defineStore('flix', () => {
   }
 
   watch(selectedInstance, (newValue) => {
+    try {
     if (newValue) {
       sessionStorage.setItem('selectedInstance', newValue);
     } else {
       sessionStorage.removeItem('selectedInstance');
     }
+    } catch {}
   });
 
   return {

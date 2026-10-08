@@ -3,6 +3,7 @@
 import { ref, watch, computed, onMounted, toRaw } from 'vue';
 import { useRoute } from 'vue-router';
 import { useFlixStore } from '@/stores/flixStore';
+import { usePersistentPreference, isString, isMediaType } from '@/composables/usePersistentPreference';
 import { useMediaService } from '@/composables/useMediaService';
 import { useCount } from '@/composables/useCount';
 import { useLibraryFilters, savedLibraryFilters, saveLibraryFilters } from '@/composables/useLibraryFilters';
@@ -34,9 +35,9 @@ const { getConfig } = useMediaService({ useAPI, selectedInstanceData });
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
-const { state: search, reset: resetSearch } = useResettable('');
+const search = usePersistentPreference('library.search', '', isString);
 
-const selected_view = ref<'movies' | 'series'>('movies');
+const selected_view = usePersistentPreference('library.view', 'movies', isMediaType);
 const filters = ref(savedLibraryFilters());
 const activeItems = computed(() => selected_view.value === 'movies' ? movieItems.value : serieItems.value);
 const statuses = computed(() => [...new Set<string>(activeItems.value.map(item => item.status).filter(Boolean))].sort());
@@ -321,40 +322,17 @@ async function handleFileUpload() {
   resetShowFileUpload();
 }
 
-watch(search, (newValue) => {
-  if (newValue) {
-    localStorage.setItem("library_search_" + window.location.href, newValue);
-  } else {
-    localStorage.removeItem("library_search_" + window.location.href);
-  }
-
-});
-
 watch([search, filters], () => { movie_page.value = 1; serie_page.value = 1; }, { deep: true });
 watch(filters, saveLibraryFilters, { deep: true });
 
-watch(selected_view, (newValue) => {
+watch(selected_view, () => {
   filters.value.status = null;
   filters.value.quality = null;
   movie_page.value = 1;
   serie_page.value = 1;
-  if (newValue) {
-    localStorage.setItem("library_selected_" + window.location.href, newValue);
-  }
 });
 
 onMounted(() => {
-  if (localStorage.getItem('library_search_' + window.location.href)) {
-    search.value = localStorage.getItem('library_search_' + window.location.href) ?? '';
-  }
-
-  if (localStorage.getItem('library_selected_' + window.location.href)) {
-    const sel = localStorage.getItem('library_selected_' + window.location.href);
-    if (sel === 'movies' || sel === 'series') {
-      selected_view.value = sel;
-    }
-  }
-
   getContent('movies');
   getContent('series');
 });
