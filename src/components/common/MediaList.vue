@@ -34,7 +34,7 @@ const emit = defineEmits(['add', 'remove', 'details']);
             />
         </v-avatar>
       </template>
-      <div>
+      <div class="pr-4">
         <v-list-item-title>
           {{ item.title }} ({{ item.year }})
         </v-list-item-title>
@@ -62,7 +62,7 @@ const emit = defineEmits(['add', 'remove', 'details']);
           </template>
         </v-tooltip>
         <v-row
-          class="mt-4"
+          class="mt-4 mr-0"
           >
           <v-col
             v-if="$vuetify.display.smAndUp"
