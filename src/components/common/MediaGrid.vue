@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MediaImage from './MediaImage.vue';
 
 const props = defineProps<{
   paginated_items: any | null;
@@ -29,8 +30,9 @@ const emit = defineEmits(['card-click']);
         class="media-card"
         @click="emit('card-click', item[idField])"
         >
-        <v-img
+        <MediaImage
           :src="item.prependAvatar ?? item.poster"
+          :alt="item.title"
           class="w-100"
           height="250"
           cover
