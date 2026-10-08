@@ -50,6 +50,7 @@ export function useReleaseSearch(options: MediaServiceOptions) {
   let context: SearchContext | null = null;
   let controller: AbortController | null = null;
   let requestId = 0;
+  let changingSeason = false;
 
   function clearResults() {
     requestId++;
@@ -188,12 +189,19 @@ export function useReleaseSearch(options: MediaServiceOptions) {
 
   watch(season, () => {
     if (context?.type === 'series') {
+      changingSeason = true;
       episodeId.value = null;
+      changingSeason = false;
       clearResults();
       if (!isLoadingEpisodes.value && season.value !== null) void search();
     }
   }, { flush: 'sync' });
-  watch(episodeId, () => { if (context?.type === 'series') clearResults(); }, { flush: 'sync' });
+  watch(episodeId, () => {
+    if (context?.type === 'series' && !changingSeason) {
+      clearResults();
+      if (!isLoadingEpisodes.value && season.value !== null) void search();
+    }
+  }, { flush: 'sync' });
   watch(() => [options.useAPI.value, options.selectedInstanceData.value], close, { flush: 'sync' });
   if (getCurrentScope()) onScopeDispose(close);
 

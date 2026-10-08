@@ -71,7 +71,8 @@ describe('interactive release search', () => {
     expect(fetchMock.mock.calls[1]?.[0]).toBe('http://sonarr.test/api/v3/release?seriesId=42&seasonNumber=1');
     actions.episodeId.value = 22;
     expect(actions.releases.value).toEqual([]);
-    await actions.search();
+    await vi.waitFor(() => expect(actions.releases.value).toEqual([candidate]));
+    expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls[2]?.[0]).toBe('http://sonarr.test/api/v3/release?episodeId=22');
     expect(await actions.grab(candidate)).toBe(true);
     expect(JSON.parse(fetchMock.mock.calls[3]?.[1].body)).toEqual({ guid: 'release-guid', indexerId: 7, seriesId: 42, episodeId: 22 });
