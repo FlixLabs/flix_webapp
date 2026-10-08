@@ -45,6 +45,7 @@ test('downloads display reported remaining time and diagnostics', async ({ page,
 test('dashboard actions open the missing series directly', async ({ page, mutations }) => {
   test.skip(feature !== 'dashboard' && feature !== 'all');
   await page.goto('/dashboard');
+  await page.getByRole('button', { name: /Needs attention/ }).click();
   await expect(page.locator('.v-card-title').filter({ hasText: 'Needs attention' })).toBeVisible();
   await expect(page.getByText('Not enough space').first()).toBeVisible();
   await page.getByRole('link').filter({ hasText: 'Example series' }).first().click();

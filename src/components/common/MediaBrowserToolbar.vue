@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { MediaType } from "@/composables/useMediaService";
+import MediaTypeToggle from './MediaTypeToggle.vue';
 
 const search = defineModel<string | null>("search", { required: true });
 const selectedView = defineModel<MediaType>("selectedView", { required: true });
@@ -29,19 +30,7 @@ defineProps<{ totalMovies: number; totalSeries: number }>();
   </v-row>
   <v-row>
     <v-col>
-      <v-btn-toggle
-        v-model="selectedView"
-        color="primary"
-        variant="outlined"
-        mandatory
-      >
-        <v-btn value="movies" prepend-icon="mdi-movie-open-outline"
-          >Movies</v-btn
-        >
-        <v-btn value="series" prepend-icon="mdi-television-classic"
-          >Series</v-btn
-        >
-      </v-btn-toggle>
+      <MediaTypeToggle v-model="selectedView" />
     </v-col>
     <slot name="actions" />
   </v-row>
