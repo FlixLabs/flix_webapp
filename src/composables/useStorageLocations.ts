@@ -45,4 +45,11 @@ export function useStorageLocations(roots: Ref<RootFolder[]>, disks: Ref<DiskSpa
   }));
 }
 
-export type StorageLocation = ReturnType<typeof useStorageLocations>["value"][number];
+export interface StorageLocation {
+  path: string;
+  accessible: boolean;
+  free: number | null;
+  total: number | null;
+  ratio: number | null;
+  sharedWith?: string[];
+}
