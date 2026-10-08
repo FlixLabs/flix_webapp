@@ -494,6 +494,7 @@ watch(selectedInstance, () => {
         :showAdd="!!selectedMovie && !selectedMovie.already_in_library && qualityMovieItems.length > 0"
         :showRemove="!!selectedMovie && selectedMovie.already_in_library"
         @search="searchContent('movies', $event)"
+        @release-grabbed="showSuccessAlert('Release queued successfully')"
         @add="openQualityDialog('movies', $event)"
         @remove="openDeleteConfirmationDialog('movies', $event)"
         />
@@ -522,6 +523,7 @@ watch(selectedInstance, () => {
         :showAdd="!!selectedSerie && !selectedSerie.already_in_library && qualitySerieItems.length > 0"
         :showRemove="!!selectedSerie && selectedSerie.already_in_library"
         @search="searchContent('series', $event)"
+        @release-grabbed="showSuccessAlert('Release queued successfully')"
         @add="openQualityDialog('series', $event)"
         @remove="openDeleteConfirmationDialog('series', $event)"
         >
