@@ -9,7 +9,7 @@ import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
-import { useMediaActions } from '@/composables/useMediaActions';
+import { useDashboardActions } from '@/composables/useDashboardActions';
 import { useLibraryChecker } from '@/composables/useLibraryChecker';
 import { useQualityProfiles } from '@/composables/useQualityProfiles';
 import Alert from '@/components/common/Alert.vue';
@@ -50,8 +50,8 @@ const { qualityMovieItems, qualitySerieItems, qualityMovie, qualitySerie, getQua
   useAPI, selectedInstanceData, showErrorAlert, initialQuality: 1
 });
 
-const { addItem, deleteItem } = useMediaActions({
-  useAPI, selectedInstanceData, showSuccessAlert, showErrorAlert, refreshContent: getContent
+const { addItem, deleteItem, isPending } = useDashboardActions({
+  useAPI, selectedInstanceData, showSuccessAlert, showErrorAlert, movies: movieItems, series: serieItems,
 });
 
 const { deleteConfirmationDialog, resetDeleteConfirmationDialog, openDeleteConfirmationDialog, confirmDelete } = useDeleteConfirmation({
@@ -262,6 +262,7 @@ onBeforeUnmount(cancelSearch);
           mediaType="movies"
           :paginated_items="paginated_movies"
           :qualityItems="qualityMovieItems"
+          :is-pending="isPending"
           @add="addToList"
           @remove="openDeleteConfirmationDialog"
           />
@@ -292,6 +293,7 @@ onBeforeUnmount(cancelSearch);
           mediaType="series"
           :paginated_items="paginated_series"
           :qualityItems="qualitySerieItems"
+          :is-pending="isPending"
           @add="addToList"
           @remove="openDeleteConfirmationDialog"
           />
