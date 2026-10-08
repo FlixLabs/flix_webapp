@@ -11,6 +11,10 @@ const props = defineProps<{
   showSearch: boolean;
   showAdd: boolean;
   showRemove: boolean;
+  actionPending?: boolean;
+  addDisabled?: boolean;
+  showFileDetails?: boolean;
+  activator?: HTMLElement | null;
 }>();
 
 const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'release-grabbed']);
@@ -145,11 +149,14 @@ onBeforeUnmount(() => {
 
 <template>
   <v-dialog
+    :activator="activator ?? undefined"
+    :open-on-click="activator ? false : undefined"
     :model-value="modelValue"
     @update:model-value="val => emit('update:modelValue', val)"
     max-width="980px"
     max-height="815px"
     class="blur-dialog"
+    transition="fade-transition"
     >
     <v-card
       :ref="setDialogCardRef"
@@ -204,7 +211,7 @@ onBeforeUnmount(() => {
                 </v-row>
                 <v-row no-gutters>
                   <v-col class="meta-value">
-                    {{ item.certification }}
+                    {{ item.certification || 'Unavailable' }}
                   </v-col>
                 </v-row>
               </v-col>
@@ -228,7 +235,7 @@ onBeforeUnmount(() => {
                 </v-row>
                 <v-row no-gutters>
                   <v-col class="meta-value">
-                    {{ item.runTime }}
+                    {{ item.runTime || 'Unavailable' }}
                   </v-col>
                 </v-row>
               </v-col>
@@ -244,7 +251,7 @@ onBeforeUnmount(() => {
           name="details"
           />
         <v-row
-          v-if="item.relativePath"
+          v-if="showFileDetails !== false && item.relativePath"
           >
           <v-col>
             <v-row>
@@ -277,7 +284,7 @@ onBeforeUnmount(() => {
                 <v-text-field
                   label="Size (GB)"
                   variant="outlined"
-                  :model-value="(item.statistics.sizeOnDisk / 1e9).toFixed(2)"
+                  :model-value="item.statistics?.sizeOnDisk != null ? (item.statistics.sizeOnDisk / 1e9).toFixed(2) : 'Unavailable'"
                   :disabled="true"
                   />
               </v-col>
@@ -318,6 +325,8 @@ onBeforeUnmount(() => {
         </v-btn>
         <v-btn
           v-if="showAdd"
+          :loading="actionPending"
+          :disabled="actionPending || addDisabled"
           @click="emit('add', item)"
           color="primary"
           >
@@ -325,6 +334,8 @@ onBeforeUnmount(() => {
         </v-btn>
         <v-btn
           v-if="showRemove"
+          :loading="actionPending"
+          :disabled="actionPending"
           @click="emit('remove', item)"
           color="error"
           >
