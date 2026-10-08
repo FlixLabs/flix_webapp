@@ -2,6 +2,7 @@
 
 import { ref, watch, computed, onMounted } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
+import { usePersistentPreference, isString, isMediaType } from '@/composables/usePersistentPreference';
 import { useMediaService } from '@/composables/useMediaService';
 import { useCount } from '@/composables/useCount';
 import { useFilteredItems } from '@/composables/useFilteredItems';
@@ -42,9 +43,9 @@ const {
   resetItemQuality
 } = useQualitySelection();
 
-const { state: search, reset: resetSearch } = useResettable('');
+const search = usePersistentPreference('outings.search', '', isString);
 
-const selected_view = ref<'movies' | 'series'>('movies');
+const selected_view = usePersistentPreference('outings.view', 'movies', isMediaType);
 
 const items_per_page = 12;
 const movie_page = ref(1);
@@ -401,37 +402,9 @@ function searchContent(type: 'movies' | 'series', item: any) {
   resetSerieDialog();
 }
 
-watch(search, (newValue) => {
-  if (newValue) {
-    localStorage.setItem("outings_search_" + window.location.href, newValue);
-  } else {
-    localStorage.removeItem("outings_search_" + window.location.href);
-  }
-
-  getContent('movies');
-  getContent('series');
-});
-
-watch(selected_view, (newValue) => {
-  if (newValue) {
-    localStorage.setItem("outings_selected_" + window.location.href, newValue);
-  }
-});
+watch(search, () => { movie_page.value = 1; serie_page.value = 1; });
 
 onMounted(() => {
-  if (localStorage.getItem('outings_search_' + window.location.href)) {
-    search.value = localStorage.getItem('outings_search_' + window.location.href) ?? '';
-  }
-
-  if (localStorage.getItem('outings_selected_' + window.location.href)) {
-    const sel = localStorage.getItem('outings_selected_' + window.location.href);
-    if (sel === 'movies' || sel === 'series') {
-      selected_view.value = sel;
-    }
-  }
-
-  getQualityProfileList('movies');
-  getQualityProfileList('series');
   getContent('movies');
   getContent('series');
 });
