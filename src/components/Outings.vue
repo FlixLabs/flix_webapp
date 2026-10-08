@@ -9,7 +9,7 @@ import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
-import { useMediaActions } from '@/composables/useMediaActions';
+import { useMediaActions, canSearchItem } from '@/composables/useMediaActions';
 import { useDialog } from '@/composables/useDialog';
 import { useLibraryChecker } from '@/composables/useLibraryChecker';
 import { useQualitySelection } from '@/composables/useQualitySelection';
@@ -490,7 +490,7 @@ watch(selectedInstance, () => {
         mediaType="Movie"
         :item="selectedMovie"
         announcementName="Release"
-        :showSearch="!!selectedMovie && !selectedMovie.hasFile && selectedMovie.status == 'released'"
+        :showSearch="!!selectedMovie?.already_in_library && canSearchItem('movies', selectedMovie)"
         :showAdd="!!selectedMovie && !selectedMovie.already_in_library && qualityMovieItems.length > 0"
         :showRemove="!!selectedMovie && selectedMovie.already_in_library"
         @search="searchContent('movies', $event)"
@@ -518,7 +518,7 @@ watch(selectedInstance, () => {
         mediaType="Serie"
         :item="selectedSerie"
         announcementName="Premiere"
-        :showSearch="!!selectedSerie && selectedSerie.statistics && selectedSerie.statistics.sizeOnDisk == 0 && selectedSerie.status != 'upcoming'"
+        :showSearch="!!selectedSerie?.already_in_library && canSearchItem('series', selectedSerie)"
         :showAdd="!!selectedSerie && !selectedSerie.already_in_library && qualitySerieItems.length > 0"
         :showRemove="!!selectedSerie && selectedSerie.already_in_library"
         @search="searchContent('series', $event)"
