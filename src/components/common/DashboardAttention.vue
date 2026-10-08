@@ -17,7 +17,20 @@ const critical = computed(() => {
 function refresh() { void attention.refresh(); void agent.refresh(); }
 </script>
 <template>
-  <v-card class="mb-6">
+  <v-expansion-panels>
+    <v-expansion-panel>
+      <v-expansion-panel-title>
+        <div>
+          <div>Needs attention</div>
+          <div class="text-caption text-medium-emphasis mt-1">
+            <template v-if="loading">Loading...</template>
+            <template v-else>{{ blocked.length }} downloads &middot; {{ missingCount ?? 'Unavailable' }} {{ missingCount === 1 ? 'missing episode' : 'missing episodes' }} &middot; {{ critical.length }} storage alerts</template>
+          </div>
+          <div v-if="errors.length || agent.error.value" class="text-caption text-warning">Some information is unavailable</div>
+        </div>
+      </v-expansion-panel-title>
+      <v-expansion-panel-text eager>
+  <v-card variant="flat">
     <v-card-title class="d-flex flex-wrap align-center justify-space-between ga-2">
       Needs attention
       <v-btn variant="text" prepend-icon="mdi-refresh" :loading="loading" @click="refresh">Refresh</v-btn>
@@ -53,4 +66,7 @@ function refresh() { void attention.refresh(); void agent.refresh(); }
       </v-row>
     </v-card-text>
   </v-card>
+      </v-expansion-panel-text>
+    </v-expansion-panel>
+  </v-expansion-panels>
 </template>
