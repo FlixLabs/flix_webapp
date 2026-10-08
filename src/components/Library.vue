@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
 import { ref, watch, computed, onMounted, toRaw } from 'vue';
+import { useRoute } from 'vue-router';
 import { useFlixStore } from '@/stores/flixStore';
 import { useMediaService } from '@/composables/useMediaService';
 import { useCount } from '@/composables/useCount';
@@ -23,6 +24,7 @@ import SeriesSizeField from '@/components/common/SeriesSizeField.vue';
 import { useEpisodeSummary } from '@/composables/useEpisodeSummary';
 
 const store = useFlixStore();
+const route = useRoute();
 
 const selectedInstance = computed(() => store.selectedInstance);
 const selectedInstanceData = computed(() => store.selectedInstanceData);
@@ -101,6 +103,8 @@ function getContent(type: 'movies' | 'series') {
   fetch(base_url + '/api/v3/' + url_type + '?apikey=' + api_key)
     .then(async (response) => {
       const json_data = await response.json();
+      const currentConfig = getConfig(type);
+      if (currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
 
       let items = [];
       for (let item of json_data) {
@@ -224,6 +228,16 @@ function handleSerieClick(serie_id: number) {
     getSerieEpisodes(serie.id);
   }
 }
+
+watch([() => route.query.media, () => route.query.id, movieItems, serieItems], () => {
+  const type = route.query.media;
+  if (type !== 'movies' && type !== 'series') return;
+  selected_view.value = type;
+  const id = Number(route.query.id);
+  if (!Number.isInteger(id) || id <= 0) return;
+  if (type === 'movies' && selectedMovie.value?.id !== id) handleMovieClick(id);
+  if (type === 'series' && selectedSerie.value?.id !== id) handleSerieClick(id);
+}, { immediate: true });
 
 const { grouped_episodes, totalSerieSizeOnDisk } = useEpisodeSummary(serieEpisodes);
 
