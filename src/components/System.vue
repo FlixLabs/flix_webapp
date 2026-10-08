@@ -9,6 +9,7 @@ import { useDiskAndLogAndHealthList } from '@/composables/useDiskAndLogAndHealth
 import Loading from '@/components/common/Loading.vue';
 import StorageLocations from '@/components/common/StorageLocations.vue';
 import { useStorageLocations, type RootFolder } from '@/composables/useStorageLocations';
+import { useAgentStorage } from '@/composables/useAgentStorage';
 
 const store = useFlixStore();
 
@@ -47,6 +48,12 @@ const logListSerie = createLogList();
 const { state: logListSerieInterval, reset: resetLogListSerieInterval } = useResettable(60);
 const healthListSerie = createHealthList();
 const { state: healthListSerieInterval, reset: resetHealthListSerieInterval } = useResettable(60);
+
+const storageAgentInterval = ref(60);
+const storageAgent = useAgentStorage({ useAPI, selectedInstanceData, interval: storageAgentInterval });
+const displayedMovieStorage = computed(() => storageAgent.enabled.value ? storageAgent.locations('movies') : storageLocationsMovie.value);
+const displayedSerieStorage = computed(() => storageAgent.enabled.value ? storageAgent.locations('series') : storageLocationsSerie.value);
+const displayedDownloadStorage = computed(() => storageAgent.locations('downloads'));
 
 function progressColor(ratio: number): string {
   const threshold = import.meta.env.VITE_SYSTEM_STORAGE_SPACE_TRESHOLD;
@@ -445,7 +452,7 @@ onUnmounted(() => {
               <v-card-title>
                 <v-row>
                   <v-col>
-                    Space
+                    Disks visible to Radarr
                   </v-col>
                   <v-col>
                     <v-text-field
@@ -495,7 +502,10 @@ onUnmounted(() => {
         </v-row>
         <v-row>
           <v-col>
-            <StorageLocations title="Movie Storage" :locations="storageLocationsMovie" />
+            <StorageLocations title="Movie Storage" :locations="displayedMovieStorage"
+              :interval="storageAgent.enabled.value ? storageAgentInterval : undefined"
+              @update:interval="storageAgentInterval = $event"
+              :loading="storageAgent.loading.value" :error="storageAgent.error.value" />
           </v-col>
         </v-row>
         <v-row
@@ -740,7 +750,7 @@ onUnmounted(() => {
               <v-card-title>
                 <v-row>
                   <v-col>
-                    Space
+                    Disks visible to Sonarr
                   </v-col>
                   <v-col>
                     <v-text-field
@@ -790,7 +800,10 @@ onUnmounted(() => {
         </v-row>
         <v-row>
           <v-col>
-            <StorageLocations title="Series Storage" :locations="storageLocationsSerie" />
+            <StorageLocations title="Series Storage" :locations="displayedSerieStorage"
+              :interval="storageAgent.enabled.value ? storageAgentInterval : undefined"
+              @update:interval="storageAgentInterval = $event"
+              :loading="storageAgent.loading.value" :error="storageAgent.error.value" />
           </v-col>
         </v-row>
         <v-row
@@ -886,12 +899,23 @@ onUnmounted(() => {
     </v-row>
     <v-row>
       <v-col>
-        <v-card>
+        <StorageLocations v-if="storageAgent.enabled.value" title="Download Storage"
+          v-model:interval="storageAgentInterval"
+          :locations="displayedDownloadStorage" :loading="storageAgent.loading.value" :error="storageAgent.error.value" />
+        <v-card v-else>
           <v-card-title>Download Storage</v-card-title>
           <v-card-text>
-            Unavailable: the download storage has not been identified in Radarr/Sonarr.
+            Unavailable: download storage measurements require Flix API and a configured storage agent.
           </v-card-text>
         </v-card>
+      </v-col>
+    </v-row>
+    <v-row v-if="storageAgent.enabled.value" align="center">
+      <v-col>
+        <v-btn :loading="storageAgent.loading.value" @click="storageAgent.refresh">Refresh Storage</v-btn>
+        <div v-if="storageAgent.collectedAt.value" class="text-caption mt-2">
+          Last measurement: {{ new Date(storageAgent.collectedAt.value).toLocaleString() }}
+        </div>
       </v-col>
     </v-row>
   </v-container>
