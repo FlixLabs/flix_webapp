@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MediaImage from './MediaImage.vue';
+import ReleaseSelectionDialog from './ReleaseSelectionDialog.vue';
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -12,7 +13,15 @@ const props = defineProps<{
   showRemove: boolean;
 }>();
 
-const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove']);
+const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'release-grabbed']);
+const releaseDialog = ref(false);
+watch(() => props.modelValue, value => { if (!value) releaseDialog.value = false; });
+
+function releaseGrabbed() {
+  releaseDialog.value = false;
+  emit('release-grabbed');
+  emit('update:modelValue', false);
+}
 
 const dialogCardEl = ref<HTMLElement | null>(null);
 const dialogScrollEl = ref<HTMLElement | null>(null);
@@ -298,7 +307,8 @@ onBeforeUnmount(() => {
           <span>Scroll</span>
         </div>
       </v-card-text>
-      <v-card-actions>
+      <v-card-actions class="flex-wrap">
+        <v-btn v-if="showSearch" color="primary" @click="releaseDialog = true">Choose Release</v-btn>
         <v-btn
           v-if="showSearch"
           @click="emit('search', item)"
@@ -329,6 +339,12 @@ onBeforeUnmount(() => {
       </v-card-actions>
     </v-card>
   </v-dialog>
+  <ReleaseSelectionDialog
+    v-model="releaseDialog"
+    :media-type="mediaType === 'Movie' ? 'movies' : 'series'"
+    :item="item"
+    @grabbed="releaseGrabbed"
+  />
 </template>
 
 <style scoped>

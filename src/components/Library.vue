@@ -420,6 +420,7 @@ watch(selectedInstance, () => {
         :showAdd="false"
         :showRemove="!!selectedMovie"
         @search="searchContent('movies', $event)"
+        @release-grabbed="showSuccessAlert('Release queued successfully')"
         @add=""
         @remove="openDeleteConfirmationDialog('movies', $event)"
       />
@@ -448,6 +449,7 @@ watch(selectedInstance, () => {
         :showAdd="false"
         :showRemove="!!selectedSerie"
         @search="searchContent('series', $event)"
+        @release-grabbed="showSuccessAlert('Release queued successfully')"
         @add=""
         @remove="openDeleteConfirmationDialog('series', $event)"
         >
