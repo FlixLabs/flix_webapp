@@ -9,7 +9,7 @@ import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
-import { useMediaActions } from '@/composables/useMediaActions';
+import { useMediaActions, canSearchItem } from '@/composables/useMediaActions';
 import { useDialog } from '@/composables/useDialog';
 import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
@@ -416,7 +416,7 @@ watch(selectedInstance, () => {
         mediaType="Movie"
         :item="selectedMovie"
         announcementName="Release"
-        :showSearch="!!selectedMovie && !selectedMovie.hasFile && selectedMovie.status == 'released'"
+        :showSearch="canSearchItem('movies', selectedMovie)"
         :showAdd="false"
         :showRemove="!!selectedMovie"
         @search="searchContent('movies', $event)"
@@ -444,7 +444,7 @@ watch(selectedInstance, () => {
         mediaType="Serie"
         :item="selectedSerie"
         announcementName="Premiere"
-        :showSearch="!!selectedSerie && selectedSerie.statistics && selectedSerie.statistics.sizeOnDisk == 0 && selectedSerie.status != 'upcoming'"
+        :showSearch="canSearchItem('series', selectedSerie)"
         :showAdd="false"
         :showRemove="!!selectedSerie"
         @search="searchContent('series', $event)"

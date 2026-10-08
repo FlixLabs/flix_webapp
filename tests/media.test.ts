@@ -4,7 +4,7 @@ import {
   useMediaService,
   type MediaInstance,
 } from "@/composables/useMediaService";
-import { useMediaActions } from "@/composables/useMediaActions";
+import { useMediaActions, canSearchItem } from "@/composables/useMediaActions";
 import { useEpisodeSummary } from "@/composables/useEpisodeSummary";
 import { useQualityProfiles } from "@/composables/useQualityProfiles";
 import { useDeleteConfirmation } from "@/composables/useDeleteConfirmation";
@@ -52,6 +52,22 @@ describe("media service configuration", () => {
 });
 
 describe("media actions", () => {
+  it.each(["movies", "series"] as const)("allows relaunching a search for existing %s", type => {
+    expect(canSearchItem(type, { id: 7, title: "Existing media", status: type === "movies" ? "released" : "continuing" })).toBe(true);
+    expect(canSearchItem(type, { id: 7, title: "Not in library", status: "released", already_in_library: false })).toBe(false);
+    expect(canSearchItem(type, null)).toBe(false);
+    expect(canSearchItem(type, { title: "No service ID", status: "released" })).toBe(false);
+    expect(canSearchItem(type, { id: 7, title: "Upcoming", status: "upcoming" })).toBe(false);
+  });
+
+  it("does not send search commands without a valid service ID", async () => {
+    const options = createOptions();
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    await useMediaActions(options).searchItem("movies", { title: "No service ID" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(options.showErrorAlert).toHaveBeenCalled();
+  });
   it.each(["movies", "series"] as const)(
     "adds %s with the correct service and search options",
     async (type) => {
