@@ -57,7 +57,8 @@ async function download() {
 </script>
 
 <template>
-  <v-dialog v-model="model" max-width="1200" scrollable :persistent="isGrabbing">
+  <!-- Keep select-menu measurements stable while the dialog opens. -->
+  <v-dialog v-model="model" max-width="1200" transition="fade-transition" scrollable :persistent="isGrabbing">
     <v-card>
       <v-card-title class="text-wrap">Choose Release - {{ item?.title }}</v-card-title>
       <v-card-text>
