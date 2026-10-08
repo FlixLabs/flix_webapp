@@ -51,8 +51,10 @@ export function useMediaActions(options: MediaActionsOptions) {
       if (!response.ok) throw new Error(errorMessage);
       options.showSuccessAlert(successMessage);
       options.refreshContent(type);
+      return response;
     } catch {
       options.showErrorAlert(errorMessage);
+      return null;
     }
   }
 
