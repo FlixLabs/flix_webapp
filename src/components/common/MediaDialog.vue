@@ -302,7 +302,7 @@ onBeforeUnmount(() => {
           @click="emit('search', item)"
           color="primary"
           >
-          Search
+          {{ item.hasFile || item.statistics?.sizeOnDisk > 0 ? 'Search Again' : 'Search' }}
         </v-btn>
         <v-btn
           v-if="showAdd"
