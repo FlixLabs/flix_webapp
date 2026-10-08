@@ -1,9 +1,20 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { applyPrimary, DEFAULT_THEME_NAME, getSavedTheme, LIGHT_THEME_NAME, saveTheme, THEME_STORAGE_KEY } from '@/theme/constants';
+import { applyPrimary, DEFAULT_THEME_NAME, DEFAULT_PRIMARY, DEFAULT_LIGHT_PRIMARY, getSavedTheme, LIGHT_THEME_NAME, saveTheme, THEME_STORAGE_KEY } from '@/theme/constants';
 
 afterEach(() => vi.unstubAllGlobals());
 
 describe('theme preferences', () => {
+  it('uses a more legible default accent in light mode without overriding custom colors', () => {
+    const themes = {
+      [DEFAULT_THEME_NAME]: { colors: { primary: '#AA5500' } },
+      [LIGHT_THEME_NAME]: { colors: { primary: '#AA5500' } },
+    };
+    applyPrimary(themes, DEFAULT_PRIMARY);
+    expect(themes[DEFAULT_THEME_NAME]!.colors.primary).toBe(DEFAULT_PRIMARY);
+    expect(themes[LIGHT_THEME_NAME]!.colors.primary).toBe(DEFAULT_LIGHT_PRIMARY);
+    applyPrimary(themes, '#AA5500');
+    expect(themes[LIGHT_THEME_NAME]!.colors.primary).toBe('#AA5500');
+  });
   it.each([null, '', 'invalid', DEFAULT_THEME_NAME])('keeps the dark default for %s', value => {
     vi.stubGlobal('localStorage', { getItem: vi.fn().mockReturnValue(value) });
     expect(getSavedTheme()).toBe(DEFAULT_THEME_NAME);

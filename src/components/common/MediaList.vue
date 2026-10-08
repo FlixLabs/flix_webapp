@@ -131,7 +131,7 @@ const emit = defineEmits(['add', 'remove']);
   -webkit-box-orient: vertical;
   overflow: hidden;
   max-width: 100%;
-  color: gray;
+  color: rgba(var(--v-theme-on-surface), 0.8);
   font-size: 0.9em;
   margin-top: 5px;
   margin-left: 15px;
@@ -145,5 +145,17 @@ const emit = defineEmits(['add', 'remove']);
   border-radius: 12px;
   background: rgb(var(--v-theme-surface));
   border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.spacing-list-item :deep(.v-list-item-title) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 599px) {
+  .custom-avatar {
+    width: 96px !important;
+    height: 144px !important;
+  }
 }
 </style>

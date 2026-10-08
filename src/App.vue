@@ -83,6 +83,7 @@ onMounted(() => {
 </script>
 
 <template>
+  <a class="flix-skip-link" href="#main-content">Skip to content</a>
   <v-app class="flix-app">
     <v-app-bar
       color="surface"
@@ -94,6 +95,8 @@ onMounted(() => {
         v-slot:prepend
         >
         <v-app-bar-nav-icon
+          :aria-label="drawer ? 'Close navigation' : 'Open navigation'"
+          :aria-expanded="drawer"
           @click.stop="drawer = !drawer"
           />
       </template>
@@ -141,7 +144,7 @@ onMounted(() => {
       </v-list>
     </v-navigation-drawer>
 
-    <v-main class="flix-main">
+    <v-main id="main-content" class="flix-main" tabindex="-1">
       <Alert :alert="alert" @update:alert="alert = $event" />
       <v-container v-if="currentPage" class="flix-page-heading pb-0">
         <div class="d-flex align-center ga-3">
