@@ -16,6 +16,13 @@ import colors from 'vuetify/util/colors'
 import { DEFAULT_THEME_NAME, DEFAULT_PRIMARY, isCustomPrimary } from '@/theme/constants'
 
 const vuetify = createVuetify({
+  defaults: {
+    VCard: { rounded: 'lg', elevation: 0, border: true },
+    VBtn: { rounded: 'lg' },
+    VBtnGroup: { VBtn: { rounded: 0 } },
+    VTextField: { color: 'primary' },
+    VSelect: { color: 'primary' },
+  },
   components: {
     ...components,
   },
@@ -27,6 +34,10 @@ const vuetify = createVuetify({
         dark: true,
         colors: {
           primary: DEFAULT_PRIMARY,
+          background: '#111315',
+          surface: '#1B1E22',
+          'surface-variant': '#30353B',
+          'on-surface-variant': '#EEF0F2',
         }
       }
     }

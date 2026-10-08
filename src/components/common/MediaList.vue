@@ -108,7 +108,7 @@ const emit = defineEmits(['add', 'remove']);
 
 <style scoped>
 .custom-list {
-  background-color: #121212 !important;
+  background: transparent;
 }
 
 .custom-avatar {
@@ -141,6 +141,8 @@ const emit = defineEmits(['add', 'remove']);
 }
 
 .spacing-list-item {
-  border-radius: 5px !important;
+  border-radius: 12px;
+  background: rgb(var(--v-theme-surface));
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
 }
 </style>
