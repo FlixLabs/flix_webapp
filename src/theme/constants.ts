@@ -3,6 +3,7 @@ import type { ThemeDefinition } from 'vuetify'
 
 export const DEFAULT_THEME_NAME = 'flixDark';
 export const LIGHT_THEME_NAME = 'flixLight';
+export const DEFAULT_LIGHT_PRIMARY = '#A94F00';
 export const THEME_STORAGE_KEY = 'flix_theme';
 
 export function getSavedTheme() {
@@ -22,7 +23,7 @@ export function saveTheme(name: string) {
 export function applyPrimary(themes: Record<string, ThemeDefinition>, primary: string) {
   for (const name of [DEFAULT_THEME_NAME, LIGHT_THEME_NAME]) {
     const colors = themes[name]?.colors;
-    if (colors) colors.primary = primary;
+    if (colors) colors.primary = name === LIGHT_THEME_NAME && !isCustomPrimary(primary) ? DEFAULT_LIGHT_PRIMARY : primary;
   }
 }
 

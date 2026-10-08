@@ -28,6 +28,7 @@ const emit = defineEmits(['card-click']);
       >
       <v-card
         class="media-card"
+        :aria-label="`Open ${item.title}`"
         @click="emit('card-click', item[idField])"
         >
         <MediaImage
@@ -38,7 +39,8 @@ const emit = defineEmits(['card-click']);
           cover
           />
         <v-card-title
-          class="title-line text-center"
+          class="title-line text-center text-wrap"
+          :title="item.title"
           >
           {{ item.title }}
         </v-card-title>
@@ -91,6 +93,8 @@ const emit = defineEmits(['card-click']);
   font-size: 1rem;
   line-height: 1.2;
   font-weight: bold;
+  min-height: 3.4rem;
+  overflow-wrap: anywhere;
 }
 
 .media-date {
