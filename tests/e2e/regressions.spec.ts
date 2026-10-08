@@ -26,7 +26,7 @@ test('changing a series season searches again without downloading', async ({ pag
   const searches: string[] = [];
   page.on('request', request => { if (request.url().includes('/api/v3/release?')) searches.push(request.url()); });
   await page.goto('/library');
-  await page.getByRole('button', { name: 'Series', exact: true }).click();
+  await page.getByRole('button', { name: 'Series (1)', exact: true }).click();
   await page.locator('.media-card').filter({ hasText: 'Example series' }).click();
   await page.getByRole('button', { name: 'Choose Release', exact: true }).click();
   await expect.poll(() => searches.some(url => url.includes('seasonNumber=1'))).toBe(true);

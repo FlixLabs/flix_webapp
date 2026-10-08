@@ -6,7 +6,7 @@ defineProps<{ totalMovies?: number; totalSeries?: number }>();
 </script>
 
 <template>
-  <v-btn-toggle v-model="selectedView" color="primary" variant="outlined" mandatory aria-label="Media type">
+  <v-btn-toggle v-model="selectedView" color="primary" variant="outlined" mandatory class="flex-shrink-0" aria-label="Media type">
     <v-btn value="movies" prepend-icon="mdi-movie-open-outline">
       Movies<span v-if="totalMovies !== undefined" class="ml-1">({{ totalMovies }})</span>
     </v-btn>

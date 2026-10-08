@@ -50,6 +50,10 @@ const selected_view = usePersistentPreference('outings.view', 'movies', isMediaT
 const items_per_page = 12;
 const movie_page = ref(1);
 const serie_page = ref(1);
+const activePage = computed({
+  get: () => selected_view.value === 'movies' ? movie_page.value : serie_page.value,
+  set: value => { (selected_view.value === 'movies' ? movie_page : serie_page).value = value; },
+});
 
 const { state: qualityItems, reset: resetQualityItems } = useResettable<any[]>([]);
 const { state: qualitySelected, reset: resetQualitySelected } = useResettable<any | null>(null);
@@ -437,6 +441,8 @@ watch(selectedInstance, () => {
     />
   <v-container>
     <MediaBrowserToolbar
+      v-model:page="activePage"
+      :total-pages="selected_view === 'movies' ? movies_total_pages : series_total_pages"
       v-model:search="search"
       v-model:selected-view="selected_view"
       :total-movies="total_movies"
@@ -447,10 +453,8 @@ watch(selectedInstance, () => {
       v-if="selected_view == 'movies'"
       >
       <MediaBrowserResults
-        v-model:page="movie_page"
         :items="paginated_movies"
         :total="total_movies"
-        :total-pages="movies_total_pages"
         :is-loading="isLoadingMovie"
         id-field="tmdbId"
         announcementName="Release"
@@ -476,10 +480,8 @@ watch(selectedInstance, () => {
       v-else-if="selected_view == 'series'"
       >
       <MediaBrowserResults
-        v-model:page="serie_page"
         :items="paginated_series"
         :total="total_series"
-        :total-pages="series_total_pages"
         :is-loading="isLoadingSerie"
         id-field="tmdbId"
         announcementName="Premiere"

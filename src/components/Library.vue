@@ -47,6 +47,10 @@ const years = computed(() => [...new Set<number>(activeItems.value.map(item => i
 const items_per_page = 12;
 const movie_page = ref(1);
 const serie_page = ref(1);
+const activePage = computed({
+  get: () => selected_view.value === 'movies' ? movie_page.value : serie_page.value,
+  set: value => { (selected_view.value === 'movies' ? movie_page : serie_page).value = value; },
+});
 
 const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
 const { state: movieItems, reset: resetMovieItems } = useResettable<any[]>([]);
@@ -355,13 +359,15 @@ watch(selectedInstance, () => {
     />
   <v-container>
     <MediaBrowserToolbar
+      v-model:page="activePage"
+      :total-pages="selected_view === 'movies' ? movies_total_pages : series_total_pages"
       v-model:search="search"
       v-model:selected-view="selected_view"
       :total-movies="total_movies"
       :total-series="total_series"
     >
       <template #actions>
-      <v-col
+      <div
         v-if="(selected_view == 'movies' && filtered_movies.length > 0) || (selected_view == 'series' && filtered_series.length > 0)"
         class="d-flex justify-end align-center"
         >
@@ -383,7 +389,7 @@ watch(selectedInstance, () => {
             Import
           </v-btn>
         </v-btn-group>
-      </v-col>
+      </div>
       </template>
     </MediaBrowserToolbar>
     <LibraryFilters v-model="filters" :statuses="statuses" :qualities="qualities" :years="years" />
@@ -406,10 +412,8 @@ watch(selectedInstance, () => {
       v-if="selected_view == 'movies'"
       >
       <MediaBrowserResults
-        v-model:page="movie_page"
         :items="paginated_movies"
         :total="total_movies"
-        :total-pages="movies_total_pages"
         :is-loading="isLoadingMovie"
         id-field="id"
         announcementName="Release"
@@ -435,10 +439,8 @@ watch(selectedInstance, () => {
       v-else-if="selected_view == 'series'"
       >
       <MediaBrowserResults
-        v-model:page="serie_page"
         :items="paginated_series"
         :total="total_series"
-        :total-pages="series_total_pages"
         :is-loading="isLoadingSerie"
         id-field="id"
         announcementName="Premiere"
