@@ -18,6 +18,7 @@ import Loading from '@/components/common/Loading.vue';
 import MediaList from '@/components/common/MediaList.vue';
 import DashboardAttention from '@/components/common/DashboardAttention.vue';
 import MediaTypeToggle from '@/components/common/MediaTypeToggle.vue';
+import PageNavigation from '@/components/common/PageNavigation.vue';
 
 const store = useFlixStore();
 
@@ -35,7 +36,7 @@ const items_per_page = 4;
 const movie_page = ref(1);
 const serie_page = ref(1);
 const mediaType = ref<'movies' | 'series'>(localStorage.getItem('dashboard_media_type') === 'series' ? 'series' : 'movies');
-const navigation = ref<HTMLElement | null>(null);
+const navigation = ref<InstanceType<typeof PageNavigation> | null>(null);
 const activePage = computed({
   get: () => mediaType.value === 'movies' ? movie_page.value : serie_page.value,
   set: value => { (mediaType.value === 'movies' ? movie_page : serie_page).value = value; },
@@ -57,7 +58,7 @@ const activeLoading = computed(() => mediaType.value === 'movies' ? isLoadingMov
 watch(mediaType, value => localStorage.setItem('dashboard_media_type', value));
 watch([mediaType, activePage], async () => {
   await nextTick();
-  navigation.value?.scrollIntoView({ block: 'start' });
+  navigation.value?.scrollToStart();
 });
 const { isAlreadyInLibrary: checkSeries } = useLibraryChecker("series", serieItems, showErrorAlert, useAPI);
 
@@ -231,9 +232,7 @@ onBeforeUnmount(cancelSearch);
     @cancel="resetDeleteConfirmationDialog"
     />
   <v-container>
-    <div ref="navigation" class="dashboard-navigation-anchor" />
-    <div class="dashboard-navigation">
-      <v-sheet rounded="lg" border class="pa-3">
+    <PageNavigation ref="navigation">
         <v-text-field
           v-model="search"
           label="Search"
@@ -254,8 +253,7 @@ onBeforeUnmount(cancelSearch);
             rounded
           />
         </div>
-      </v-sheet>
-    </div>
+    </PageNavigation>
     <DashboardAttention class="mt-4" />
     <section :aria-label="mediaType === 'movies' ? 'Movie results' : 'Series results'" :aria-busy="activeLoading">
       <MediaList
@@ -273,15 +271,3 @@ onBeforeUnmount(cancelSearch);
     </section>
   </v-container>
 </template>
-
-<style scoped>
-.dashboard-navigation {
-  position: sticky;
-  top: var(--v-layout-top, 64px);
-  z-index: 2;
-}
-
-.dashboard-navigation-anchor {
-  scroll-margin-top: var(--v-layout-top, 64px);
-}
-</style>
