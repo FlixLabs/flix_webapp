@@ -2,9 +2,12 @@
 
 import { ref, watch } from 'vue';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: boolean;
-}>();
+  message?: string;
+}>(), {
+  message: 'Are you sure you want to delete this item? This action cannot be undone.',
+});
 
 const emits = defineEmits(['update:modelValue', 'cancel', 'confirm']);
 
@@ -40,7 +43,7 @@ function confirm() {
         Confirm deletion
       </v-card-title>
       <v-card-text>
-        Are you sure you want to delete this item? This action cannot be undone.
+        {{ message }}
       </v-card-text>
       <v-card-actions>
         <v-btn
