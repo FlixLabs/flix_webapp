@@ -7,6 +7,10 @@ import { useMediaService } from '@/composables/useMediaService';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import Loading from '@/components/common/Loading.vue';
+import Alert from '@/components/common/Alert.vue';
+import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
+import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
+import { useDownloadActions } from '@/composables/useDownloadActions';
 
 const store = useFlixStore();
 
@@ -17,6 +21,15 @@ const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE
 const { getConfig } = useMediaService({ useAPI, selectedInstanceData });
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
+
+const { isRemoving, removeDownload } = useDownloadActions({
+  useAPI, selectedInstanceData, showSuccessAlert, showErrorAlert,
+  refreshDownloads: type => { getDownload(type); getHistory(type); },
+});
+const {
+  deleteConfirmationDialog, itemToDelete, resetDeleteConfirmationDialog,
+  resetItemToDelete, openDeleteConfirmationDialog, confirmDelete,
+} = useDeleteConfirmation({ deleteItem: removeDownload });
 
 const { state: isLoadingMovieRecords, reset: resetIsLoadingMovieRecords } = useResettable(false);
 const { state: movieRecords, reset: resetMovieRecords } = useResettable<any[]>([]);
@@ -32,7 +45,10 @@ const { state: isLoadingSerieHistory, reset: resetIsLoadingSerieHistory } = useR
 const { state: serieHistory, reset: resetSerieHistory } = useResettable<any[]>([]);
 const { state: serieHistoryInterval, reset: resetSerieHistoryInterval } = useResettable(60);
 
+const downloadRequestIds = { movies: 0, series: 0 };
+
 function getDownload(type: 'movies' | 'series') {
+  const requestId = ++downloadRequestIds[type];
   let base_url = '';
   let api_key = '';
 
@@ -50,6 +66,8 @@ function getDownload(type: 'movies' | 'series') {
   fetch(base_url + '/api/v3/queue?apikey=' + api_key)
     .then(async (response) => {
       const json_data = await response.json();
+      const currentConfig = getConfig(type);
+      if (requestId !== downloadRequestIds[type] || currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
 
       let items = [];
       for (let item of json_data.records) {
@@ -63,6 +81,7 @@ function getDownload(type: 'movies' | 'series') {
         }
 
         items.push({
+          id: item.id,
           title: item.title,
           date: item.added,
           indexer: item.indexer,
@@ -81,9 +100,10 @@ function getDownload(type: 'movies' | 'series') {
       }
     })
     .catch((error) => {
-      showErrorAlert(error);
+      if (requestId === downloadRequestIds[type]) showErrorAlert(error);
     })
     .finally(() => {
+      if (requestId !== downloadRequestIds[type]) return;
       if (type == 'movies') {
         resetIsLoadingMovieRecords();
       }
@@ -199,9 +219,29 @@ onMounted(() => {
 onUnmounted(() => {
   Object.values(intervalIds).forEach(id => clearInterval(id));
 });
+
+watch(selectedInstance, () => {
+  resetDeleteConfirmationDialog();
+  resetItemToDelete();
+  resetMovieRecords();
+  resetSerieRecords();
+  resetMovieHistory();
+  resetSerieHistory();
+  getDownload('movies');
+  getDownload('series');
+  getHistory('movies');
+  getHistory('series');
+}, { flush: 'sync' });
 </script>
 
 <template>
+  <Alert :alert="alert" @update:alert="alert = $event" />
+  <DeleteConfirmationDialog
+    v-model="deleteConfirmationDialog"
+    :message="`Remove '${itemToDelete.item?.title ?? ''}' from the queue and download client? Downloaded files may be deleted. The media will remain in your library.`"
+    @confirm="confirmDelete"
+    @cancel="resetItemToDelete"
+  />
   <v-container>
     <v-row>
       <v-col
@@ -236,12 +276,13 @@ onUnmounted(() => {
                       <!--<th>Languages</th>-->
                       <th>Status</th>
                       <th>Progress</th>
+                      <th class="download-actions">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
                       v-for="record in movieRecords"
-                      :key="record.title"
+                      :key="record.id"
                       >
                       <td>
                         <v-tooltip
@@ -271,6 +312,17 @@ onUnmounted(() => {
                             {{ Math.ceil(record.ratio) }} %
                           </strong>
                         </v-progress-linear>
+                      </td>
+                      <td class="download-actions">
+                        <v-btn
+                          color="error"
+                          variant="text"
+                          size="small"
+                          prepend-icon="mdi-trash-can-outline"
+                          :disabled="isRemoving || !Number.isInteger(record.id)"
+                          :aria-label="`Remove ${record.title}`"
+                          @click="openDeleteConfirmationDialog('movies', record)"
+                        >Remove</v-btn>
                       </td>
                     </tr>
                   </tbody>
@@ -387,12 +439,13 @@ onUnmounted(() => {
                       <!--<th>Languages</th>-->
                       <th>Status</th>
                       <th>Progress</th>
+                      <th class="download-actions">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr
                       v-for="record in serieRecords"
-                      :key="record.title"
+                      :key="record.id"
                       >
                       <td>
                         <v-tooltip
@@ -422,6 +475,17 @@ onUnmounted(() => {
                             {{ Math.ceil(record.ratio) }} %
                           </strong>
                         </v-progress-linear>
+                      </td>
+                      <td class="download-actions">
+                        <v-btn
+                          color="error"
+                          variant="text"
+                          size="small"
+                          prepend-icon="mdi-trash-can-outline"
+                          :disabled="isRemoving || !Number.isInteger(record.id)"
+                          :aria-label="`Remove ${record.title}`"
+                          @click="openDeleteConfirmationDialog('series', record)"
+                        >Remove</v-btn>
                       </td>
                     </tr>
                   </tbody>
@@ -509,3 +573,12 @@ onUnmounted(() => {
     </v-row>
   </v-container>
 </template>
+
+<style scoped>
+.download-actions {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  background: rgb(var(--v-theme-surface));
+}
+</style>
