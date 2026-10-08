@@ -28,16 +28,14 @@ test('dashboard adds and removes a movie without reloading the results', async (
   await expect.poll(() => reads.length).toBe(2);
   const initialReads = [...reads];
   await row.getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(row.locator('button.v-btn')).toBeDisabled();
-  await expect(row.locator('button.v-btn')).toHaveClass(/v-btn--loading/);
+  await expect(row.locator('button.v-btn--loading')).toBeDisabled();
   await expect.poll(() => mutations.length).toBe(1);
   finishAdd();
   await expect(row.getByRole('button', { name: 'Remove', exact: true })).toBeEnabled();
   expect(reads).toEqual(initialReads);
   await row.getByRole('button', { name: 'Remove', exact: true }).click();
   await page.getByRole('button', { name: 'Confirm', exact: true }).click();
-  await expect(row.locator('button.v-btn')).toBeDisabled();
-  await expect(row.locator('button.v-btn')).toHaveClass(/v-btn--loading/);
+  await expect(row.locator('button.v-btn--loading')).toBeDisabled();
   await expect.poll(() => mutations.length).toBe(2);
   finishDelete();
   await expect(row.getByRole('button', { name: 'Add', exact: true })).toBeEnabled();

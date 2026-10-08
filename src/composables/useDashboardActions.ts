@@ -5,6 +5,10 @@ import { useMediaActions, type MediaActionItem } from './useMediaActions';
 
 interface DashboardItem extends MediaActionItem {
   selected_quality?: number;
+  relativePath?: string;
+  quality?: string;
+  statistics?: { sizeOnDisk?: number };
+  hasFile?: boolean;
 }
 interface Options extends MediaServiceOptions {
   movies: Ref<DashboardItem[]>;
@@ -53,6 +57,12 @@ export function useDashboardActions(options: Options) {
         if (result !== item && (!id || identity(type, result) !== id)) continue;
         result.already_in_library = !remove;
         result.id = remove ? undefined : created.id;
+        if (remove) {
+          result.relativePath = undefined;
+          result.quality = undefined;
+          result.statistics = undefined;
+          result.hasFile = false;
+        }
       }
     } catch {
       options.showErrorAlert('Added, but the service response could not be read. Search again to refresh.');
