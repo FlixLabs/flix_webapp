@@ -40,7 +40,7 @@ test('dashboard search and pagination remain below the app bar while scrolling',
   await page.getByRole('textbox', { name: 'Search', exact: true }).fill('Example');
   await expect(page.locator('.custom-list .v-list-item')).toHaveCount(4);
   await page.evaluate(() => window.scrollTo(0, 600));
-  const toolbar = page.locator('.dashboard-navigation');
+  const toolbar = page.locator('.page-navigation');
   await expect.poll(async () => (await toolbar.boundingBox())?.y).toBe(64);
   await expect(page.getByRole('button', { name: 'Go to page 2', exact: true })).toBeInViewport();
   await expect(page.getByRole('textbox', { name: 'Search', exact: true })).toBeInViewport();
