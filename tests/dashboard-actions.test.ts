@@ -47,11 +47,12 @@ describe('dashboard media actions', () => {
   it.each(['movies', 'series'] as const)('updates deleted %s locally, retaining the search result', async type => {
     const { options, actions } = setup();
     const item = options[type].value[0]!;
-    Object.assign(item, { id: 42, already_in_library: true });
+    Object.assign(item, { id: 42, already_in_library: true, relativePath: 'Movie.mkv', quality: 'HD', statistics: { sizeOnDisk: 1e9 }, hasFile: true });
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal('fetch', fetchMock);
     await actions.deleteItem(type, item);
     expect(item).toMatchObject({ id: undefined, already_in_library: false });
+    expect(item).toMatchObject({ relativePath: undefined, quality: undefined, statistics: undefined, hasFile: false });
     expect(options[type].value).toHaveLength(1);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock.mock.calls[0]?.[0]).toContain('/42?deleteFiles=true');
