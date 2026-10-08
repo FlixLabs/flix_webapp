@@ -4,7 +4,8 @@ import { ref, watch, computed, onMounted, toRaw } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useMediaService } from '@/composables/useMediaService';
 import { useCount } from '@/composables/useCount';
-import { useFilteredItems } from '@/composables/useFilteredItems';
+import { useLibraryFilters, savedLibraryFilters, saveLibraryFilters } from '@/composables/useLibraryFilters';
+import LibraryFilters from '@/components/common/LibraryFilters.vue';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from '@/composables/usePagination';
@@ -34,6 +35,11 @@ const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 const { state: search, reset: resetSearch } = useResettable('');
 
 const selected_view = ref<'movies' | 'series'>('movies');
+const filters = ref(savedLibraryFilters());
+const activeItems = computed(() => selected_view.value === 'movies' ? movieItems.value : serieItems.value);
+const statuses = computed(() => [...new Set<string>(activeItems.value.map(item => item.status).filter(Boolean))].sort());
+const qualities = computed(() => [...new Set<string>(activeItems.value.map(item => item.quality).filter(Boolean))].sort());
+const years = computed(() => [...new Set<number>(activeItems.value.map(item => item.year).filter(Boolean))].sort((a, b) => b - a));
 
 const items_per_page = 12;
 const movie_page = ref(1);
@@ -43,7 +49,7 @@ const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(fals
 const { state: movieItems, reset: resetMovieItems } = useResettable<any[]>([]);
 const { state: selectedMovie, reset: resetSelectedMovie } = useResettable<any | null>(null);
 const { dialog: movieDialog, reset: resetMovieDialog } = useDialog();
-const { filteredItems: filtered_movies } = useFilteredItems(movieItems, search);
+const { filteredItems: filtered_movies } = useLibraryFilters(movieItems, search, filters);
 const movies_total_pages = computed(() =>
   Math.ceil(filtered_movies.value.length / items_per_page)
 );
@@ -55,7 +61,7 @@ const { state: serieItems, reset: resetSerieItems } = useResettable<any[]>([]);
 const { state: selectedSerie, reset: resetSelectedSerie } = useResettable<any | null>(null);
 const { dialog: serieDialog, reset: resetSerieDialog } = useDialog();
 const { state: serieEpisodes, reset: resetSerieEpisodes } = useResettable<any[]>([]);
-const { filteredItems: filtered_series } = useFilteredItems(serieItems, search);
+const { filteredItems: filtered_series } = useLibraryFilters(serieItems, search, filters);
 const series_total_pages = computed(() =>
   Math.ceil(filtered_series.value.length / items_per_page)
 );
@@ -138,6 +144,8 @@ function getContent(type: 'movies' | 'series') {
           title: title,
           certification: item.certification,
           year: item.year,
+          added: item.added,
+          sizeOnDisk: item.sizeOnDisk ?? item.movieFile?.size,
           runTime: runTime,
           overview: item.overview,
           hasFile: item.hasFile,
@@ -306,11 +314,16 @@ watch(search, (newValue) => {
     localStorage.removeItem("library_search_" + window.location.href);
   }
 
-  getContent('movies');
-  getContent('series');
 });
 
+watch([search, filters], () => { movie_page.value = 1; serie_page.value = 1; }, { deep: true });
+watch(filters, saveLibraryFilters, { deep: true });
+
 watch(selected_view, (newValue) => {
+  filters.value.status = null;
+  filters.value.quality = null;
+  movie_page.value = 1;
+  serie_page.value = 1;
   if (newValue) {
     localStorage.setItem("library_selected_" + window.location.href, newValue);
   }
@@ -381,6 +394,7 @@ watch(selectedInstance, () => {
       </v-col>
       </template>
     </MediaBrowserToolbar>
+    <LibraryFilters v-model="filters" :statuses="statuses" :qualities="qualities" :years="years" />
     <v-row
       v-if="showFileUpload"
       >
