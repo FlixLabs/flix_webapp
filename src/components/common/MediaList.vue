@@ -8,7 +8,7 @@ const props = defineProps<{
   isPending?: (type: 'movies' | 'series', item: any) => boolean;
 }>();
 
-const emit = defineEmits(['add', 'remove']);
+const emit = defineEmits(['add', 'remove', 'details']);
 </script>
 
 <template>
@@ -19,7 +19,6 @@ const emit = defineEmits(['add', 'remove']);
     <v-list-item
       v-for="(item, index) in paginated_items"
       :key="index"
-      link
       class="pa-0 spacing-list-item"
       >
       <template
@@ -39,6 +38,14 @@ const emit = defineEmits(['add', 'remove']);
         <v-list-item-title>
           {{ item.title }} ({{ item.year }})
         </v-list-item-title>
+        <v-btn
+          variant="text"
+          color="primary"
+          size="small"
+          prepend-icon="mdi-information-outline"
+          :aria-label="`Details for ${item.title}`"
+          @click="emit('details', mediaType, item, $event.currentTarget)"
+        >Details</v-btn>
         <v-tooltip
           :text="item.overview"
           max-width="400"

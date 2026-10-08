@@ -19,6 +19,8 @@ import MediaList from '@/components/common/MediaList.vue';
 import DashboardAttention from '@/components/common/DashboardAttention.vue';
 import MediaTypeToggle from '@/components/common/MediaTypeToggle.vue';
 import PageNavigation from '@/components/common/PageNavigation.vue';
+import MediaDialog from '@/components/common/MediaDialog.vue';
+import SeriesSizeField from '@/components/common/SeriesSizeField.vue';
 
 const store = useFlixStore();
 
@@ -37,6 +39,17 @@ const movie_page = ref(1);
 const serie_page = ref(1);
 const mediaType = ref<'movies' | 'series'>(localStorage.getItem('dashboard_media_type') === 'series' ? 'series' : 'movies');
 const navigation = ref<InstanceType<typeof PageNavigation> | null>(null);
+const detailDialog = ref(false);
+const selectedItem = ref<any | null>(null);
+const detailType = ref<'movies' | 'series'>('movies');
+const detailActivator = ref<HTMLElement | null>(null);
+const detailQualities = computed(() => detailType.value === 'movies' ? qualityMovieItems.value : qualitySerieItems.value);
+function openDetails(type: 'movies' | 'series', item: any, activator: HTMLElement) {
+  detailType.value = type;
+  selectedItem.value = item;
+  detailActivator.value = activator;
+  detailDialog.value = true;
+}
 const activePage = computed({
   get: () => mediaType.value === 'movies' ? movie_page.value : serie_page.value,
   set: value => { (mediaType.value === 'movies' ? movie_page : serie_page).value = value; },
@@ -142,6 +155,9 @@ function getContent(type: 'movies' | 'series') {
           title: title,
           year: item.year,
           overview: item.overview,
+          certification: item.certification,
+          runTime: item.runtime,
+          release_date: type === 'movies' ? item.digitalRelease ?? item.inCinemas : item.firstAired,
           selected_quality: selectedQuality,
           already_in_library: false
         });
@@ -207,6 +223,9 @@ onMounted(() => {
 });
 
 watch(selectedInstance, () => {
+  detailDialog.value = false;
+  selectedItem.value = null;
+  resetDeleteConfirmationDialog();
   cancelSearch();
   movie_page.value = 1;
   serie_page.value = 1;
@@ -231,6 +250,43 @@ onBeforeUnmount(cancelSearch);
     @confirm="confirmDelete"
     @cancel="resetDeleteConfirmationDialog"
     />
+  <MediaDialog
+    v-if="selectedItem"
+    v-model="detailDialog"
+    :media-type="detailType === 'movies' ? 'Movie' : 'Serie'"
+    :item="selectedItem"
+    :activator="detailActivator"
+    :announcement-name="detailType === 'movies' ? 'Release' : 'Premiere'"
+    :show-search="false"
+    :show-add="!selectedItem.already_in_library"
+    :show-remove="!!selectedItem.already_in_library"
+    :show-file-details="!!selectedItem.already_in_library"
+    :action-pending="isPending(detailType, selectedItem)"
+    :add-disabled="!detailQualities.some(quality => quality.value === selectedItem.selected_quality)"
+    @add="addToList(detailType, selectedItem)"
+    @remove="openDeleteConfirmationDialog(detailType, selectedItem)"
+  >
+    <template #details>
+      <v-row v-if="!selectedItem.already_in_library">
+        <v-col>
+          <v-select
+            v-model="selectedItem.selected_quality"
+            :items="detailQualities"
+            label="Quality"
+            variant="outlined"
+            :disabled="isPending(detailType, selectedItem) || !detailQualities.length"
+          />
+          <p v-if="!detailQualities.length" class="text-caption text-warning">No quality profile available. Adding is unavailable.</p>
+        </v-col>
+      </v-row>
+      <SeriesSizeField
+        v-if="detailType === 'series' && selectedItem.already_in_library"
+        :size="selectedItem.statistics?.sizeOnDisk ?? 0"
+        :is-loading="false"
+        :is-open="detailDialog"
+      />
+    </template>
+  </MediaDialog>
   <v-container>
     <PageNavigation ref="navigation">
         <v-text-field
@@ -263,6 +319,7 @@ onBeforeUnmount(cancelSearch);
         :is-pending="isPending"
         @add="addToList"
         @remove="openDeleteConfirmationDialog"
+        @details="openDetails"
       />
       <Loading :isLoading="activeLoading" sentence="Research in progress..." />
       <v-alert v-if="!activeItems.length && !activeLoading" type="info" class="mt-4">
