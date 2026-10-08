@@ -15,6 +15,7 @@ import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
 import Loading from '@/components/common/Loading.vue';
 import MediaList from '@/components/common/MediaList.vue';
+import DashboardAttention from '@/components/common/DashboardAttention.vue';
 
 const store = useFlixStore();
 
@@ -172,6 +173,7 @@ watch(selectedInstance, () => {
     @cancel="resetDeleteConfirmationDialog"
     />
   <v-container>
+    <DashboardAttention />
     <v-form>
       <v-row>
         <v-col>
