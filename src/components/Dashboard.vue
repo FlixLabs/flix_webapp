@@ -237,6 +237,7 @@ watch(selectedInstance, () => {
           v-if="movieItems.length > items_per_page"
           v-model="movie_page"
           :length="Math.ceil(movieItems.length / items_per_page)"
+          :total-visible="$vuetify.display.xs ? 3 : 5"
           rounded
           />
       </v-col>
@@ -266,6 +267,7 @@ watch(selectedInstance, () => {
           v-if="serieItems.length > items_per_page"
           v-model="serie_page"
           :length="Math.ceil(serieItems.length / items_per_page)"
+          :total-visible="$vuetify.display.xs ? 3 : 5"
           rounded
           />
       </v-col>
