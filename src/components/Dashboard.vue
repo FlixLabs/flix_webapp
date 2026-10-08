@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
-import { ref, watch, computed, onMounted } from 'vue';
+import { ref, watch, computed, onMounted, onBeforeUnmount } from 'vue';
+import { rankSearchResults } from '@/composables/useSearchRelevance';
 import { useFlixStore } from '@/stores/flixStore';
 import { useMediaService } from '@/composables/useMediaService';
 import { useCount } from '@/composables/useCount';
@@ -57,7 +58,26 @@ const { deleteConfirmationDialog, resetDeleteConfirmationDialog, openDeleteConfi
   deleteItem,
 });
 
+const requests = { movies: { id: 0, controller: null as AbortController | null }, series: { id: 0, controller: null as AbortController | null } };
+let searchTimer: ReturnType<typeof setTimeout> | undefined;
+
+function cancelSearch() {
+  clearTimeout(searchTimer);
+  for (const request of Object.values(requests)) {
+    request.id++;
+    request.controller?.abort();
+  }
+  resetIsLoadingMovie();
+  resetIsLoadingSerie();
+}
+
 function getContent(type: 'movies' | 'series') {
+  const term = (search.value ?? '').trim();
+  if (term.length < 3) return;
+  const request = requests[type];
+  request.controller?.abort();
+  const id = ++request.id;
+  request.controller = new AbortController();
   let base_url = '';
   let api_key = '';
   let url_type = '';
@@ -73,12 +93,22 @@ function getContent(type: 'movies' | 'series') {
     url_type = 'series';
   }
 
-  fetch(base_url + '/api/v3/' + url_type + '/lookup?term=' + search.value + '&apikey=' + api_key)
+  if (!base_url) {
+    if (type === 'movies') resetIsLoadingMovie();
+    else resetIsLoadingSerie();
+    return;
+  }
+
+  const params = new URLSearchParams({ term, apikey: api_key });
+  fetch(base_url + '/api/v3/' + url_type + '/lookup?' + params, { signal: request.controller.signal })
     .then(async response => {
+      if (!response.ok) throw new Error(`Search failed (${response.status})`);
       const json_data = await response.json();
+      if (id !== request.id) return;
+      if (!Array.isArray(json_data)) throw new Error('Invalid search response');
 
       let items = [];
-      for (let item of json_data) {
+      for (let item of rankSearchResults(json_data, term)) {
         let title = item.title;
         const year_str = '(' + item.year + ')';
 
@@ -101,8 +131,6 @@ function getContent(type: 'movies' | 'series') {
         });
       }
 
-      items.sort((a, b) => b.year - a.year);
-
       if (type == 'movies') {
         movieItems.value = items;
         checkMovies();
@@ -113,9 +141,10 @@ function getContent(type: 'movies' | 'series') {
       }
     })
     .catch(error => {
-      showErrorAlert(error);
+      if (id === request.id && error.name !== 'AbortError') showErrorAlert(error);
     })
     .finally(() => {
+      if (id !== request.id) return;
       if (type == 'movies') {
         resetIsLoadingMovie();
       }
@@ -132,18 +161,25 @@ function addToList(type: 'movies' | 'series', item: any) {
 
 
 watch(search, (newValue) => {
-  if (newValue && newValue.length >= 3) {
+  cancelSearch();
+  movie_page.value = 1;
+  serie_page.value = 1;
+  resetMovieItems();
+  resetSerieItems();
+  if (newValue && newValue.trim().length >= 3) {
     localStorage.setItem("dashboard_search_" + window.location.href, newValue);
 
-    getContent('movies');
-    getContent('series');
+    searchTimer = setTimeout(() => {
+      getContent('movies');
+      getContent('series');
+    }, 300);
   } else {
     localStorage.removeItem("dashboard_search_" + window.location.href);
 
     resetMovieItems();
     resetSerieItems();
   }
-});
+}, { flush: 'sync' });
 
 onMounted(() => {
   if (localStorage.getItem('dashboard_search_' + window.location.href)) {
@@ -155,11 +191,16 @@ onMounted(() => {
 });
 
 watch(selectedInstance, () => {
+  cancelSearch();
+  resetMovieItems();
+  resetSerieItems();
   getQualityProfileList('movies');
   getQualityProfileList('series');
   getContent('movies');
   getContent('series');
-});
+}, { flush: 'sync' });
+
+onBeforeUnmount(cancelSearch);
 </script>
 
 <template>
