@@ -12,7 +12,7 @@ import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 
-import { DEFAULT_THEME_NAME, LIGHT_THEME_NAME, DEFAULT_PRIMARY, isCustomPrimary, getSavedTheme, applyPrimary } from '@/theme/constants'
+import { DEFAULT_THEME_NAME, LIGHT_THEME_NAME, DEFAULT_PRIMARY, DEFAULT_LIGHT_PRIMARY, isCustomPrimary, getSavedTheme, applyPrimary } from '@/theme/constants'
 
 const vuetify = createVuetify({
   defaults: {
@@ -42,7 +42,7 @@ const vuetify = createVuetify({
       [LIGHT_THEME_NAME]: {
         dark: false,
         colors: {
-          primary: DEFAULT_PRIMARY,
+          primary: DEFAULT_LIGHT_PRIMARY,
           background: '#F5F6F8',
           surface: '#FFFFFF',
           'surface-variant': '#E5E8ED',
