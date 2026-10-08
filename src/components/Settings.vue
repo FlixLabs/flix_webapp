@@ -8,8 +8,10 @@ import { useTheme } from 'vuetify'
 import { DEFAULT_PRIMARY, DEFAULT_THEME_NAME, LIGHT_THEME_NAME, applyPrimary, saveTheme } from '@/theme/constants'
 import Alert from '@/components/common/Alert.vue';
 import SectionNavigation from '@/components/common/SectionNavigation.vue';
+import { useFlixStore } from '@/stores/flixStore';
 
 const theme = useTheme();
+const store = useFlixStore();
 const useAPI = import.meta.env.VITE_FLIX_API_USE === 'true';
 const section = ref('appearance');
 const sections = [
@@ -60,6 +62,7 @@ function getData(key: 'auth' | 'color') {
       const json_data = await response.json();
 
       if (key == 'auth') {
+        store.authenticationEnabled = !!(json_data.username && json_data.password);
         if (json_data.username && json_data.password) {
           authData.value = json_data;
           auth.value = true;
@@ -118,6 +121,8 @@ function setData(key: 'auth' | 'color') {
       if (response.ok) {
         showSuccessAlert();
 
+        if (key == 'auth') store.authenticationEnabled = true;
+
         if (key == 'color') {
           applyPrimaryNow(colorData.value.primary || DEFAULT_PRIMARY);
         }
@@ -146,6 +151,7 @@ function deleteData(key: 'auth' | 'color') {
     .then(async (response) => {
       if (response.ok) {
         showSuccessAlert();
+        if (key == 'auth') store.authenticationEnabled = false;
       }
     })
     .catch((error) => {
