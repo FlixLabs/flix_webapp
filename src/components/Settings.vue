@@ -1,27 +1,29 @@
 <script setup lang="ts">
 
-import { ref, onMounted, watch } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import CryptoJS from 'crypto-js';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { useTheme } from 'vuetify'
-import { DEFAULT_PRIMARY } from '@/theme/constants'
+import { DEFAULT_PRIMARY, DEFAULT_THEME_NAME, LIGHT_THEME_NAME, applyPrimary, saveTheme } from '@/theme/constants'
 import Alert from '@/components/common/Alert.vue';
-import colors from 'vuetify/util/colors'
 
 const theme = useTheme();
+const useAPI = import.meta.env.VITE_FLIX_API_USE === 'true';
+const themeMode = computed({
+  get: () => theme.name.value,
+  set: (name: string) => {
+    theme.change(name);
+    saveTheme(name);
+  },
+});
+const themeModes = [
+  { title: 'Dark', value: DEFAULT_THEME_NAME },
+  { title: 'Light', value: LIGHT_THEME_NAME },
+];
 
 function applyPrimaryNow(hex: string) {
-  const name = theme.global.name.value
-  const curr = theme.themes.value[name]
-
-  theme.themes.value[name] = {
-    ...curr,
-    colors: {
-      ...curr.colors,
-      primary: hex,
-    },
-  }
+  applyPrimary(theme.themes.value, hex);
 }
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
@@ -38,7 +40,7 @@ const initialAuthData: { username: string | null; password: string | null } = {
 const { state: authData, reset: resetAuthData } = useResettable(initialAuthData);
 
 const initialColorData = {
-  primary: '#EA9034'
+  primary: DEFAULT_PRIMARY
 };
 const { state: colorData, reset: resetColorData } = useResettable(initialColorData);
 
@@ -149,8 +151,10 @@ function deleteData(key: 'auth' | 'color') {
 }
 
 onMounted(() => {
-  getData('auth');
-  getData('color');
+  if (useAPI) {
+    getData('auth');
+    getData('color');
+  }
 });
 
 watch(auth, (newValue) => {
@@ -166,111 +170,85 @@ watch(color, (newValue) => {
   if (!newValue) {
     deleteData('color');
 
-    colorData.value.primary = '#EA9034';
+    colorData.value.primary = DEFAULT_PRIMARY;
     applyPrimaryNow(DEFAULT_PRIMARY);
   }
 });
 </script>
 
 <template>
-  <Alert
-    :alert="alert"
-    @update:alert="alert = $event"
-    />
+  <Alert :alert="alert" @update:alert="alert = $event" />
   <v-container>
     <v-row>
-      <v-col>
-        <h3>Authentification</h3>
-        <v-row>
-          <v-col>
-            <v-card
-              class="mt-4"
-              >
-              <v-card-title>
-                <v-switch
-                  label="Basic Authentification"
-                  inset
-                  v-model="auth"
-                  :color="auth ? 'green-lighten-1' : 'gray'"
-                  />
-              </v-card-title>
-              <v-card-text
-                v-if="auth"
-                >
-                <v-text-field
-                  label="Username"
-                  variant="outlined"
-                  v-model="authData.username"
-                  prepend-icon="mdi-form-textbox"
-                  clearable
-                  />
-                <v-text-field
-                  label="Password"
-                  type="password"
-                  variant="outlined"
-                  v-model="authData.password"
-                  prepend-icon="mdi-form-textbox-password"
-                  clearable
-                  />
-                <div
-                  class="d-flex justify-end"
-                  >
-                  <v-btn
-                    color="primary"
-                    variant="outlined"
-                    @click="setData('auth')"
-                    >
-                    Save
-                  </v-btn>
+      <v-col cols="12">
+        <h3>Appearance</h3>
+        <v-card class="mt-4">
+          <v-card-text>
+            <v-select
+              v-model="themeMode"
+              :items="themeModes"
+              label="Theme"
+              prepend-icon="mdi-theme-light-dark"
+              variant="outlined"
+              hide-details
+            />
+            <p class="text-caption text-medium-emphasis mt-3">Saved in this browser and applied immediately.</p>
+            <template v-if="useAPI">
+              <v-divider class="my-4" />
+              <v-switch
+                v-model="color"
+                label="Custom primary color"
+                inset
+                color="primary"
+                hide-details
+              />
+              <template v-if="color">
+                <div class="d-flex justify-center mt-4">
+                  <v-color-picker v-model="colorData.primary" show-swatches />
                 </div>
-              </v-card-text>
-            </v-card>
-          </v-col>
-        </v-row>
+                <div class="d-flex justify-end ga-2 mt-4">
+                  <v-btn variant="text" :disabled="isLoading" @click="color = false">Reset</v-btn>
+                  <v-btn color="primary" variant="outlined" :disabled="isLoading" @click="setData('color')">Save</v-btn>
+                </div>
+              </template>
+            </template>
+          </v-card-text>
+        </v-card>
       </v-col>
-    </v-row>
-    <v-row>
-      <v-col>
-        <h3>Color</h3>
-        <v-row>
-          <v-col>
-            <v-card
-              class="mt-4"
-              >
-              <v-card-title>
-                <v-switch
-                  label="Primary color"
-                  inset
-                  v-model="color"
-                  :color="color ? 'green-lighten-1' : 'gray'"
-                  />
-              </v-card-title>
-              <v-card-text
-                v-if="color"
-                >
-                <div
-                  class="d-flex justify-center"
-                  >
-                  <v-color-picker
-                    v-model="colorData.primary"
-                    show-swatches
-                    />
-                </div>
-                <div
-                  class="d-flex justify-end"
-                  >
-                  <v-btn
-                    color="primary"
-                    variant="outlined"
-                    @click="setData('color')"
-                    >
-                    Save
-                  </v-btn>
-                </div>
-              </v-card-text>
-            </v-card>
-          </v-col>
-        </v-row>
+      <v-col v-if="useAPI" cols="12">
+        <h3>Security</h3>
+        <v-card class="mt-4">
+          <v-card-text>
+            <v-switch
+              v-model="auth"
+              label="Basic authentication"
+              inset
+              color="primary"
+              hide-details
+            />
+            <template v-if="auth">
+              <v-text-field
+                v-model="authData.username"
+                label="Username"
+                variant="outlined"
+                prepend-icon="mdi-form-textbox"
+                clearable
+                class="mt-4"
+              />
+              <v-text-field
+                v-model="authData.password"
+                label="Password"
+                type="password"
+                variant="outlined"
+                prepend-icon="mdi-form-textbox-password"
+                clearable
+              />
+              <div class="d-flex justify-end">
+                <v-btn color="primary" variant="outlined" @click="setData('auth')">Save</v-btn>
+              </div>
+            </template>
+          </v-card-text>
+        </v-card>
       </v-col>
     </v-row>
   </v-container>
