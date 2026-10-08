@@ -37,7 +37,7 @@ const { state: drawerOptions, reset: resetDrawerOptions } = useResettable(initia
 const filteredDrawerOptions = computed(() => {
   return drawerOptions.value.filter(option => {
     return option.value === 'signout'
-      ? useAPI.value
+      ? useAPI.value && store.authenticationEnabled
       : true;
   });
 });
@@ -78,6 +78,13 @@ function getData() {
 onMounted(() => {
   if (useAPI.value) {
     getData();
+    fetch(import.meta.env.VITE_FLIX_API_URL + '/auth')
+      .then(async response => {
+        if (!response.ok) throw new Error('Unable to load authentication settings');
+        const data = await response.json();
+        store.authenticationEnabled = !!(data.username && data.password);
+      })
+      .catch(showErrorAlert);
   }
 });
 </script>

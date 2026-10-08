@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia';
-import { computed, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useResettable } from '@/composables/useResettable';
 import { usePersistentPreference } from '@/composables/usePersistentPreference';
 
 import type { MediaInstance as Instance } from '@/composables/useMediaService';
 
 export const useFlixStore = defineStore('flix', () => {
+  const authenticationEnabled = ref(false);
   const { state: instances, reset: resetInstances } = useResettable<Instance[]>([]);
 
   let initialInstance: string | null = null;
@@ -35,6 +36,7 @@ export const useFlixStore = defineStore('flix', () => {
   });
 
   return {
+    authenticationEnabled,
     instances,
     selectedInstance,
     selectedInstanceData,
