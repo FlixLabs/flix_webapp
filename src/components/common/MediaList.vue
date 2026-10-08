@@ -39,6 +39,8 @@ const emit = defineEmits(['add', 'remove']);
         </v-list-item-title>
         <v-tooltip
           :text="item.overview"
+          max-width="400"
+          location="top"
           >
           <template #activator="{ props }">
             <span v-bind="props" style="cursor:pointer;">
@@ -59,6 +61,7 @@ const emit = defineEmits(['add', 'remove']);
             <v-select
               v-model="item.selected_quality"
               :items="qualityItems"
+              :menu-props="{ maxWidth: 400 }"
               label="Quality"
               variant="outlined"
               :disabled="item.already_in_library"
