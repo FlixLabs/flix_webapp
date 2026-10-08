@@ -11,9 +11,8 @@ import router from './router'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
-import colors from 'vuetify/util/colors'
 
-import { DEFAULT_THEME_NAME, DEFAULT_PRIMARY, isCustomPrimary } from '@/theme/constants'
+import { DEFAULT_THEME_NAME, LIGHT_THEME_NAME, DEFAULT_PRIMARY, isCustomPrimary, getSavedTheme, applyPrimary } from '@/theme/constants'
 
 const vuetify = createVuetify({
   defaults: {
@@ -28,7 +27,7 @@ const vuetify = createVuetify({
   },
   directives,
   theme: {
-    defaultTheme: DEFAULT_THEME_NAME,
+    defaultTheme: getSavedTheme(),
     themes: {
       [DEFAULT_THEME_NAME]: {
         dark: true,
@@ -38,6 +37,16 @@ const vuetify = createVuetify({
           surface: '#1B1E22',
           'surface-variant': '#30353B',
           'on-surface-variant': '#EEF0F2',
+        }
+      },
+      [LIGHT_THEME_NAME]: {
+        dark: false,
+        colors: {
+          primary: DEFAULT_PRIMARY,
+          background: '#F5F6F8',
+          surface: '#FFFFFF',
+          'surface-variant': '#E5E8ED',
+          'on-surface-variant': '#30353B',
         }
       }
     }
@@ -69,7 +78,7 @@ app.use(pinia)
         .then(async (response) => {
           const { primary } = await response.json()
           if (isCustomPrimary(primary)) {
-            vuetify.theme.themes.value[DEFAULT_THEME_NAME].colors.primary = primary
+            applyPrimary(vuetify.theme.themes.value, primary)
           }
         });
     }

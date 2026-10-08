@@ -36,7 +36,7 @@ const { state: drawerOptions, reset: resetDrawerOptions } = useResettable(initia
 
 const filteredDrawerOptions = computed(() => {
   return drawerOptions.value.filter(option => {
-    return ['settings', 'signout'].includes(option.value)
+    return option.value === 'signout'
       ? useAPI.value
       : true;
   });
