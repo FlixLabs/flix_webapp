@@ -1,15 +1,21 @@
 <script setup lang="ts">
 
-import { computed, onMounted, watch } from 'vue';
+import { computed, onMounted, watch, ref } from 'vue';
 import CryptoJS from 'crypto-js';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { useTheme } from 'vuetify'
 import { DEFAULT_PRIMARY, DEFAULT_THEME_NAME, LIGHT_THEME_NAME, applyPrimary, saveTheme } from '@/theme/constants'
 import Alert from '@/components/common/Alert.vue';
+import SectionNavigation from '@/components/common/SectionNavigation.vue';
 
 const theme = useTheme();
 const useAPI = import.meta.env.VITE_FLIX_API_USE === 'true';
+const section = ref('appearance');
+const sections = [
+  { title: 'Appearance', value: 'appearance', icon: 'mdi-palette-outline' },
+  ...(useAPI ? [{ title: 'Security', value: 'security', icon: 'mdi-shield-lock-outline' }] : []),
+];
 const themeMode = computed({
   get: () => theme.name.value,
   set: (name: string) => {
@@ -179,8 +185,9 @@ watch(color, (newValue) => {
 <template>
   <Alert :alert="alert" @update:alert="alert = $event" />
   <v-container>
-    <v-row>
-      <v-col cols="12">
+    <SectionNavigation v-if="useAPI" v-model="section" :sections="sections" />
+    <v-row :class="{ 'mt-4': useAPI }">
+      <v-col v-show="section === 'appearance'" cols="12">
         <h3>Appearance</h3>
         <v-card class="mt-4">
           <v-card-text>
@@ -215,7 +222,7 @@ watch(color, (newValue) => {
           </v-card-text>
         </v-card>
       </v-col>
-      <v-col v-if="useAPI" cols="12">
+      <v-col v-if="useAPI" v-show="section === 'security'" cols="12">
         <h3>Security</h3>
         <v-card class="mt-4">
           <v-card-text>

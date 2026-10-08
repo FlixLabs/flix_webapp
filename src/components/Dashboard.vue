@@ -297,7 +297,7 @@ onBeforeUnmount(cancelSearch);
           clearable
           hide-details
         />
-        <div class="d-flex flex-wrap align-center justify-space-between ga-2 mt-2">
+        <div class="d-flex flex-wrap align-center justify-space-between ga-3 mt-3">
           <MediaTypeToggle v-model="mediaType" :total-movies="total_movies" :total-series="total_series" />
           <v-pagination
             v-if="activeTotal > items_per_page"

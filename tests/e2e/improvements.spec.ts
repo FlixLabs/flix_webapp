@@ -23,7 +23,7 @@ test('episode selection searches automatically', async ({ page, mutations }) => 
   const searches: string[] = [];
   page.on('request', request => { if (request.url().includes('/api/v3/release?')) searches.push(request.url()); });
   await page.goto('/library');
-  await page.getByRole('button', { name: 'Series', exact: true }).click();
+  await page.getByRole('button', { name: 'Series (1)', exact: true }).click();
   await page.locator('.media-card').filter({ hasText: 'Example series' }).click();
   await page.getByRole('button', { name: 'Choose Release', exact: true }).click();
   await page.getByRole('combobox', { name: 'Episode', exact: true }).press('Enter');
