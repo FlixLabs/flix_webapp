@@ -10,6 +10,7 @@ export interface MediaServiceConfig {
 
 export interface MediaInstance {
   name: string;
+  has_storage_agent?: boolean;
   radarr: MediaServiceConfig;
   sonarr: MediaServiceConfig;
 }
