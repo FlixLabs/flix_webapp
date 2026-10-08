@@ -11,6 +11,13 @@ export interface MediaActionItem {
   title: string;
   year?: number;
   qualityProfileId?: number;
+  status?: string;
+  already_in_library?: boolean;
+}
+
+export function canSearchItem(type: MediaType, item: MediaActionItem | null): boolean {
+  if (!item || typeof item.id !== "number" || !Number.isInteger(item.id) || item.id <= 0 || item.already_in_library === false) return false;
+  return type === "movies" ? item.status === "released" : !!item.status && item.status !== "upcoming";
 }
 
 interface MediaActionsOptions extends MediaServiceOptions {
@@ -91,6 +98,10 @@ export function useMediaActions(options: MediaActionsOptions) {
   }
 
   function searchItem(type: MediaType, item: MediaActionItem) {
+    if (typeof item.id !== "number" || !Number.isInteger(item.id) || item.id <= 0 || item.already_in_library === false) {
+      options.showErrorAlert("Search failed: media must already exist in the library");
+      return Promise.resolve();
+    }
     return request(
       type,
       "command",
