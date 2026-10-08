@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MediaImage from './MediaImage.vue';
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
 const props = defineProps<{
@@ -157,8 +158,9 @@ onBeforeUnmount(() => {
         <v-row>
           <v-col>
             <v-card>
-              <v-img
+              <MediaImage
                 :src="item.prependAvatar ?? item.poster"
+                :alt="item.title"
                 class="media-poster"
                 :aspect-ratio="2 / 3"
                 cover
