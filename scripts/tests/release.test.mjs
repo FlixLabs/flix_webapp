@@ -123,7 +123,7 @@ esac
 test('quality is independent from production secrets and image publishing', () => {
   const ci = readFileSync(join(root, '.gitlab-ci.yml'), 'utf8');
   const quality = ci.split('\nquality:\n')[1].split('\ncreate_release_tag:')[0];
-  assert.match(quality, /docker build -f Dockerfile\.quality \./);
+  assert.match(quality, /sh scripts\/build-quality\.sh/);
   assert.doesNotMatch(quality, /extends:|VITE_|docker login|docker push/);
   const dockerfile = readFileSync(join(root, 'Dockerfile.quality'), 'utf8');
   assert.doesNotMatch(dockerfile, /ARG VITE_|ENV VITE_|COPY .*\.env/);
@@ -132,4 +132,19 @@ test('quality is independent from production secrets and image publishing', () =
   assert.match(build, /extends: \.build-image/);
   assert.match(build, /CI_COMMIT_TAG/);
   assert.doesNotMatch(build, /merge_request_event|CI_COMMIT_BRANCH/);
+});
+
+test('quality restores the root ignore file after successful and failed builds', t => {
+  const dir = fixture(t);
+  const original = '.env\ndeploy-agent\n';
+  const quality = '.env\ndeploy-agent/*\n!deploy-agent/deploy.sh\n';
+  writeFileSync(join(dir, '.dockerignore'), original);
+  writeFileSync(join(dir, 'Dockerfile.quality.dockerignore'), quality);
+  writeFileSync(join(dir, 'bin/docker'), '#!/bin/sh\ncp .dockerignore observed-ignore\nexit "$BUILD_EXIT"\n', { mode: 0o755 });
+  for (const status of [0, 1]) {
+    const result = run(dir, 'sh', ['scripts/build-quality.sh'], { BUILD_EXIT: String(status) });
+    assert.equal(result.status, status, result.stderr);
+    assert.equal(readFileSync(join(dir, 'observed-ignore'), 'utf8'), quality);
+    assert.equal(readFileSync(join(dir, '.dockerignore'), 'utf8'), original);
+  }
 });
