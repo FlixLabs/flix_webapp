@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { readApiJson, requireList, optionalList } from '@/composables/apiResponse';
+
 
 import { ref, watch, computed, onMounted, toRaw } from 'vue';
 import { useRoute } from 'vue-router';
@@ -107,7 +109,7 @@ function getContent(type: 'movies' | 'series') {
 
   fetch(base_url + '/api/v3/' + url_type + '?apikey=' + api_key)
     .then(async (response) => {
-      const json_data = await response.json();
+      const json_data: any = requireList(await readApiJson(response), 'library', ['title']);
       const currentConfig = getConfig(type);
       if (currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
 
@@ -149,7 +151,7 @@ function getContent(type: 'movies' | 'series') {
           id: item.id,
           tmdbId: tmdbId,
           tvdbId: tvdbId,
-          prependAvatar: item.images?.find((img: any) => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
+          prependAvatar: optionalList(item.images, 'images').find((img: any) => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
           title: title,
           certification: item.certification,
           year: item.year,
@@ -198,7 +200,7 @@ function getSerieEpisodes(serie_id: number) {
 
   fetch(base_url + '/api/v3/episode?includeEpisodeFile=true&apikey=' + api_key + '&seriesId=' + serie_id)
     .then(async (response) => {
-      const json_data = await response.json();
+      const json_data: any = requireList(await readApiJson(response), 'library', ['title']);
 
       serieEpisodes.value = json_data.map((episode: any) => ({
         title: episode.title,
@@ -211,11 +213,11 @@ function getSerieEpisodes(serie_id: number) {
         quality: episode.episodeFile ? episode.episodeFile.quality.quality.name : null
       }));
 
-      isLoadingSerieEpisodes.value = false;
     })
     .catch((error) => {
       showErrorAlert(error);
-    });
+    })
+    .finally(() => { isLoadingSerieEpisodes.value = false; });
 }
 
 function handleMovieClick(movie_id: number) {
@@ -308,7 +310,7 @@ async function handleFileUpload() {
     const text = await file.text();
 
     try {
-      const json_data = JSON.parse(text);
+      const json_data: any = requireList(JSON.parse(text), 'import file');
 
       for (let item of json_data) {
         addItem(selected, item);

@@ -1,3 +1,4 @@
+import { readApiJson, requireList, requireObject, optionalList } from '@/composables/apiResponse';
 import { computed, getCurrentScope, onScopeDispose, ref, watch } from 'vue';
 import { useMediaService, type MediaServiceConfig, type MediaServiceOptions, type MediaType } from './useMediaService';
 
@@ -76,7 +77,7 @@ export function useManualImport(options: MediaServiceOptions) {
       signal: controller?.signal,
     });
     if (!response.ok) throw new Error(`Service request failed (${response.status}).`);
-    return response.json();
+    return readApiJson(response);
   }
   function validFile(file: ImportFile) {
     return !!file.path && media.value.some(item => item.id === file.mediaId)
@@ -107,8 +108,7 @@ export function useManualImport(options: MediaServiceOptions) {
     if (!active || !current(active) || episodes.value[seriesId] || loadingEpisodes.value[seriesId]) return;
     loadingEpisodes.value[seriesId] = true;
     try {
-      const data = await request(active, `episode?seriesId=${seriesId}`);
-      if (!Array.isArray(data)) throw new Error('Invalid episode response.');
+      const data = requireList<Episode>(await request(active, `episode?seriesId=${seriesId}`), 'episodes');
       if (current(active)) episodes.value[seriesId] = data;
     } catch {
       if (current(active)) error.value = 'Unable to load episodes. Reopen the import to try again.';
@@ -139,14 +139,20 @@ export function useManualImport(options: MediaServiceOptions) {
         request(active, mediaType === 'movies' ? 'movie' : 'series'),
         request(active, 'qualitydefinition'),
       ]);
-      if (![candidates, library, definitions].every(Array.isArray)) throw new Error('Invalid import response.');
+      const importFiles = requireList<ImportFile>(candidates, 'import files');
+      for (const file of importFiles) {
+        optionalList(file.languages, 'import languages');
+        optionalList(file.rejections, 'import rejections');
+      }
+      const importMedia = requireList<Media>(library, 'import media');
+      const qualityDefinitions = requireList<{ quality: Quality }>(definitions, 'quality definitions');
       if (!current(active)) return;
-      media.value = library;
-      qualities.value = definitions.map((definition: { quality: Quality }) => definition.quality).filter((quality: Quality) => quality?.id > 0);
-      files.value = candidates.filter((file: ImportFile) => typeof file.path === 'string' && file.path.length > 0).map((file: ImportFile) => ({
+      media.value = importMedia;
+      qualities.value = qualityDefinitions.map(definition => definition.quality).filter(quality => quality?.id > 0);
+      files.value = importFiles.filter(file => typeof file.path === 'string' && file.path.length > 0).map(file => ({
         ...file, mediaId: (mediaType === 'movies' ? file.movie?.id : file.series?.id) ?? null,
         qualityId: file.quality?.quality?.id ?? null,
-        episodeIds: file.episodes?.map(episode => episode.id) ?? [], selected: false,
+        episodeIds: optionalList<Episode>(file.episodes, 'import episodes').map(episode => episode.id), selected: false,
       }));
       if (mediaType === 'series') await Promise.all([...new Set(files.value.map(file => file.mediaId).filter((id): id is number => id !== null))].map(loadEpisodes));
     } catch {
@@ -174,13 +180,14 @@ export function useManualImport(options: MediaServiceOptions) {
     error.value = '';
     try {
       const selection = selected.value.map(payload);
-      const result = await request(active, 'manualimport', selection);
+      const result = requireList<ImportFile>(await request(active, 'manualimport', selection), 'import review');
       if (!current(active)) return;
-      if (!Array.isArray(result) || result.length !== selection.length) throw new Error('Invalid review response.');
+      if (result.length !== selection.length) throw new Error('Invalid review response.');
       for (const file of selected.value) {
         const updated = result.find((item: ImportFile) => item.path === file.path);
         if (!updated) throw new Error('Missing reviewed file.');
-        file.rejections = updated.rejections ?? [];
+        file.rejections = optionalList(updated.rejections, 'import rejections');
+        optionalList(updated.languages, 'import languages');
         file.languages = updated.languages ?? file.languages;
         file.quality = updated.quality ?? file.quality;
       }
@@ -200,7 +207,7 @@ export function useManualImport(options: MediaServiceOptions) {
     try {
       if (JSON.stringify(selected.value.map(payload)) !== JSON.stringify(reviewed)) throw new Error('Selection changed. Review it again before importing.');
       submissionAttempted.value = true;
-      const command = await request(active, 'command', { name: 'ManualImport', files: reviewed, importMode: 'auto' });
+      const command = requireObject<{ id: number; status?: string }>(await request(active, 'command', { name: 'ManualImport', files: reviewed, importMode: 'auto' }), 'import command');
       if (!current(active)) return false;
       if (!Number.isInteger(command.id) || command.id <= 0) throw new Error('Invalid import command response.');
       commandId.value = command.id;
@@ -222,7 +229,7 @@ export function useManualImport(options: MediaServiceOptions) {
     busy.value = true;
     error.value = '';
     try {
-      const command = await request(active, `command/${commandId.value}`);
+      const command = requireObject(await request(active, `command/${commandId.value}`), 'import command');
       if (!current(active)) return false;
       if (typeof command.status !== 'string') throw new Error('Invalid command status.');
       commandState.value = command.status;

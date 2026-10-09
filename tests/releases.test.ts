@@ -23,6 +23,19 @@ function createOptions() {
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('interactive release search', () => {
+  it.each([
+    { ...candidate, languages: {} },
+    { ...candidate, rejections: {} },
+    { ...candidate, rejections: [null] },
+  ])('rejects malformed nested release lists before rendering', async release => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json([release])));
+    const actions = useReleaseSearch(createOptions());
+    await actions.open('movies', { id: 42, title: 'Movie' });
+    expect(actions.releases.value).toEqual([]);
+    expect(actions.error.value).toContain('Unable to search releases');
+    expect(actions.isSearching.value).toBe(false);
+  });
+
   it('searches a movie without launching a command or download', async () => {
     const fetchMock = vi.fn().mockResolvedValue(Response.json([candidate]));
     vi.stubGlobal('fetch', fetchMock);

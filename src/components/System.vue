@@ -1,10 +1,13 @@
 <script setup lang="ts">
+import { readApiJson, requireObject, requireList } from '@/composables/apiResponse';
+
 
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useMediaService } from '@/composables/useMediaService';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
+import Alert from '@/components/common/Alert.vue';
 import { useDiskAndLogAndHealthList } from '@/composables/useDiskAndLogAndHealthList';
 import SectionNavigation from '@/components/common/SectionNavigation.vue';
 import MediaTypeToggle from '@/components/common/MediaTypeToggle.vue';
@@ -100,7 +103,10 @@ function getData(
   fetch(base_url + '/api/v3/' + endpoint + '?apikey=' + api_key)
     .then(async (response) => {
       if (!response.ok) throw new Error(`Unable to load ${endpoint}`);
-      const json_data = await response.json();
+      const json_data: any = await readApiJson(response);
+      if (['rootfolder', 'diskspace', 'health'].includes(endpoint)) requireList(json_data, endpoint);
+      else requireObject(json_data, endpoint);
+      if (endpoint === 'log') requireList(json_data.records, 'logs');
       const currentConfig = getConfig(type);
       if (currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
 
@@ -318,6 +324,7 @@ onUnmounted(() => {
 </script>
 
 <template>
+  <Alert :alert="alert" @update:alert="alert = $event" />
   <v-container>
     <SectionNavigation v-model="section" :sections="sections">
       <MediaTypeToggle v-model="selectedMedia" />

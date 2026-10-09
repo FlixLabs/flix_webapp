@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { readApiJson, requireList, optionalList } from '@/composables/apiResponse';
+
 
 import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { rankSearchResults } from '@/composables/useSearchRelevance';
@@ -132,7 +134,7 @@ function getContent(type: 'movies' | 'series') {
   fetch(base_url + '/api/v3/' + url_type + '/lookup?' + params, { signal: request.controller.signal })
     .then(async response => {
       if (!response.ok) throw new Error(`Search failed (${response.status})`);
-      const json_data = await response.json();
+      const json_data: any = requireList(await readApiJson(response), 'search', ['title']);
       if (id !== request.id) return;
       if (!Array.isArray(json_data)) throw new Error('Invalid search response');
 
@@ -151,7 +153,7 @@ function getContent(type: 'movies' | 'series') {
           id: item.id,
           tmdbId: item.tmdbId,
           tvdbId: item.tvdbId,
-          prependAvatar: item.images?.find((img: any) => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
+          prependAvatar: optionalList(item.images, 'images').find((img: any) => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
           title: title,
           year: item.year,
           overview: item.overview,

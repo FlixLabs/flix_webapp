@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { readApiJson, requireObject, requireList } from '@/composables/apiResponse';
+
 
 import { watch, computed, onMounted } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
@@ -81,7 +83,7 @@ function getContent(type: 'movies' | 'series') {
 
   fetch(base_url + '/api/v3/' + url_type + '?start=' + start + '&end=' + end + include + '&apikey=' + api_key)
     .then(async response => {
-      const json_data = await response.json();
+      const json_data: any = requireList(await readApiJson(response), 'calendar');
 
       let items = [];
       for (let item of json_data) {
@@ -124,7 +126,7 @@ function getContent(type: 'movies' | 'series') {
 
         if (type == 'series') {
           if (item.airDate && m + 1 == new Date(item.airDate).getMonth() + 1) {
-            title = item.series.title + ' : ' + item.title + ' (airDate)';
+            title = requireObject(item.series, 'calendar series').title + ' : ' + item.title + ' (airDate)';
 
             items.push({
               title: title,

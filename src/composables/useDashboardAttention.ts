@@ -1,3 +1,4 @@
+import { readApiJson, requireList, requireObject } from '@/composables/apiResponse';
 import { computed, onScopeDispose, ref, watch } from 'vue';
 import { useMediaService, type MediaServiceOptions, type MediaType } from './useMediaService';
 import { useStorageLocations, type RootFolder } from './useStorageLocations';
@@ -40,29 +41,31 @@ export function useDashboardAttention(options: MediaServiceOptions) {
         signal: AbortSignal.any([request.signal, AbortSignal.timeout(8000)]),
       });
       if (!response.ok) throw new Error('Service unavailable');
-      return response.json();
+      return readApiJson(response);
     }
     async function task(label: string, action: () => Promise<void>) {
       try { await action(); }
       catch { if (!request.signal.aborted) errors.value.push(`Unable to load ${label}.`); }
     }
     const jobs: Promise<void>[] = (['movies', 'series'] as const).map(type => task(`${type} downloads`, async () => {
-      const data = await load(type, 'queue?page=1&pageSize=1000');
-      if (!Array.isArray(data.records)) throw new Error('Invalid queue');
-      if (!request.signal.aborted) queues.value.push(...data.records.map((item: QueueItem) => ({ type, item })));
+      const data = requireObject(await load(type, 'queue?page=1&pageSize=1000'), 'queue');
+      const records = requireList<QueueItem>(data.records, 'queue');
+      if (!request.signal.aborted) queues.value.push(...records.map(item => ({ type, item })));
     }));
     jobs.push(task('missing episodes', async () => {
-      const data = await load('series', 'wanted/missing?page=1&pageSize=5&includeSeries=true&monitored=true');
-      if (!Array.isArray(data.records) || typeof data.totalRecords !== 'number') throw new Error('Invalid episodes');
-      if (!request.signal.aborted) { episodes.value = data.records; missingCount.value = data.totalRecords; }
+      const data = requireObject(await load('series', 'wanted/missing?page=1&pageSize=5&includeSeries=true&monitored=true'), 'missing episodes');
+      const records = requireList<MissingEpisode>(data.records, 'missing episodes');
+      if (typeof data.totalRecords !== 'number') throw new Error('Invalid episodes');
+      if (!request.signal.aborted) { episodes.value = records; missingCount.value = data.totalRecords; }
     }));
     if (!options.useAPI.value || !options.selectedInstanceData.value?.has_storage_agent) {
       for (const type of ['movies', 'series'] as const) jobs.push(task(`${type} storage`, async () => {
         const [roots, disks] = await Promise.all([load(type, 'rootfolder'), load(type, 'diskspace')]);
-        if (!Array.isArray(roots) || !Array.isArray(disks)) throw new Error('Invalid storage');
+        const rootFolders = requireList<RootFolder>(roots, 'root folders');
+        const diskSpaces = requireList<{ path: string; freeSpace: number; totalSpace: number }>(disks, 'disk space');
         if (request.signal.aborted) return;
-        (type === 'movies' ? movieRoots : seriesRoots).value = roots;
-        (type === 'movies' ? movieDisks : seriesDisks).value = disks.map(disk => ({ path: disk.path, free_space: disk.freeSpace / 1024 ** 3, total_space: disk.totalSpace / 1024 ** 3 }));
+        (type === 'movies' ? movieRoots : seriesRoots).value = rootFolders;
+        (type === 'movies' ? movieDisks : seriesDisks).value = diskSpaces.map(disk => ({ path: disk.path, free_space: disk.freeSpace / 1024 ** 3, total_space: disk.totalSpace / 1024 ** 3 }));
       }));
     }
     await Promise.all(jobs);
