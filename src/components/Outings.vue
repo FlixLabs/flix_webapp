@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { readApiJson, requireList, requireObject } from '@/composables/apiResponse';
 
-import { ref, watch, computed, onMounted } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { usePersistentPreference, isString, isMediaType } from '@/composables/usePersistentPreference';
 import { useMediaService } from '@/composables/useMediaService';
@@ -30,7 +30,6 @@ import { fetchTmdbPage } from '@/composables/fetchTmdbPage';
 
 const store = useFlixStore();
 
-const selectedInstance = computed(() => store.selectedInstance);
 const selectedInstanceData = computed(() => store.selectedInstanceData);
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
@@ -416,17 +415,13 @@ function searchContent(type: 'movies' | 'series', item: any) {
 
 watch(search, () => { movie_page.value = 1; serie_page.value = 1; });
 
-onMounted(() => {
-  getContent('movies');
-  getContent('series');
-});
-
-watch(selectedInstance, () => {
+watch(selectedInstanceData, () => {
+  if (useAPI.value && !selectedInstanceData.value) return;
   getQualityProfileList('movies');
   getQualityProfileList('series');
   getContent('movies');
   getContent('series');
-});
+}, { immediate: true });
 </script>
 
 <template>
@@ -478,7 +473,7 @@ watch(selectedInstance, () => {
         announcementName="Release"
         :showSearch="!!selectedMovie?.already_in_library && canSearchItem('movies', selectedMovie)"
         :showAdd="!!selectedMovie && !selectedMovie.already_in_library && qualityMovieItems.length > 0"
-        :showRemove="!!selectedMovie && selectedMovie.already_in_library"
+        :showRemove="!!selectedMovie?.already_in_library"
         @search="searchContent('movies', $event)"
         @release-grabbed="showSuccessAlert('Release queued successfully')"
         @add="openQualityDialog('movies', $event)"
@@ -506,7 +501,7 @@ watch(selectedInstance, () => {
         announcementName="Premiere"
         :showSearch="!!selectedSerie?.already_in_library && canSearchItem('series', selectedSerie)"
         :showAdd="!!selectedSerie && !selectedSerie.already_in_library && qualitySerieItems.length > 0"
-        :showRemove="!!selectedSerie && selectedSerie.already_in_library"
+        :showRemove="!!selectedSerie?.already_in_library"
         @search="searchContent('series', $event)"
         @release-grabbed="showSuccessAlert('Release queued successfully')"
         @add="openQualityDialog('series', $event)"
