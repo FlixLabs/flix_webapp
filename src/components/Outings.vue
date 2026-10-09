@@ -25,6 +25,7 @@ import MediaBrowserToolbar from '@/components/common/MediaBrowserToolbar.vue';
 import MediaBrowserResults from '@/components/common/MediaBrowserResults.vue';
 import SeriesSizeField from '@/components/common/SeriesSizeField.vue';
 import { useEpisodeSummary } from '@/composables/useEpisodeSummary';
+import { fetchTmdbPage } from '@/composables/fetchTmdbPage';
 
 const store = useFlixStore();
 
@@ -115,9 +116,8 @@ function getContent(type: 'movies' | 'series') {
     url_request = 'on_the_air';
   }
 
-  fetch(base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key)
-    .then(async (response) => {
-      const json_data = await response.json();
+  return fetchTmdbPage(base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key)
+    .then(async (json_data) => {
 
       let items = [];
       for (const item of json_data.results) {
@@ -167,9 +167,8 @@ function getContent(type: 'movies' | 'series') {
       for (let page = 2; page <= total_pages; page++) {
         let url = base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key + '&page=' + page;
         promises.push(
-          fetch(url)
-            .then(async (response) => {
-              const page_data = await response.json();
+          fetchTmdbPage(url)
+            .then((page_data) => {
 
               for (const item of page_data.results) {
                 let tmdbId = null;
@@ -225,7 +224,7 @@ function getContent(type: 'movies' | 'series') {
       });
     })
     .catch((error) => {
-      showErrorAlert(error);
+      showErrorAlert(error instanceof Error ? error.message : 'Unable to load upcoming media. Please try again.');
     })
     .finally(() => {
       if (type == 'movies') {
