@@ -12,6 +12,8 @@ import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useDownloadActions } from '@/composables/useDownloadActions';
 import { downloadDetails } from '@/composables/useDownloadDetails';
 import DownloadDetails from '@/components/common/DownloadDetails.vue';
+import ManualImportDialog from '@/components/common/ManualImportDialog.vue';
+import { canManualImport } from '@/composables/useManualImport';
 import MediaTypeToggle from '@/components/common/MediaTypeToggle.vue';
 import PageNavigation from '@/components/common/PageNavigation.vue';
 import { usePersistentPreference, isMediaType } from '@/composables/usePersistentPreference';
@@ -23,6 +25,13 @@ const selectedInstanceData = computed(() => store.selectedInstanceData);
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
 const { getConfig } = useMediaService({ useAPI, selectedInstanceData });
+const importDialog = ref<InstanceType<typeof ManualImportDialog> | null>(null);
+const importType = ref<'movies' | 'series'>('movies');
+const importOptions = { useAPI, selectedInstanceData };
+function refreshImport() {
+  getDownload(importType.value);
+  getHistory(importType.value);
+}
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
@@ -130,6 +139,9 @@ function getDownload(type: 'movies' | 'series') {
 
         items.push({
           id: item.id,
+          downloadId: item.downloadId,
+          outputPath: item.outputPath,
+          trackedDownloadState: item.trackedDownloadState,
           title: item.title,
           date: item.added,
           indexer: item.indexer,
@@ -285,6 +297,7 @@ watch(selectedInstance, () => {
 
 <template>
   <Alert :alert="alert" @update:alert="alert = $event" />
+  <ManualImportDialog ref="importDialog" :options="importOptions" @requested="refreshImport" @finished="refreshImport" />
   <DeleteConfirmationDialog
     v-model="deleteConfirmationDialog"
     :message="`Remove '${itemToDelete.item?.title ?? ''}' from the queue and download client? Downloaded files may be deleted. The media will remain in your library.`"
@@ -353,6 +366,16 @@ watch(selectedInstance, () => {
             <DownloadDetails :record="item" />
           </template>
           <template #item.actions="{ item }">
+            <v-btn
+              v-if="canManualImport(item)"
+              color="primary"
+              variant="text"
+              size="small"
+              prepend-icon="mdi-file-import-outline"
+              :aria-label="'Manual import ' + item.title"
+              :disabled="isRemoving"
+              @click="importType = mediaType; importDialog?.open(mediaType, item)"
+            >Manual Import</v-btn>
             <v-btn
               color="error"
               variant="text"
