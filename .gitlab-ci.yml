@@ -1,17 +1,24 @@
 stages:
+  - quality
+  - release
   - build
   - deploy
   - mirror
 
 variables:
+  GIT_DEPTH: "0"
   IMAGE: $CI_REGISTRY_IMAGE
   TAG: $CI_COMMIT_SHA
 
-build:
-  stage: build
+.build-image:
   tags:
     - build
   script: |
+    VERSION="$(sh scripts/read-version.sh)"
+    if [ -n "$CI_COMMIT_TAG" ] && [ "$CI_COMMIT_TAG" != "v$VERSION" ]; then
+      echo "Release tag must match package.json (v$VERSION)"
+      exit 1
+    fi
     test -n "$VITE_FLIX_API_USE" || (echo "VITE_FLIX_API_USE is required" && exit 1)
     test -n "$VITE_TMDB_BASE_URL" || (echo "VITE_TMDB_BASE_URL is required" && exit 1)
     test -n "$VITE_TMDB_API_KEY" || (echo "VITE_TMDB_API_KEY is required" && exit 1)
@@ -30,7 +37,7 @@ build:
       echo "VITE_FLIX_API_USE must be 'true' or 'false'"
       exit 1
     fi
-    docker login -u gitlab-ci-token -p "$CI_JOB_TOKEN" "$CI_REGISTRY"
+    printf '%s' "$CI_JOB_TOKEN" | docker login -u gitlab-ci-token --password-stdin "$CI_REGISTRY"
     docker build \
       --build-arg VITE_RADARR_BASE_URL="$VITE_RADARR_BASE_URL" \
       --build-arg VITE_RADARR_API_KEY="$VITE_RADARR_API_KEY" \
@@ -44,21 +51,56 @@ build:
       --build-arg VITE_CRYPT_KEY="$VITE_CRYPT_KEY" \
       --build-arg VITE_FLIX_API_USE="$VITE_FLIX_API_USE" \
       --build-arg VITE_FLIX_API_URL="$VITE_FLIX_API_URL" \
-      -f Dockerfile.prod -t "$IMAGE:$TAG" -t "$IMAGE:latest" .
+      -f Dockerfile.prod -t "$IMAGE:$TAG" .
     docker push "$IMAGE:$TAG"
+    docker tag "$IMAGE:$TAG" "$IMAGE:$CI_COMMIT_TAG"
+    docker tag "$IMAGE:$TAG" "$IMAGE:latest"
+    docker push "$IMAGE:$CI_COMMIT_TAG"
     docker push "$IMAGE:latest"
-  only:
-    - master
+
+quality:
+  stage: quality
+  tags:
+    - build
+  script:
+    - sh scripts/build-quality.sh
+  interruptible: true
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG =~ /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/'
+
+create_release_tag:
+  stage: release
+  tags:
+    - build
+  needs: [quality]
+  resource_group: release-tag
+  script:
+    - sh scripts/create-release-tag.sh
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+build:
+  extends: .build-image
+  stage: build
+  needs: [quality]
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/'
 
 deploy:
   stage: deploy
+  needs: [build]
+  resource_group: production
   tags:
     - deploy
   script: |
     test -n "$DEPLOY_WEBHOOK_URL" || (echo "DEPLOY_WEBHOOK_URL is required" && exit 1)
     test -n "$DEPLOY_WEBHOOK_TOKEN" || (echo "DEPLOY_WEBHOOK_TOKEN is required" && exit 1)
     HEALTHCHECK_URL="${HEALTHCHECK_URL}"
-    curl -fsS -X POST -H "X-Deploy-Token: $DEPLOY_WEBHOOK_TOKEN" "$DEPLOY_WEBHOOK_URL"
+    curl -fsS -X POST -H "X-Deploy-Token: $DEPLOY_WEBHOOK_TOKEN" -H "X-Deploy-Version: $CI_COMMIT_TAG" "$DEPLOY_WEBHOOK_URL"
     for i in 1 2 3 4 5; do
       if curl -fsS "$HEALTHCHECK_URL" > /dev/null; then
         echo "healthcheck ok";
@@ -69,8 +111,8 @@ deploy:
     done
     echo "healthcheck failed";
     exit 1
-  only:
-    - master
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/'
 
 mirror-gitlab:
   stage: mirror
@@ -97,8 +139,9 @@ mirror-gitlab:
     - rm -rf refs/original/ && git reflog expire --all && git gc --prune=now
     - git for-each-ref --format="%(refname)" refs/pipelines/ | xargs -r git update-ref -d
     - git push --prune --force "$WEBAPP_MIRROR_GITLAB_REPO" +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*
-  only:
-    - master
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG =~ /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/'
 
 mirror-github:
   stage: mirror
@@ -125,5 +168,6 @@ mirror-github:
     - rm -rf refs/original/ && git reflog expire --all && git gc --prune=now
     - git for-each-ref --format="%(refname)" refs/pipelines/ | xargs -r git update-ref -d
     - git push --prune --force "$WEBAPP_MIRROR_GITHUB_REPO" +refs/heads/*:refs/heads/* +refs/tags/*:refs/tags/*
-  only:
-    - master
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_TAG =~ /^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/'

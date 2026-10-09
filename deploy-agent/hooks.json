@@ -4,7 +4,8 @@
     "execute-command": "/scripts/deploy.sh",
     "command-working-directory": "/app",
     "pass-arguments-to-command": [
-      { "source": "header", "name": "X-Deploy-Token" }
+      { "source": "header", "name": "X-Deploy-Token" },
+      { "source": "header", "name": "X-Deploy-Version" }
     ],
     "response-message": "deploy triggered"
   }

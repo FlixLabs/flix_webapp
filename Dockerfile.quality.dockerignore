@@ -1,0 +1,9 @@
+.git
+node_modules
+dist
+.env
+.env.*
+!.env.dist
+repo-mirror
+deploy-agent/*
+!deploy-agent/deploy.sh
