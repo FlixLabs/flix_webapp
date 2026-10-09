@@ -119,3 +119,17 @@ esac
     writeFileSync(join(dir, 'docker.log'), '');
   }
 });
+
+test('quality is independent from production secrets and image publishing', () => {
+  const ci = readFileSync(join(root, '.gitlab-ci.yml'), 'utf8');
+  const quality = ci.split('\nquality:\n')[1].split('\ncreate_release_tag:')[0];
+  assert.match(quality, /docker build -f Dockerfile\.quality \./);
+  assert.doesNotMatch(quality, /extends:|VITE_|docker login|docker push/);
+  const dockerfile = readFileSync(join(root, 'Dockerfile.quality'), 'utf8');
+  assert.doesNotMatch(dockerfile, /ARG VITE_|ENV VITE_|COPY .*\.env/);
+  assert.match(dockerfile, /yarn test:ci && yarn test/);
+  const build = ci.split('\nbuild:\n')[1].split('\ndeploy:')[0];
+  assert.match(build, /extends: \.build-image/);
+  assert.match(build, /CI_COMMIT_TAG/);
+  assert.doesNotMatch(build, /merge_request_event|CI_COMMIT_BRANCH/);
+});

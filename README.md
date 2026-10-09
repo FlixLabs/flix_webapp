@@ -75,13 +75,13 @@ The version in `package.json` is the release source of truth. Each repository
 has its own version; the webapp and API do not need matching versions.
 
 - `quality` runs on merge requests, the default branch and stable `vX.Y.Z` tags.
-  It runs the release-script tests, unit tests, type checking and production build,
-  then publishes the validated image with the commit SHA.
+  It runs tests, type checking and compilation in a dedicated Docker image,
+  without production variables or registry authentication.
 - After successful default-branch validation, `create_release_tag` creates an
   annotated `vX.Y.Z` tag and triggers its pipeline. An existing release tag is
   never moved; bump `package.json` to release another version.
-- Tag pipelines publish the validated image as `vX.Y.Z` and `latest`, then deploy
-  the exact version using the `X-Deploy-Version` webhook header.
+- Tag pipelines build the production image with the configured variables, publish
+  it as `vX.Y.Z` and `latest`, then deploy the exact version using the `X-Deploy-Version` webhook header.
 - Mirrors remain independent and run on the default branch and release tags.
 
 Before enabling automatic releases in GitLab:
@@ -89,8 +89,9 @@ Before enabling automatic releases in GitLab:
 1. In **Settings > CI/CD > Job token permissions**, enable **Allow Git push
    requests to the repository**. Job-token pushes do not automatically create
    pipelines, so the release script triggers the tag pipeline explicitly.
-2. If `v*` tags are protected, allow the pipeline user to create them. Ensure
-   existing CI variables are available to the pipelines that need them.
+2. Protect `v*` tags and allow the pipeline user to create them. Keep production
+   variables protected and available to release jobs (environment scope `*`).
+   Merge-request quality checks do not need these variables.
 3. Update `deploy-agent/deploy.sh` and `deploy-agent/hooks.json` on the server,
    then recreate the production deploy-agent to reload its hooks before merging.
    Keep the registry repository in `APP_IMAGE`; the agent overrides only its tag
