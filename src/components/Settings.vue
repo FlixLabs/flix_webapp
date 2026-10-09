@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { readApiJson, requireObject } from '@/composables/apiResponse';
+
 
 import { computed, onMounted, watch, ref } from 'vue';
 import CryptoJS from 'crypto-js';
@@ -59,7 +61,7 @@ function getData(key: 'auth' | 'color') {
 
   fetch(base_url + '/' + key)
     .then(async (response) => {
-      const json_data = await response.json();
+      const json_data: any = requireObject(await readApiJson(response), key);
 
       if (key == 'auth') {
         store.authenticationEnabled = !!(json_data.username && json_data.password);

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { readApiJson, requireObject, requireList } from '@/composables/apiResponse';
+
 
 import { RouterView, useRouter } from 'vue-router'
 import { ref, computed, watch, onMounted } from 'vue';
@@ -64,8 +66,8 @@ function getData() {
   fetch(base_url + '/instances')
     .then(async (response) => {
       if (!response.ok) throw new Error('Unable to load instances');
-      const json_data = await response.json();
-      store.setInstances(json_data);
+      const json_data = await readApiJson(response);
+      store.setInstances(requireList<import('@/composables/useMediaService').MediaInstance>(json_data, 'instances', ['name']));
     })
     .catch((error) => {
       showErrorAlert(error);
@@ -81,7 +83,7 @@ onMounted(() => {
     fetch(import.meta.env.VITE_FLIX_API_URL + '/auth')
       .then(async response => {
         if (!response.ok) throw new Error('Unable to load authentication settings');
-        const data = await response.json();
+        const data = requireObject<{ username?: string; password?: string }>(await readApiJson(response), 'authentication');
         store.authenticationEnabled = !!(data.username && data.password);
       })
       .catch(showErrorAlert);
