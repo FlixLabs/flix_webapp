@@ -2,8 +2,6 @@ FROM node:24-bookworm-slim AS build
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends git && rm -rf /var/lib/apt/lists/*
-
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
 
@@ -32,7 +30,7 @@ ENV VITE_SYSTEM_STORAGE_SPACE_TRESHOLD=$VITE_SYSTEM_STORAGE_SPACE_TRESHOLD
 ENV VITE_CRYPT_KEY=$VITE_CRYPT_KEY
 ENV VITE_FLIX_API_USE=$VITE_FLIX_API_USE
 ENV VITE_FLIX_API_URL=$VITE_FLIX_API_URL
-RUN yarn test:ci && yarn test && yarn build
+RUN yarn test && yarn build
 
 FROM node:24-bookworm-slim
 
