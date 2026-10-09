@@ -15,6 +15,7 @@
     "lint": "eslint . --fix",
     "format": "prettier --write src/",
     "test": "vitest run",
+    "test:ci": "node --test scripts/tests/*.test.mjs",
     "test:e2e": "playwright test"
   },
   "dependencies": {

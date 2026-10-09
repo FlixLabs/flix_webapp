@@ -68,3 +68,40 @@ yarn lint
 ```sh
 yarn test
 ```
+
+### GitLab Releases
+
+The version in `package.json` is the release source of truth. Each repository
+has its own version; the webapp and API do not need matching versions.
+
+- `quality` runs on merge requests, the default branch and stable `vX.Y.Z` tags.
+  It runs tests, type checking and compilation in a dedicated Docker image,
+  without production variables or registry authentication.
+  The quality script temporarily applies its ignore file at the context root
+  for compatibility with both BuildKit and the legacy Docker builder.
+- After successful default-branch validation, `create_release_tag` creates an
+  annotated `vX.Y.Z` tag and triggers its pipeline. An existing release tag is
+  never moved; bump `package.json` to release another version.
+- Tag pipelines build the production image with the configured variables, publish
+  it as `vX.Y.Z` and `latest`, then deploy the exact version using the `X-Deploy-Version` webhook header.
+- Mirrors remain independent and run on the default branch and release tags.
+
+Before enabling automatic releases in GitLab:
+
+1. In **Settings > CI/CD > Job token permissions**, enable **Allow Git push
+   requests to the repository**. Job-token pushes do not automatically create
+   pipelines, so the release script triggers the tag pipeline explicitly.
+2. Protect `v*` tags and allow the pipeline user to create them. Keep production
+   variables protected and available to release jobs (environment scope `*`).
+   Merge-request quality checks do not need these variables.
+3. Update `deploy-agent/deploy.sh` and `deploy-agent/hooks.json` on the server,
+   then recreate the production deploy-agent to reload its hooks before merging.
+   Keep the registry repository in `APP_IMAGE`; the agent overrides only its tag
+   for the requested release. No Compose changes are required.
+
+The release script uses the existing job token, not a new personal access token.
+No tags need to be pushed manually. Test release scripts locally with:
+
+```sh
+yarn test:ci
+```
