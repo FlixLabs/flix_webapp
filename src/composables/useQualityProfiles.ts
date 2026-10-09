@@ -1,3 +1,4 @@
+import { readApiJson, requireList } from '@/composables/apiResponse';
 import { useResettable } from "@/composables/useResettable";
 import {
   useMediaService,
@@ -33,7 +34,7 @@ export function useQualityProfiles(
         base_url + "/api/v3/qualityProfile?apikey=" + api_key,
       );
       if (!response.ok) throw new Error("Unable to load quality profiles");
-      const profiles: { name: string; id: number }[] = await response.json();
+      const profiles = requireList<{ name: string; id: number }>(await readApiJson(response), 'quality profiles', ['name']);
       const items = profiles.map((profile) => ({
         title: profile.name,
         value: profile.id,

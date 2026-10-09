@@ -1,3 +1,4 @@
+import { optionalList } from '@/composables/apiResponse';
 interface SearchResult {
   title: string;
   originalTitle?: string;
@@ -5,6 +6,7 @@ interface SearchResult {
 }
 
 function normalize(value: string) {
+  if (typeof value !== 'string') throw new Error('Invalid search title. Please try again.');
   return value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase()
     .replace(/[^\p{L}\p{N}]+/gu, ' ').trim().replace(/\s+/g, ' ');
 }
@@ -15,7 +17,7 @@ export function rankSearchResults<T extends SearchResult>(items: T[], query: str
   if (!term || /^(tmdb|tvdb|imdb):/i.test(query.trim())) return [...items];
   const words = term.split(' ');
   const score = (item: T) => Math.max(...[
-    item.title, item.originalTitle ?? '', ...(item.alternateTitles ?? []).map(title => title.title),
+    item.title, item.originalTitle ?? '', ...optionalList<{ title: string }>(item.alternateTitles, 'alternate titles').map(title => title.title),
   ].map(title => {
     const value = normalize(title);
     if (value === term) return 4;

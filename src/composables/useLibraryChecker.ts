@@ -2,6 +2,7 @@ import { computed } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import type { Ref } from 'vue';
 import { useMediaService } from '@/composables/useMediaService';
+import { readApiJson, requireList } from '@/composables/apiResponse';
 
 export function useLibraryChecker(
   type: 'movies' | 'series',
@@ -24,16 +25,17 @@ export function useLibraryChecker(
 
     const url_type = URL_TYPES[type];
 
-    fetch(base_url + '/api/v3/' + url_type + '?apikey=' + api_key)
+    return fetch(base_url + '/api/v3/' + url_type + '?apikey=' + api_key)
       .then(async (response) => {
-        const json_data: any[] = await response.json();
+        if (!response.ok) throw new Error(`Unable to check the library (HTTP ${response.status}).`);
+        const json_data = requireList(await readApiJson(response), 'library');
 
         if (items.value.length > 0) {
           markAsAlreadyInLibrary(items.value, json_data);
         }
       })
       .catch((error) => {
-        showErrorAlert(error);
+        showErrorAlert(error instanceof Error ? error.message : 'Unable to check the library.');
       });
   };
 

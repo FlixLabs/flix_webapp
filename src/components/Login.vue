@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { readApiJson, requireObject } from '@/composables/apiResponse';
+
 
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
@@ -33,7 +35,7 @@ function getData() {
   if (auth_data.value.username && auth_data.value.password) {
     fetch(base_url + '/auth')
       .then(async (response) => {
-        const json_data = await response.json();
+        const json_data: any = requireObject(await readApiJson(response), 'authentication');
 
         if (json_data.username && json_data.password) {
           const decrypted_password = CryptoJS.AES.decrypt(json_data.password, import.meta.env.VITE_CRYPT_KEY);
@@ -65,7 +67,7 @@ function checkData() {
 
   fetch(base_url + '/auth')
     .then(async (response) => {
-      const json_data = await response.json();
+      const json_data: any = requireObject(await readApiJson(response), 'authentication');
 
       if (json_data.username && json_data.password) {
         // resetIsLoading(); Not working

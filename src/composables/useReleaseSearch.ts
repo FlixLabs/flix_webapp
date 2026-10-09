@@ -1,3 +1,4 @@
+import { readApiJson, requireList, optionalList } from '@/composables/apiResponse';
 import { computed, getCurrentScope, onScopeDispose, ref, watch } from 'vue';
 import { useMediaService, type MediaServiceOptions, type MediaServiceConfig, type MediaType } from './useMediaService';
 import type { MediaActionItem } from './useMediaActions';
@@ -100,8 +101,7 @@ export function useReleaseSearch(options: MediaServiceOptions) {
         headers: { 'X-Api-Key': config.api_key }, signal: abort.signal,
       });
       if (!response.ok) throw new Error('Unable to load episodes');
-      const data: Episode[] = await response.json();
-      if (!Array.isArray(data)) throw new Error('Invalid episode response');
+      const data: Episode[] = requireList(await readApiJson(response), 'episodes');
       if (!validContext(active) || abort.signal.aborted) return;
       episodes.value = data;
       season.value = seasons.value.find(s => s > 0) ?? seasons.value[0] ?? null;
@@ -141,8 +141,14 @@ export function useReleaseSearch(options: MediaServiceOptions) {
         headers: { 'X-Api-Key': active.config.api_key }, signal: abort.signal,
       });
       if (!response.ok) throw new Error('Release search failed');
-      const data: Release[] = await response.json();
-      if (!Array.isArray(data)) throw new Error('Invalid release response');
+      const data: Release[] = requireList(await readApiJson(response), 'releases');
+      for (const release of data) {
+        optionalList(release.languages, 'release languages');
+        if (release.rejections != null && (!Array.isArray(release.rejections)
+          || release.rejections.some(reason => typeof reason !== 'string'))) {
+          throw new Error('Invalid release rejections response.');
+        }
+      }
       if (!validContext(active) || id !== requestId || abort.signal.aborted) return;
       releases.value = data;
       hasSearched.value = true;

@@ -25,7 +25,9 @@ export function useAlert() {
     showAlert('success', 'mdi-check-circle', text);
   };
 
-  const showErrorAlert = (text = 'An error occurred!') => {
+  const showErrorAlert = (error: unknown = 'An error occurred!') => {
+    const text = error instanceof Error ? error.message
+      : typeof error === 'string' ? error : 'An error occurred!';
     showAlert('error', 'mdi-alert-circle', text);
   };
 

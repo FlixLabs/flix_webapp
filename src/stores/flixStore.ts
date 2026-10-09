@@ -2,6 +2,7 @@ import { defineStore } from 'pinia';
 import { computed, ref, watch } from 'vue';
 import { useResettable } from '@/composables/useResettable';
 import { usePersistentPreference } from '@/composables/usePersistentPreference';
+import { requireList, requireObject } from '@/composables/apiResponse';
 
 import type { MediaInstance as Instance } from '@/composables/useMediaService';
 
@@ -19,6 +20,11 @@ export const useFlixStore = defineStore('flix', () => {
   });
 
   function setInstances(data: Instance[]) {
+    requireList(data, 'instances', ['name']);
+    for (const instance of data) {
+      requireObject(instance.radarr, 'Radarr configuration');
+      requireObject(instance.sonarr, 'Sonarr configuration');
+    }
     instances.value = data;
     if (!data.some(instance => instance.name === selectedInstance.value)) {
       selectedInstance.value = data[0]?.name ?? null;
