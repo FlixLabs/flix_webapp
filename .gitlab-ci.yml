@@ -63,7 +63,7 @@ quality:
   tags:
     - build
   script:
-    - docker build -f Dockerfile.quality .
+    - sh scripts/build-quality.sh
   interruptible: true
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'

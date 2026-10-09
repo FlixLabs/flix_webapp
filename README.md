@@ -77,6 +77,8 @@ has its own version; the webapp and API do not need matching versions.
 - `quality` runs on merge requests, the default branch and stable `vX.Y.Z` tags.
   It runs tests, type checking and compilation in a dedicated Docker image,
   without production variables or registry authentication.
+  The quality script temporarily applies its ignore file at the context root
+  for compatibility with both BuildKit and the legacy Docker builder.
 - After successful default-branch validation, `create_release_tag` creates an
   annotated `vX.Y.Z` tag and triggers its pipeline. An existing release tag is
   never moved; bump `package.json` to release another version.
