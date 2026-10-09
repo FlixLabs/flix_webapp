@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { readApiJson, requireObject, requireList, optionalList } from '@/composables/apiResponse';
+
 
 import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue';
 import type { Ref } from 'vue';
@@ -125,7 +127,8 @@ function getDownload(type: 'movies' | 'series') {
 
   fetch(base_url + '/api/v3/queue?apikey=' + api_key)
     .then(async (response) => {
-      const json_data = await response.json();
+      const json_data: any = requireObject(await readApiJson(response), 'downloads');
+      requireList(json_data.records, 'download records');
       const currentConfig = getConfig(type);
       if (requestId !== downloadRequestIds[type] || currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
 
@@ -133,7 +136,7 @@ function getDownload(type: 'movies' | 'series') {
       for (let item of json_data.records) {
         let languages = [];
 
-        for (let language of item.languages ?? []) {
+        for (let language of optionalList(item.languages, 'languages')) {
           languages.push(language.name);
         }
 
@@ -190,13 +193,14 @@ function getHistory(type: 'movies' | 'series') {
 
   fetch(base_url + '/api/v3/history?apikey=' + api_key)
     .then(async (response) => {
-      const json_data = await response.json();
+      const json_data: any = requireObject(await readApiJson(response), 'downloads');
+      requireList(json_data.records, 'download records');
 
       let items = [];
       for (let item of json_data.records) {
         let languages = [];
 
-        for (let language of item.languages) {
+        for (let language of optionalList(item.languages, 'languages')) {
           languages.push(language.name);
         }
 

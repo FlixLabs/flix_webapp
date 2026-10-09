@@ -8,6 +8,7 @@ defineProps<{
   isLoading: boolean;
   idField: "id" | "tmdbId";
   announcementName: "Release" | "Premiere";
+  showAnnouncement?: boolean;
   showHasFile: boolean;
   emptyMessage: string;
 }>();
@@ -20,6 +21,7 @@ defineEmits<{ "card-click": [id: number] }>();
     :paginated_items="items"
     :id-field="idField"
     :announcementName="announcementName"
+    :show-announcement="showAnnouncement"
     :showHasFile="showHasFile"
     @card-click="$emit('card-click', $event)"
   />

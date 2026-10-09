@@ -5,6 +5,7 @@ const props = defineProps<{
   paginated_items: any | null;
   idField: 'id' | 'tmdbId';
   announcementName: 'Release' | 'Premiere';
+  showAnnouncement?: boolean;
   showHasFile: boolean;
 }>();
 
@@ -42,12 +43,14 @@ const emit = defineEmits(['card-click']);
           class="title-line text-center text-wrap"
           :title="item.title"
           >
-          {{ item.title }}
+          <span class="title-text">{{ item.title }}</span>
         </v-card-title>
         <v-card-text
           class="media-date text-center d-flex align-center justify-center"
           >
-          {{ item.year || `${announcementName} ${item.release_date ?? ''}` }}
+          {{ showAnnouncement
+            ? `${announcementName} ${item.release_date || item.year || ''}`
+            : item.year || `${announcementName} ${item.release_date ?? ''}` }}
         </v-card-text>
         <div
           class="d-flex justify-center pb-2"
@@ -94,7 +97,19 @@ const emit = defineEmits(['card-click']);
   line-height: 1.2;
   font-weight: bold;
   min-height: 3.4rem;
-  overflow-wrap: anywhere;
+  height: 3.4rem;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.title-text {
+  width: 100%;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: break-word;
 }
 
 .media-date {

@@ -1,3 +1,4 @@
+import { readApiJson, requireList, requireObject } from '@/composables/apiResponse';
 import { computed, onScopeDispose, ref, watch, type Ref } from "vue";
 import type { MediaInstance } from "./useMediaService";
 import type { StorageLocation } from "./useStorageLocations";
@@ -40,7 +41,8 @@ export function useAgentStorage(options: {
         cache: "no-store",
       });
       if (!response.ok) throw new Error("Storage agent unavailable");
-      const data = await response.json();
+      const data = requireObject(await readApiJson(response), 'storage');
+      requireList(data.locations, 'storage locations');
       if (!Array.isArray(data.locations) || typeof data.collectedAt !== "string") throw new Error("Invalid storage response");
       if (request.signal.aborted) return;
       records.value = data.locations;

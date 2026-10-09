@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { readApiJson, requireList, requireObject } from '@/composables/apiResponse';
 
 import { ref, watch, computed, onMounted } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
@@ -248,17 +249,22 @@ function getSerieEpisodes(serie_id: number) {
 
   fetch(base_url + '/tv/' + serie_id + '?api_key=' + api_key)
     .then(async (response) => {
-      const json_data = await response.json();
+      if (!response.ok) throw new Error(`Unable to load seasons (TMDB HTTP ${response.status}).`);
+      const json_data: any = requireObject(await readApiJson(response), 'TMDB');
+      if (!json_data || !Array.isArray(json_data.seasons)
+        || json_data.seasons.some((season: any) => !season || !Number.isInteger(season.season_number))) {
+        throw new Error('Invalid season response from TMDB. Please try again.');
+      }
       const seasonPromises = [];
 
       for (const season of json_data.seasons) {
         const seasonPromise = fetch(base_url + '/tv/' + serie_id + '/season/' + season.season_number + '?api_key=' + api_key)
-          .then(response => response.json())
+          .then(async response => requireObject(await readApiJson(response), 'TMDB season'))
           .then(async seasonData => {
             let tmdbEpisodes: any[] = [];
 
-            if (seasonData && Array.isArray(seasonData.episodes)) {
-              tmdbEpisodes = seasonData.episodes
+            if (seasonData) {
+              tmdbEpisodes = requireList(seasonData.episodes, 'season episodes')
                 .filter((episode: any) =>
                   episode &&
                   episode.name &&
@@ -280,7 +286,7 @@ function getSerieEpisodes(serie_id: number) {
             if (selectedSerie.value.id) {
               await fetch(base_url_sonarr + '/api/v3/episode?includeEpisodeFile=true&apikey=' + api_key_sonarr + '&seriesId=' + selectedSerie.value.id)
                 .then(async (response) => {
-                  const json_data_sonarr = await response.json();
+                  const json_data_sonarr = requireList(await readApiJson(response), 'episodes');
 
                   const lookup: Record<string, any> = {};
                   json_data_sonarr.forEach((episodeData: any) => {
@@ -300,13 +306,14 @@ function getSerieEpisodes(serie_id: number) {
                   });
                 })
                 .catch((error) => {
-                  //showErrorAlert(error);
+                  showErrorAlert(error);
                 });
             }
 
             return tmdbEpisodes;
           })
           .catch(error => {
+            showErrorAlert(error);
             return [];
           });
 
@@ -320,10 +327,12 @@ function getSerieEpisodes(serie_id: number) {
         episode => episode && typeof episode.season !== 'undefined'
       );
 
-      isLoadingSerieEpisodes.value = false;
     })
     .catch((error) => {
-      showErrorAlert(error);
+      showErrorAlert(error instanceof Error ? error.message : 'Unable to load seasons.');
+    })
+    .finally(() => {
+      isLoadingSerieEpisodes.value = false;
     });
 }
 
@@ -356,7 +365,7 @@ const getSerieTvdbId = async (serie: any) => {
 
   await fetch(base_url + '/tv/' + serie.tmdbId + '/external_ids?api_key=' + api_key)
     .then(async (response) => {
-      const json_data = await response.json();
+      const json_data: any = requireObject(await readApiJson(response), 'TMDB');
 
       tvdbId = json_data.tvdb_id;
     })
@@ -457,6 +466,7 @@ watch(selectedInstance, () => {
         :is-loading="isLoadingMovie"
         id-field="tmdbId"
         announcementName="Release"
+        show-announcement
         :showHasFile="true"
         empty-message="No upcoming movies found"
         @card-click="handleMovieClick"
@@ -484,6 +494,7 @@ watch(selectedInstance, () => {
         :is-loading="isLoadingSerie"
         id-field="tmdbId"
         announcementName="Premiere"
+        show-announcement
         :showHasFile="false"
         empty-message="No upcoming series found"
         @card-click="handleSerieClick"
