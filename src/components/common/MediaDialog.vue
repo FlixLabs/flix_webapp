@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MediaFileDetails from './MediaFileDetails.vue';
+import MediaMonitoring from './MediaMonitoring.vue';
 import MediaImage from './MediaImage.vue';
 import ReleaseSelectionDialog from './ReleaseSelectionDialog.vue';
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -22,6 +23,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'release-grabbed']);
 const releaseDialog = ref(false);
+const monitoringPending = ref(false);
 watch(() => props.modelValue, value => { if (!value) releaseDialog.value = false; });
 
 function releaseGrabbed() {
@@ -261,6 +263,14 @@ onBeforeUnmount(() => {
             </v-row>
           </v-col>
         </v-row>
+        <MediaMonitoring
+          v-if="showRemove && modelValue"
+          :key="`${mediaType}-${item.id}`"
+          :item="item"
+          :type="mediaType === 'Movie' ? 'movies' : 'series'"
+          :disabled="actionPending"
+          @busy="monitoringPending = $event"
+        />
         <div
           class="media-supplemental-details"
           :class="{ 'media-details-concealed': showFileDetails && concealFileDetails }"
@@ -283,9 +293,10 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <v-card-actions class="flex-wrap">
-        <v-btn v-if="showSearch" color="primary" @click="releaseDialog = true">Choose Release</v-btn>
+        <v-btn v-if="showSearch" :disabled="monitoringPending" color="primary" @click="releaseDialog = true">Choose Release</v-btn>
         <v-btn
           v-if="showSearch"
+          :disabled="monitoringPending"
           @click="emit('search', item)"
           color="primary"
           >
@@ -294,7 +305,7 @@ onBeforeUnmount(() => {
         <v-btn
           v-if="showAdd"
           :loading="actionPending"
-          :disabled="actionPending || addDisabled"
+          :disabled="actionPending || monitoringPending || addDisabled"
           @click="emit('add', item)"
           color="primary"
           >
@@ -303,7 +314,7 @@ onBeforeUnmount(() => {
         <v-btn
           v-if="showRemove"
           :loading="actionPending"
-          :disabled="actionPending"
+          :disabled="actionPending || monitoringPending"
           @click="emit('remove', item)"
           color="error"
           >

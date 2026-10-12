@@ -3,6 +3,7 @@ import type { Ref } from 'vue';
 import { useMediaService, type MediaServiceOptions, type MediaType } from './useMediaService';
 import { useMediaActions, type MediaActionItem } from './useMediaActions';
 import type { MediaFileDetails } from './mediaFileDetails';
+import { monitoringFields, type MonitoredSeason } from './useMediaMonitoring';
 
 interface DashboardItem extends MediaActionItem {
   selected_quality?: number;
@@ -12,6 +13,9 @@ interface DashboardItem extends MediaActionItem {
   quality?: string;
   statistics?: { sizeOnDisk?: number };
   hasFile?: boolean;
+  monitored?: boolean;
+  seasons?: MonitoredSeason[];
+  monitoringNeedsRefresh?: boolean;
 }
 interface Options extends MediaServiceOptions {
   movies: Ref<DashboardItem[]>;
@@ -60,6 +64,8 @@ export function useDashboardActions(options: Options) {
         if (result !== item && (!id || identity(type, result) !== id)) continue;
         result.already_in_library = !remove;
         result.id = remove ? undefined : created.id;
+        Object.assign(result, monitoringFields(remove ? {} : created));
+        result.monitoringNeedsRefresh = false;
         if (remove) {
           result.relativePath = undefined;
           result.sizeOnDisk = undefined;

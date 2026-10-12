@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { mediaFileFields } from '@/composables/mediaFileDetails';
+import { monitoringFields } from '@/composables/useMediaMonitoring';
 import { readApiJson, requireList, optionalList } from '@/composables/apiResponse';
 
 
@@ -166,7 +167,8 @@ function getContent(type: 'movies' | 'series') {
           quality: quality,
           relativePath: relativePath,
           ...(type === 'movies' && item.movieFile ? mediaFileFields(item.movieFile) : {}),
-          statistics: item.statistics
+          statistics: item.statistics,
+          ...monitoringFields(item)
         });
       }
 

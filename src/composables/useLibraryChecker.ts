@@ -1,4 +1,5 @@
 import { mediaFileFields } from '@/composables/mediaFileDetails';
+import { monitoringFields } from './useMediaMonitoring';
 import { computed } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import type { Ref } from 'vue';
@@ -77,9 +78,7 @@ export function useLibraryChecker(
           if (compare_item.qualityProfileId) {
             item.selected_quality = compare_item.qualityProfileId;
           }
-          if (compare_item.monitored) {
-            item.monitored = compare_item.monitored;
-          }
+          Object.assign(item, monitoringFields(compare_item));
         }
       }
     }
