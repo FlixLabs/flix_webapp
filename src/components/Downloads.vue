@@ -63,6 +63,15 @@ const { state: serieHistoryInterval, reset: resetSerieHistoryInterval } = useRes
 const mediaType = usePersistentPreference('downloads.view', 'movies', isMediaType);
 const view = ref<'queue' | 'history'>('queue');
 const search = ref('');
+const queueFilter = ref('all');
+const queueFilterOptions = [
+  { title: 'All downloads', value: 'all' },
+  { title: 'Needs attention', value: 'attention' },
+  { title: 'Download complete', value: 'ready' },
+  { title: 'Downloading', value: 'downloading' },
+  { title: 'Paused', value: 'paused' },
+  { title: 'Waiting / importing', value: 'waiting' },
+];
 const page = ref(1);
 const itemsPerPage = 10;
 const navigation = ref<InstanceType<typeof PageNavigation> | null>(null);
@@ -71,7 +80,9 @@ const activeRecords = computed(() => view.value === 'queue'
   : mediaType.value === 'movies' ? movieHistory.value : serieHistory.value);
 const filteredRecords = computed(() => {
   const term = (search.value ?? '').trim().toLocaleLowerCase();
-  return activeRecords.value.filter(record => `${record.title} ${record.status ?? ''} ${record.client ?? ''}`.toLocaleLowerCase().includes(term));
+  return activeRecords.value.filter(record =>
+    (view.value !== 'queue' || queueFilter.value === 'all' || record.diagnosis?.kind === queueFilter.value)
+    && `${record.title} ${record.status ?? ''} ${record.client ?? ''} ${record.messages?.join(' ') ?? ''}`.toLocaleLowerCase().includes(term));
 });
 const pageCount = computed(() => Math.max(1, Math.ceil(filteredRecords.value.length / itemsPerPage)));
 const activeLoading = computed(() => view.value === 'queue'
@@ -321,6 +332,16 @@ watch(selectedInstance, () => {
           <v-btn value="queue" prepend-icon="mdi-download-outline">Queue</v-btn>
           <v-btn value="history" prepend-icon="mdi-history">History</v-btn>
         </v-btn-toggle>
+        <v-select
+          v-if="view === 'queue'"
+          v-model="queueFilter"
+          :items="queueFilterOptions"
+          label="Queue filter"
+          variant="outlined"
+          density="compact"
+          hide-details
+          class="queue-filter"
+        />
         <v-pagination
           v-if="pageCount > 1"
           v-model="page"
@@ -355,18 +376,26 @@ watch(selectedInstance, () => {
           :mobile-breakpoint="600"
           hide-default-footer
           class="downloads-table mt-4"
-          :no-data-text="search ? 'No matching items found' : view === 'queue' ? 'No download information found' : 'No history information found'"
+          :no-data-text="search || (view === 'queue' && queueFilter !== 'all') ? 'No matching items found' : view === 'queue' ? 'No download information found' : 'No history information found'"
         >
           <template #item.title="{ item }">
             <div class="download-title">{{ item.title }}</div>
             <div class="text-caption text-medium-emphasis">{{ formatDate(item.date) }}</div>
             <div v-if="item.client" class="text-caption text-medium-emphasis">{{ item.client }}</div>
           </template>
-          <template #item.status="{ item }"><span class="text-capitalize">{{ item.status || 'Unavailable' }}</span></template>
+          <template #item.status="{ item }">
+            <template v-if="view === 'queue'">
+              <v-chip size="small" :color="item.diagnosis?.color">{{ item.diagnosis?.label }}</v-chip>
+              <div class="text-caption text-medium-emphasis mt-1 text-capitalize">{{ item.status || 'Status unavailable' }}</div>
+              <p v-if="item.diagnosis?.hint" class="text-caption mt-2">{{ item.diagnosis.hint }}</p>
+            </template>
+            <span v-else class="text-capitalize">{{ item.status || 'Unavailable' }}</span>
+          </template>
           <template #item.progress="{ item }">
-            <v-progress-linear :model-value="item.ratio" color="primary" height="25" rounded striped>
+            <v-progress-linear v-if="item.progressKnown" :model-value="item.ratio" :color="item.blocked ? 'warning' : 'primary'" height="25" rounded :striped="item.diagnosis?.kind === 'downloading'">
               <strong>{{ Math.ceil(item.ratio) }} %</strong>
             </v-progress-linear>
+            <span v-else class="text-caption text-medium-emphasis">Progress not provided</span>
             <DownloadDetails :record="item" />
           </template>
           <template #item.actions="{ item }">
@@ -395,6 +424,13 @@ watch(selectedInstance, () => {
     </v-card>
   </v-container>
 </template>
+
+<style scoped>
+.queue-filter {
+  flex: 0 1 220px;
+  min-width: 180px;
+}
+</style>
 
 <style scoped>
 .download-title {
