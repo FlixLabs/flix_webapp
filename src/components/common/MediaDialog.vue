@@ -3,7 +3,7 @@ import MediaImage from './MediaImage.vue';
 import ReleaseSelectionDialog from './ReleaseSelectionDialog.vue';
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: boolean;
   mediaType: 'Movie' | 'Serie';
   item: any | null;
@@ -15,7 +15,9 @@ const props = defineProps<{
   addDisabled?: boolean;
   showFileDetails?: boolean;
   activator?: HTMLElement | null;
-}>();
+}>(), {
+  showFileDetails: true,
+});
 
 const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'release-grabbed']);
 const releaseDialog = ref(false);
@@ -27,11 +29,12 @@ function releaseGrabbed() {
   emit('update:modelValue', false);
 }
 
-const dialogCardEl = ref<HTMLElement | null>(null);
 const dialogScrollEl = ref<HTMLElement | null>(null);
 const showScrollHint = ref(false);
+const concealFileDetails = ref(false);
 let contentObserver: MutationObserver | null = null;
 let resizeObserver: ResizeObserver | null = null;
+let scrollFrame = 0;
 
 function resolveElement(el: any): HTMLElement | null {
   if (!el) {
@@ -46,18 +49,12 @@ function resolveElement(el: any): HTMLElement | null {
   return null;
 }
 
-function setDialogCardRef(el: any) {
-  dialogCardEl.value = resolveElement(el);
-}
-
 function setDialogScrollRef(el: any) {
   dialogScrollEl.value = resolveElement(el);
 }
 
 function getScrollTarget() {
-  const candidates = [dialogScrollEl.value, dialogCardEl.value].filter(Boolean) as HTMLElement[];
-
-  return candidates.find(el => (el.scrollHeight - el.clientHeight) > 8) ?? null;
+  return dialogScrollEl.value;
 }
 
 function attachContentObserver() {
@@ -67,7 +64,7 @@ function attachContentObserver() {
 
   contentObserver.disconnect();
 
-  const targets = [dialogScrollEl.value, dialogCardEl.value].filter(Boolean) as HTMLElement[];
+  const targets = [dialogScrollEl.value].filter(Boolean) as HTMLElement[];
 
   for (const target of targets) {
     contentObserver.observe(target, {
@@ -85,7 +82,7 @@ function attachResizeObserver() {
 
   resizeObserver.disconnect();
 
-  const targets = [dialogScrollEl.value, dialogCardEl.value].filter(Boolean) as HTMLElement[];
+  const targets = [dialogScrollEl.value, ...(dialogScrollEl.value?.children ?? [])].filter(Boolean) as Element[];
   for (const target of targets) {
     resizeObserver.observe(target);
   }
@@ -95,51 +92,66 @@ function updateScrollHint() {
   const el = getScrollTarget();
   if (!el) {
     showScrollHint.value = false;
+    concealFileDetails.value = false;
     return;
   }
 
   const canScroll = el.scrollHeight - el.clientHeight > 8;
-  const isAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 8;
-  showScrollHint.value = canScroll && !isAtBottom;
+  showScrollHint.value = canScroll && el.scrollTop <= 0;
+  concealFileDetails.value = showScrollHint.value;
+}
+
+function scheduleScrollHint() {
+  cancelAnimationFrame(scrollFrame);
+  scrollFrame = requestAnimationFrame(updateScrollHint);
 }
 
 function refreshScrollHint() {
   nextTick(() => {
     attachContentObserver();
     attachResizeObserver();
-    requestAnimationFrame(updateScrollHint);
+    scheduleScrollHint();
   });
 }
 
+function resetScroll() {
+  if (dialogScrollEl.value) dialogScrollEl.value.scrollTop = 0;
+  refreshScrollHint();
+}
+
+watch(dialogScrollEl, refreshScrollHint, { flush: 'post' });
+
 watch(() => props.modelValue, (isOpen) => {
   if (isOpen) {
-    refreshScrollHint();
+    nextTick(resetScroll);
   }
 });
 
 watch(() => props.item, () => {
   if (props.modelValue) {
-    refreshScrollHint();
+    nextTick(resetScroll);
   }
 });
 
 onMounted(() => {
   refreshScrollHint();
-  window.addEventListener('resize', updateScrollHint);
+  window.addEventListener('resize', scheduleScrollHint);
 
   contentObserver = new MutationObserver(() => {
-    updateScrollHint();
+    attachResizeObserver();
+    scheduleScrollHint();
   });
   attachContentObserver();
 
   resizeObserver = new ResizeObserver(() => {
-    updateScrollHint();
+    scheduleScrollHint();
   });
   attachResizeObserver();
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('resize', updateScrollHint);
+  window.removeEventListener('resize', scheduleScrollHint);
+  cancelAnimationFrame(scrollFrame);
   contentObserver?.disconnect();
   contentObserver = null;
   resizeObserver?.disconnect();
@@ -154,19 +166,20 @@ onBeforeUnmount(() => {
     :model-value="modelValue"
     @update:model-value="val => emit('update:modelValue', val)"
     max-width="980px"
-    max-height="815px"
+    max-height="min(815px, calc(100% - 48px))"
+    scrollable
+    @after-enter="refreshScrollHint"
     class="blur-dialog"
     transition="fade-transition"
     >
     <v-card
-      :ref="setDialogCardRef"
       class="dialog-flex"
-      @scroll.passive="updateScrollHint"
       >
       <v-card-title>
         {{ mediaType }}
       </v-card-title>
-      <v-card-text
+      <div class="dialog-body">
+        <v-card-text
         :ref="setDialogScrollRef"
         class="dialog-flex-text"
         @scroll.passive="updateScrollHint"
@@ -247,11 +260,14 @@ onBeforeUnmount(() => {
             </v-row>
           </v-col>
         </v-row>
-        <slot
-          name="details"
-          />
+        <div
+          class="media-supplemental-details"
+          :class="{ 'media-details-concealed': showFileDetails && concealFileDetails }"
+          >
+          <slot name="details" />
         <v-row
           v-if="showFileDetails !== false && item.relativePath"
+          class="media-file-details"
           >
           <v-col>
             <v-row>
@@ -299,9 +315,9 @@ onBeforeUnmount(() => {
             </v-row>
           </v-col>
         </v-row>
-        <slot
-          name="episodes"
-          />
+          <slot name="episodes" />
+        </div>
+        </v-card-text>
         <div
           v-if="showScrollHint"
           class="scroll-hint"
@@ -313,7 +329,7 @@ onBeforeUnmount(() => {
           </v-icon>
           <span>Scroll</span>
         </div>
-      </v-card-text>
+      </div>
       <v-card-actions class="flex-wrap">
         <v-btn v-if="showSearch" color="primary" @click="releaseDialog = true">Choose Release</v-btn>
         <v-btn
@@ -382,14 +398,36 @@ onBeforeUnmount(() => {
 .dialog-flex {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dialog-body {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
 }
 
 .dialog-flex-text {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  position: relative;
+  overscroll-behavior-y: contain;
+  font-size: inherit;
+  letter-spacing: 0.03125em;
+  line-height: inherit;
+  padding: 16px 24px 24px;
+}
+
+.media-supplemental-details {
+  display: flow-root;
+  padding-top: 24px;
+}
+
+.media-details-concealed {
+  visibility: hidden;
 }
 
 .scroll-hint {
