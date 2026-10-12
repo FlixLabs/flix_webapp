@@ -76,6 +76,14 @@ update, reload monitoring before making another change.
 
 ### Media Sheet Navigation
 
+Existing media sheets have a lazy-loaded **Media settings** editor for quality
+profiles and existing tags. Sonarr 3 language profiles are available only when
+the service reports a compatible version; newer language preferences remain
+configured in Radarr/Sonarr profiles and custom formats. Saving rereads the
+resource, preserves unedited fields and verifies the persisted state. No search,
+move or deletion is requested. Concurrent changes or uncertain saves require
+**Reload settings** before retrying. Standalone mode is supported.
+
 Existing media sheets also provide a collapsed **Media history** section.
 Opening it loads ten events at a time from Radarr/Sonarr, newest first, with
 release titles, quality, episode information and reported failure/deletion
