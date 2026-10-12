@@ -56,6 +56,14 @@ test('episodes share the file details layout and tolerate missing metadata', asy
   await dialog.locator('.dialog-flex-text').evaluate(el => { el.scrollTop = 1; });
   await dialog.getByRole('button', { name: /Season 1/ }).click();
   const details = dialog.locator('.media-file-details');
+  await expect(details).toBeAttached();
+  await dialog.locator('.v-expansion-panel-text').evaluate(async el => {
+    await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+    await Promise.all(el.getAnimations({ subtree: true })
+      .filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity)
+      .map(animation => animation.finished.catch(() => {})));
+  });
+  await dialog.locator('.dialog-flex-text').evaluate(el => { el.scrollTop = el.scrollHeight; });
   await expect(details.getByText('Resolution', { exact: true })).toBeVisible();
   await expect(details.getByText('Not provided', { exact: true })).toHaveCount(7);
   await expect(details.getByText('Quality', { exact: true }).locator('..')).toContainText('Not provided');

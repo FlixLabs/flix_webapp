@@ -60,6 +60,20 @@ Missing scan information is shown as **Not provided**, not inferred from a relea
 title or language profile. **File added** is the file import date, not the date
 the movie or series was added to the library. File sizes use decimal GB.
 
+### Media Monitoring
+
+Library, Dashboard and Outings sheets for existing media can enable or disable
+movie/series monitoring. Series expose a compact **Season monitoring** panel,
+including specials. Disabling the series preserves individual season choices;
+enable the series before changing those choices.
+
+Each change reads the current Radarr/Sonarr resource, updates only the requested
+monitoring setting, then reads back the persisted state. Other settings and file
+paths are preserved. These actions do not start a search, move files or delete
+media, and work with or without Flix API. An unknown monitoring state is not
+treated as disabled: use **Reload monitoring** to read it. After an uncertain
+update, reload monitoring before making another change.
+
 ## Recommended IDE Setup
 
 [VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
