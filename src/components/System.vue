@@ -15,11 +15,14 @@ import Loading from '@/components/common/Loading.vue';
 import StorageLocations from '@/components/common/StorageLocations.vue';
 import { useStorageLocations, type RootFolder } from '@/composables/useStorageLocations';
 import { useAgentStorage } from '@/composables/useAgentStorage';
+import { useIntegrationStatus } from '@/composables/useIntegrationStatus';
+import IntegrationStatusPanel from '@/components/common/IntegrationStatusPanel.vue';
 
 const store = useFlixStore();
 const selectedMedia = ref<'movies' | 'series'>('movies');
 const section = ref('storage');
 const sections = [
+  { title: 'Integrations', value: 'integrations', icon: 'mdi-lan-connect' },
   { title: 'Storage', value: 'storage', icon: 'mdi-database-outline' },
   { title: 'Status', value: 'status', icon: 'mdi-server-outline' },
   { title: 'Logs', value: 'logs', icon: 'mdi-text-box-outline' },
@@ -31,6 +34,7 @@ const selectedInstanceData = computed(() => store.selectedInstanceData);
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
 const { getConfig } = useMediaService({ useAPI, selectedInstanceData });
+const integrations = useIntegrationStatus({ useAPI, selectedInstanceData, active: computed(() => section.value === 'integrations') });
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
@@ -327,9 +331,13 @@ onUnmounted(() => {
   <Alert :alert="alert" @update:alert="alert = $event" />
   <v-container>
     <SectionNavigation v-model="section" :sections="sections">
-      <MediaTypeToggle v-model="selectedMedia" />
+      <MediaTypeToggle v-if="section !== 'integrations'" v-model="selectedMedia" />
+      <v-btn v-else prepend-icon="mdi-refresh" :loading="integrations.services.value.some(service => service.state === 'checking')"
+        @click="integrations.refresh">Check All</v-btn>
     </SectionNavigation>
-    <v-row class="mt-4">
+    <IntegrationStatusPanel v-if="section === 'integrations'" :services="integrations.services.value"
+      @retry="integrations.check" />
+    <v-row v-show="section !== 'integrations'" class="mt-4">
       <v-col
         v-show="selectedMedia === 'movies'" cols="12"
         >
