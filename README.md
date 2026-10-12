@@ -76,6 +76,12 @@ update, reload monitoring before making another change.
 
 ### Media Sheet Navigation
 
+Existing media sheets also provide a collapsed **Media history** section.
+Opening it loads ten events at a time from Radarr/Sonarr, newest first, with
+release titles, quality, episode information and reported failure/deletion
+reasons. Refresh and retry are read-only. History is service-reported, not a
+complete audit of Flix actions, and supports standalone mode too.
+
 Library, Outings and Dashboard sheets provide Previous/Next controls and a
 position counter for the currently displayed page. Navigation follows the
 filtered display order, does not wrap at the boundaries, and leaves search,

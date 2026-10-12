@@ -90,7 +90,7 @@ test('expanding a season updates scrolling without hiding the dialog actions', a
   await expect(size).toBeVisible();
   await expect(dialog.locator('.scroll-hint')).not.toBeVisible();
   await dialog.getByRole('button', { name: /Season 1/ }).click();
-  await dialog.locator('.v-expansion-panel-text').evaluate(async el => {
+  await dialog.locator('.v-expansion-panel').filter({ has: page.locator('.v-expansion-panel-title').filter({ hasText: 'Season 1' }) }).locator('.v-expansion-panel-text').evaluate(async el => {
     await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     await Promise.all(el.getAnimations({ subtree: true })
       .filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity)
@@ -104,6 +104,8 @@ test('expanding a season updates scrolling without hiding the dialog actions', a
     el.scrollTop = el.scrollHeight;
     return el.scrollHeight - el.clientHeight - el.scrollTop;
   })).toBeLessThanOrEqual(1);
+  await expect(dialog.getByRole('button', { name: 'Media history', exact: true })).toBeInViewport();
+  await dialog.getByText('Episode 25', { exact: true }).scrollIntoViewIfNeeded();
   await expect(dialog.getByText('Episode 25', { exact: true })).toBeInViewport();
   await expect(dialog.locator('.scroll-hint')).not.toBeVisible();
   expect(mutations).toEqual([]);
