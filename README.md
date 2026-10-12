@@ -74,6 +74,16 @@ media, and work with or without Flix API. An unknown monitoring state is not
 treated as disabled: use **Reload monitoring** to read it. After an uncertain
 update, reload monitoring before making another change.
 
+### Media Sheet Navigation
+
+Library, Outings and Dashboard sheets provide Previous/Next controls and a
+position counter for the currently displayed page. Navigation follows the
+filtered display order, does not wrap at the boundaries, and leaves search,
+filters and pagination unchanged. Each new sheet starts at the top; series
+episodes reload for the selected series. Controls are disabled while loading
+details, modifying media or reviewing a release. This works with or without
+the Flix API.
+
 ### Library Bulk Actions
 
 Use **Select media** to choose individual cards or **Select page** to include the
