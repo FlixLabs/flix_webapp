@@ -57,7 +57,7 @@ test('episodes share the file details layout and tolerate missing metadata', asy
   await dialog.getByRole('button', { name: /Season 1/ }).click();
   const details = dialog.locator('.media-file-details');
   await expect(details).toBeAttached();
-  await dialog.locator('.v-expansion-panel-text').evaluate(async el => {
+  await dialog.locator('.v-expansion-panel').filter({ has: page.locator('.v-expansion-panel-title').filter({ hasText: 'Season 1' }) }).locator('.v-expansion-panel-text').evaluate(async el => {
     await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
     await Promise.all(el.getAnimations({ subtree: true })
       .filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity)

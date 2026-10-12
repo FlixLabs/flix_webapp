@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import MediaFileDetails from './MediaFileDetails.vue';
 import MediaMonitoring from './MediaMonitoring.vue';
+import MediaHistory from './MediaHistory.vue';
 import MediaImage from './MediaImage.vue';
 import ReleaseSelectionDialog from './ReleaseSelectionDialog.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -293,6 +294,12 @@ onBeforeUnmount(() => {
           <slot name="details" />
           <MediaFileDetails v-if="showFileDetails && item.relativePath" :item="item" />
           <slot name="episodes" />
+          <MediaHistory
+            v-if="showRemove && modelValue && Number.isInteger(item.id) && item.id > 0"
+            :key="`${mediaType}-history-${item.id}`"
+            :media-id="item.id"
+            :type="mediaType === 'Movie' ? 'movies' : 'series'"
+          />
         </div>
         </v-card-text>
         <div
