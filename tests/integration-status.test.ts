@@ -16,7 +16,7 @@ function setup(api = true, active = true) {
 }
 function validFetch() {
   return vi.fn<(url: string, init?: RequestInit) => Promise<Response>>(async url => Response.json(url.endsWith('/instances') ? [{ name: 'Test' }]
-    : url.includes('/storage/') ? { collectedAt: '2026-10-12T10:00:00Z', locations: [{ id: 'movies', available: true }] }
+    : url.includes('/storage/') ? { collectedAt: '2026-10-12T10:00:00Z', locations: ['movies', 'series', 'downloads'].map(id => ({ id, available: true })) }
       : { version: '6.0' }));
 }
 afterEach(() => {

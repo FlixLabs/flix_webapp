@@ -31,6 +31,54 @@ afterEach(() => {
 });
 
 describe("storage agent integration", () => {
+  it('preserves safe volume errors and distinguishes omitted measurements', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...measurement, locations: [
+      { id: 'movies', path: '/storage/movies', available: false, code: 'IO_ERROR', error: 'private error' },
+      { id: 'series', path: '/storage/series', available: true },
+    ] }) }));
+    const { storage } = setup();
+    await vi.waitFor(() => expect(storage.loading.value).toBe(false));
+    expect(storage.locations('movies')[0]).toMatchObject({ accessible: false, issue: 'IO_ERROR', free: null });
+    expect(storage.locations('series')[0]).toMatchObject({ issue: 'MEASUREMENT_MISSING', total: null });
+    expect(storage.locations('downloads')[0]).toMatchObject({ issue: 'MEASUREMENT_MISSING', free: null });
+    expect(JSON.stringify(storage.locations('movies'))).not.toContain('private');
+  });
+
+  it('rejects inconsistent capacities rather than displaying misleading numbers', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ ...measurement, locations: [
+      { id: 'movies', path: '/storage/movies', available: true, totalBytes: 100, availableBytes: 200, usagePercent: 20 },
+    ] }) }));
+    const { storage } = setup();
+    await vi.waitFor(() => expect(storage.loading.value).toBe(false));
+    expect(storage.locations('movies')[0]).toMatchObject({ accessible: false, issue: 'INVALID_METRICS', free: null, total: null });
+  });
+
+  it('preserves the last measurement date, but not its metrics, after an authentication failure', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => measurement });
+    vi.stubGlobal('fetch', fetchMock);
+    const { storage } = setup();
+    await vi.waitFor(() => expect(storage.loading.value).toBe(false));
+    fetchMock.mockResolvedValue({ ok: false, status: 502, json: async () => ({ code: 'AGENT_AUTH_FAILED', error: 'private' }) });
+    await storage.refresh();
+    expect(storage.error.value).toContain('token');
+    expect(storage.error.value).not.toContain('private');
+    expect(storage.locations('movies')).toEqual([]);
+    expect(storage.lastSuccessAt.value).toBe(measurement.collectedAt);
+  });
+
+  it('does not label an I/O-only response as the last valid measurement', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => measurement });
+    vi.stubGlobal('fetch', fetchMock);
+    const { storage } = setup();
+    await vi.waitFor(() => expect(storage.loading.value).toBe(false));
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ collectedAt: '2026-10-12T10:00:00Z', locations: [
+      { id: 'movies', path: '/storage/movies', available: false, code: 'IO_ERROR' },
+    ] }) });
+    await storage.refresh();
+    expect(storage.lastSuccessAt.value).toBe(measurement.collectedAt);
+    expect(storage.locations('movies')[0]!.free).toBeNull();
+  });
+
   it.each([false, true])("does not query an agent when API mode is %s and no agent is configured", async useAPI => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
@@ -80,7 +128,7 @@ describe("storage agent integration", () => {
     resolveOld({ ok: true, json: async () => measurement });
     await nextTick();
     await nextTick();
-    expect(storage.locations("movies")).toEqual([]);
+    expect(storage.locations("movies")[0]).toMatchObject({ free: null, issue: 'MEASUREMENT_MISSING' });
     expect(fetchMock.mock.calls[0][1].signal.aborted).toBe(true);
   });
 

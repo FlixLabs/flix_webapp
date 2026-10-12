@@ -1,4 +1,5 @@
 import { computed, type Ref } from "vue";
+import type { StorageIssue } from './storageDiagnostics';
 
 export interface RootFolder {
   path: string;
@@ -41,6 +42,9 @@ export function useStorageLocations(roots: Ref<RootFolder[]>, disks: Ref<DiskSpa
       free,
       total,
       ratio: free !== null && total !== null ? (1 - free / total) * 100 : null,
+      issue: !root.accessible ? 'STORAGE_UNAVAILABLE' as const
+        : free === null ? 'MEASUREMENT_MISSING' as const
+          : total === null ? 'CAPACITY_UNCONFIRMED' as const : undefined,
     };
   }));
 }
@@ -52,4 +56,5 @@ export interface StorageLocation {
   total: number | null;
   ratio: number | null;
   sharedWith?: string[];
+  issue?: StorageIssue;
 }

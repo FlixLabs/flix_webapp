@@ -14,15 +14,15 @@ for (const media of ['movies', 'series'] as const) {
     await page.route(/\/tv\/200\?/, route => route.fulfill({ json: { seasons: [] } }));
     await page.goto('/outings');
     if (media === 'series') await page.getByRole('button', { name: 'Series (1)', exact: true }).click();
+    const externalIdsResponse = media === 'series'
+      ? page.waitForResponse(response => new URL(response.url()).pathname.endsWith('/tv/200/external_ids') && response.ok())
+      : null;
     await page.locator('.media-card').click();
     await page.getByRole('button', { name: 'Add', exact: true }).click();
     await expect(page.getByText('Choose quality', { exact: true })).toBeVisible();
     await expect(page.getByRole('combobox', { name: 'Quality' })).toHaveValue('Any');
     expect(mutations).toEqual([]);
-    if (media === 'series') {
-      await expect.poll(() => page.evaluate(() => performance.getEntriesByType('resource')
-        .some(entry => entry.name.includes('/tv/200/external_ids')))).toBe(true);
-    }
+    if (externalIdsResponse) await (await externalIdsResponse).finished();
     await page.getByRole('button', { name: 'Confirm', exact: true }).click();
     await expect.poll(() => mutations.length).toBe(1);
     expect(mutations[0]).toMatchObject({ method: 'POST', path: `/api/v3/${media === 'movies' ? 'movie' : 'series'}`,

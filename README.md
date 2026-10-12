@@ -32,6 +32,18 @@ is reachable but cannot provide measurements for one or more volumes; this is
 different from an unavailable agent. Failed retries preserve the date of the
 last valid response for the selected instance.
 
+**System > Storage** distinguishes unreachable agents, inaccessible volumes,
+missing measurements and unconfirmed capacity. Full or nearly full storage
+produces a separate capacity alert using `VITE_SYSTEM_STORAGE_SPACE_TRESHOLD`.
+After a failed refresh, old capacities are cleared and only the date of the
+last valid measurement is retained. The Dashboard summarizes these same
+diagnostics. Standalone mode still uses Radarr/Sonarr measurements; it never
+substitutes the container disk for an unconfirmed media volume.
+
+Detailed filesystem causes require the updated Flix API and a rebuilt storage
+agent. Older versions remain usable with generic diagnostics. Storage checks
+are read-only and never recreate containers, repair mounts or delete media.
+
 This project is developed entirely in my free time, and while it is already functional, improvements in **security** and **code factorization** are always welcome. Contributions and feedback are greatly appreciated!
 
 ---
