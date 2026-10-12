@@ -2,6 +2,7 @@
 import MediaFileDetails from './MediaFileDetails.vue';
 import MediaMonitoring from './MediaMonitoring.vue';
 import MediaHistory from './MediaHistory.vue';
+import MediaSettings from './MediaSettings.vue';
 import MediaImage from './MediaImage.vue';
 import ReleaseSelectionDialog from './ReleaseSelectionDialog.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -28,8 +29,10 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'release-grabbed', 'navigate']);
 const releaseDialog = ref(false);
 const monitoringPending = ref(false);
+const settingsPending = ref(false);
+const mediaBusy = computed(() => monitoringPending.value || settingsPending.value);
 const neighbors = computed(() => mediaNeighbors(props.navigationItems ?? [], props.item));
-const navigationDisabled = computed(() => props.actionPending || props.navigationPending || monitoringPending.value || releaseDialog.value);
+const navigationDisabled = computed(() => props.actionPending || props.navigationPending || mediaBusy.value || releaseDialog.value);
 function navigate(direction: 'previous' | 'next') {
   const target = neighbors.value[direction];
   if (target && !navigationDisabled.value) emit('navigate', target);
@@ -284,7 +287,7 @@ onBeforeUnmount(() => {
           :key="`${mediaType}-${item.id}`"
           :item="item"
           :type="mediaType === 'Movie' ? 'movies' : 'series'"
-          :disabled="actionPending"
+          :disabled="actionPending || settingsPending"
           @busy="monitoringPending = $event"
         />
         <div
@@ -294,6 +297,14 @@ onBeforeUnmount(() => {
           <slot name="details" />
           <MediaFileDetails v-if="showFileDetails && item.relativePath" :item="item" />
           <slot name="episodes" />
+          <MediaSettings
+            v-if="showRemove && modelValue && Number.isInteger(item.id) && item.id > 0"
+            :key="`${mediaType}-settings-${item.id}`"
+            :item="item"
+            :type="mediaType === 'Movie' ? 'movies' : 'series'"
+            :disabled="actionPending || monitoringPending || releaseDialog"
+            @busy="settingsPending = $event"
+          />
           <MediaHistory
             v-if="showRemove && modelValue && Number.isInteger(item.id) && item.id > 0"
             :key="`${mediaType}-history-${item.id}`"
@@ -315,10 +326,10 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <v-card-actions class="flex-wrap">
-        <v-btn v-if="showSearch" :disabled="monitoringPending" color="primary" @click="releaseDialog = true">Choose Release</v-btn>
+        <v-btn v-if="showSearch" :disabled="mediaBusy" color="primary" @click="releaseDialog = true">Choose Release</v-btn>
         <v-btn
           v-if="showSearch"
-          :disabled="monitoringPending"
+          :disabled="mediaBusy"
           @click="emit('search', item)"
           color="primary"
           >
@@ -327,7 +338,7 @@ onBeforeUnmount(() => {
         <v-btn
           v-if="showAdd"
           :loading="actionPending"
-          :disabled="actionPending || monitoringPending || addDisabled"
+          :disabled="actionPending || mediaBusy || addDisabled"
           @click="emit('add', item)"
           color="primary"
           >
@@ -336,7 +347,7 @@ onBeforeUnmount(() => {
         <v-btn
           v-if="showRemove"
           :loading="actionPending"
-          :disabled="actionPending || monitoringPending"
+          :disabled="actionPending || mediaBusy"
           @click="emit('remove', item)"
           color="error"
           >
