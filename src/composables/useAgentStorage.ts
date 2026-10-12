@@ -2,8 +2,10 @@ import { readApiJson, requireList, requireObject } from '@/composables/apiRespon
 import { computed, onScopeDispose, ref, watch, type Ref } from "vue";
 import type { MediaInstance } from "./useMediaService";
 import type { StorageLocation } from "./useStorageLocations";
+import { normalizeStorageIssue, storageRequestError } from './storageDiagnostics';
 
 type LocationId = "movies" | "series" | "downloads";
+class StorageRequestError extends Error {}
 interface AgentLocation {
   id: LocationId;
   path: string;
@@ -12,6 +14,7 @@ interface AgentLocation {
   totalBytes?: number;
   availableBytes?: number;
   usagePercent?: number;
+  code?: string;
 }
 
 export function useAgentStorage(options: {
@@ -24,6 +27,7 @@ export function useAgentStorage(options: {
   const loading = ref(false);
   const error = ref("");
   const collectedAt = ref("");
+  const lastSuccessAt = ref('');
   let controller: AbortController | undefined;
   let timer: ReturnType<typeof setInterval> | undefined;
 
@@ -40,18 +44,35 @@ export function useAgentStorage(options: {
         signal: AbortSignal.any([request.signal, AbortSignal.timeout(8000)]),
         cache: "no-store",
       });
-      if (!response.ok) throw new Error("Storage agent unavailable");
+      if (!response.ok) {
+        let code: unknown;
+        try { code = (await response.json())?.code; } catch { /* Older API versions may not provide an error body. */ }
+        throw new StorageRequestError(storageRequestError(code, response.status));
+      }
       const data = requireObject(await readApiJson(response), 'storage');
       requireList(data.locations, 'storage locations');
-      if (!Array.isArray(data.locations) || typeof data.collectedAt !== "string") throw new Error("Invalid storage response");
+      if (!Array.isArray(data.locations) || typeof data.collectedAt !== "string"
+        || data.locations.some(location => !['movies', 'series', 'downloads'].includes(location.id)
+          || typeof location.path !== 'string' || typeof location.available !== 'boolean')
+        || new Set(data.locations.map(location => location.id)).size !== data.locations.length) throw new Error("Invalid storage response");
       if (request.signal.aborted) return;
       records.value = data.locations;
       collectedAt.value = data.collectedAt;
-    } catch {
+      if (data.locations.some(location => location.available
+        && Number.isFinite(location.totalBytes) && location.totalBytes > 0
+        && Number.isFinite(location.availableBytes) && location.availableBytes >= 0 && location.availableBytes <= location.totalBytes
+        && Number.isFinite(location.usagePercent) && location.usagePercent >= 0 && location.usagePercent <= 100)) {
+        lastSuccessAt.value = data.collectedAt;
+      }
+    } catch (cause) {
       if (request.signal.aborted) return;
       records.value = [];
       collectedAt.value = "";
-      error.value = "Unable to load storage measurements from the agent.";
+      error.value = cause instanceof Error && cause.message.startsWith('Invalid ')
+        ? storageRequestError('AGENT_RESPONSE_INVALID')
+        : cause instanceof Error && ['TimeoutError', 'AbortError'].includes(cause.name)
+          ? storageRequestError('AGENT_TIMEOUT')
+          : cause instanceof StorageRequestError ? cause.message : storageRequestError(undefined);
     } finally {
       if (controller === request) loading.value = false;
     }
@@ -61,6 +82,7 @@ export function useAgentStorage(options: {
     controller?.abort();
     records.value = [];
     collectedAt.value = "";
+    lastSuccessAt.value = '';
     error.value = "";
     loading.value = false;
     void refresh();
@@ -76,17 +98,31 @@ export function useAgentStorage(options: {
   onScopeDispose(() => { controller?.abort(); clearInterval(timer); });
 
   function locations(id: LocationId): StorageLocation[] {
-    return records.value.filter(record => record.id === id).map(record => ({
-      path: record.path,
-      accessible: record.available,
-      free: record.available && record.availableBytes != null ? record.availableBytes / 1024 ** 3 : null,
-      total: record.available && record.totalBytes != null ? record.totalBytes / 1024 ** 3 : null,
-      ratio: record.available ? record.usagePercent ?? null : null,
-      sharedWith: record.available && record.volumeId
-        ? records.value.filter(other => other.id !== id && other.available && other.volumeId === record.volumeId).map(other => other.id)
-        : [],
-    }));
+    const selected = records.value.filter(record => record.id === id);
+    if (!selected.length && enabled.value && collectedAt.value && !error.value) {
+      return [{ path: '', accessible: false, free: null, total: null, ratio: null, issue: 'MEASUREMENT_MISSING' }];
+    }
+    return selected.map(record => {
+      const metrics = [record.availableBytes, record.totalBytes, record.usagePercent];
+      const missing = metrics.some(value => value == null);
+      const invalid = !missing && (metrics.some(value => !Number.isFinite(value))
+        || record.availableBytes! < 0 || record.totalBytes! <= 0 || record.availableBytes! > record.totalBytes!
+        || record.usagePercent! < 0 || record.usagePercent! > 100);
+      const accessible = record.available && !invalid;
+      return {
+        path: record.path,
+        accessible,
+        free: accessible && Number.isFinite(record.availableBytes) && record.availableBytes! >= 0 ? record.availableBytes! / 1024 ** 3 : null,
+        total: accessible && Number.isFinite(record.totalBytes) && record.totalBytes! > 0 ? record.totalBytes! / 1024 ** 3 : null,
+        ratio: accessible && Number.isFinite(record.usagePercent) && record.usagePercent! >= 0 && record.usagePercent! <= 100 ? record.usagePercent! : null,
+        issue: !record.available ? normalizeStorageIssue(record.code)
+          : invalid ? 'INVALID_METRICS' as const : missing ? 'MEASUREMENT_MISSING' as const : undefined,
+        sharedWith: accessible && record.volumeId
+          ? records.value.filter(other => other.id !== id && other.available && other.volumeId === record.volumeId).map(other => other.id)
+          : [],
+      };
+    });
   }
 
-  return { enabled, loading, error, collectedAt, locations, refresh };
+  return { enabled, loading, error, collectedAt, lastSuccessAt, locations, refresh };
 }

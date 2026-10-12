@@ -1,6 +1,7 @@
 import { onScopeDispose, ref, watch, type Ref } from 'vue';
 import { readApiJson, requireList, requireObject } from './apiResponse';
 import { useMediaService, type MediaServiceOptions } from './useMediaService';
+import { storageRequestError } from './storageDiagnostics';
 
 export type IntegrationId = 'api' | 'radarr' | 'sonarr' | 'storage';
 export type IntegrationState = 'idle' | 'checking' | 'available' | 'degraded' | 'unavailable' | 'unconfigured' | 'disabled';
@@ -15,7 +16,7 @@ export interface IntegrationStatus {
 }
 
 class ServiceError extends Error {
-  constructor(public status: number) { super(`HTTP ${status}`); }
+  constructor(public status: number, public code?: unknown) { super(`HTTP ${status}`); }
 }
 
 export function useIntegrationStatus(options: MediaServiceOptions & { active: Ref<boolean> }) {
@@ -80,7 +81,11 @@ export function useIntegrationStatus(options: MediaServiceOptions & { active: Re
         signal: AbortSignal.any([request.signal, AbortSignal.timeout(8000)]),
         cache: 'no-store',
       });
-      if (!response.ok) throw new ServiceError(response.status);
+      if (!response.ok) {
+        let code: unknown;
+        if (id === 'storage') { try { code = (await response.json())?.code; } catch { /* Compatible with older API responses. */ } }
+        throw new ServiceError(response.status, code);
+      }
       const data = await readApiJson(response);
       let message = 'Service is reachable.';
       let degraded = false;
@@ -93,10 +98,12 @@ export function useIntegrationStatus(options: MediaServiceOptions & { active: Re
           throw new Error('Invalid storage response.');
         }
         const unavailable = locations.filter(location => !location.available).map(location => location.id);
-        degraded = unavailable.length > 0 || !locations.length;
+        const missing = ['movies', 'series', 'downloads'].filter(kind => !locations.some(location => location.id === kind));
+        degraded = unavailable.length > 0 || missing.length > 0;
         message = !locations.length ? 'Agent is reachable, but no storage measurements were returned.'
           : unavailable.length ? `Agent is reachable. Unavailable volumes: ${unavailable.join(', ')}.`
             : 'Agent is reachable and storage measurements are available.';
+        if (locations.length && missing.length) message += ` Missing measurements: ${missing.join(', ')}.`;
       } else {
         const status = requireObject(data, 'service status');
         if (typeof status.version !== 'string' || !status.version.trim()) throw new Error('Invalid service status response.');
@@ -111,7 +118,8 @@ export function useIntegrationStatus(options: MediaServiceOptions & { active: Re
       if (request.signal.aborted || generation !== context) return;
       service.state = 'unavailable';
       if (error instanceof ServiceError) {
-        service.message = [401, 403].includes(error.status) ? `Access denied (HTTP ${error.status}). Check the credentials.`
+        service.message = id === 'storage' && error.code !== undefined ? storageRequestError(error.code, error.status)
+          : [401, 403].includes(error.status) ? `Access denied (HTTP ${error.status}). Check the credentials.`
           : error.status === 404 ? 'Endpoint not found (HTTP 404). Check the service URL and configuration.'
             : id === 'storage' && error.status === 502 ? 'Flix API cannot reach the storage agent (HTTP 502).'
               : `Service request failed (HTTP ${error.status}).`;

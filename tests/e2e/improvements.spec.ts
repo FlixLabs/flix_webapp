@@ -26,6 +26,7 @@ test('episode selection searches automatically', async ({ page, mutations }) => 
   await page.getByRole('button', { name: 'Series (1)', exact: true }).click();
   await page.locator('.media-card').filter({ hasText: 'Example series' }).click();
   await page.getByRole('button', { name: 'Choose Release', exact: true }).click();
+  await expect(page.getByRole('combobox', { name: 'Episode', exact: true })).toBeEnabled();
   await page.getByRole('combobox', { name: 'Episode', exact: true }).press('Enter');
   await page.getByRole('option', { name: 'Episode 1 - Pilot', exact: true }).click();
   await expect.poll(() => searches.some(url => url.includes('episodeId=21'))).toBe(true);

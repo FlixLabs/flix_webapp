@@ -533,7 +533,7 @@ onUnmounted(() => {
             <StorageLocations title="Movie Storage" :locations="displayedMovieStorage"
               :interval="storageAgent.enabled.value ? storageAgentInterval : undefined"
               @update:interval="storageAgentInterval = $event"
-              :loading="storageAgent.loading.value" :error="storageAgent.error.value" />
+              :loading="storageAgent.loading.value" :error="storageAgent.error.value" :last-success-at="storageAgent.lastSuccessAt.value" />
           </v-col>
         </v-row>
         <v-row
@@ -833,7 +833,7 @@ onUnmounted(() => {
             <StorageLocations title="Series Storage" :locations="displayedSerieStorage"
               :interval="storageAgent.enabled.value ? storageAgentInterval : undefined"
               @update:interval="storageAgentInterval = $event"
-              :loading="storageAgent.loading.value" :error="storageAgent.error.value" />
+              :loading="storageAgent.loading.value" :error="storageAgent.error.value" :last-success-at="storageAgent.lastSuccessAt.value" />
           </v-col>
         </v-row>
         <v-row
@@ -933,7 +933,7 @@ onUnmounted(() => {
       <v-col>
         <StorageLocations v-if="storageAgent.enabled.value" title="Download Storage"
           v-model:interval="storageAgentInterval"
-          :locations="displayedDownloadStorage" :loading="storageAgent.loading.value" :error="storageAgent.error.value" />
+          :locations="displayedDownloadStorage" :loading="storageAgent.loading.value" :error="storageAgent.error.value" :last-success-at="storageAgent.lastSuccessAt.value" />
         <v-card v-else>
           <v-card-title>Download Storage</v-card-title>
           <v-card-text>

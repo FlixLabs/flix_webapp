@@ -3,6 +3,7 @@ import { computed, ref } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useDashboardAttention } from '@/composables/useDashboardAttention';
 import { useAgentStorage } from '@/composables/useAgentStorage';
+import { storageDiagnostic } from '@/composables/storageDiagnostics';
 const store = useFlixStore();
 const options = { useAPI: ref(import.meta.env.VITE_FLIX_API_USE === 'true'), selectedInstanceData: computed(() => store.selectedInstanceData) };
 const attention = useDashboardAttention(options);
@@ -12,7 +13,8 @@ const threshold = Number(import.meta.env.VITE_SYSTEM_STORAGE_SPACE_TRESHOLD) || 
 const critical = computed(() => {
   const locations = agent.enabled.value ? (['movies', 'series', 'downloads'] as const).flatMap(kind => agent.locations(kind).map(location => ({ ...location, kind })))
     : [...attention.movieStorage.value.map(location => ({ ...location, kind: 'movies' })), ...attention.seriesStorage.value.map(location => ({ ...location, kind: 'series' }))];
-  return locations.filter(location => !location.accessible || (location.ratio !== null && location.ratio >= threshold));
+  return locations.map(location => ({ ...location, diagnostic: storageDiagnostic(location, threshold) }))
+    .filter(location => location.diagnostic.state !== 'available');
 });
 function refresh() { void attention.refresh(); void agent.refresh(); }
 </script>
@@ -56,9 +58,9 @@ function refresh() { void attention.refresh(); void agent.refresh(); }
           <v-btn class="mt-3" variant="tonal" color="primary" :to="{ path: '/library', query: { media: 'series' } }">View series</v-btn>
         </v-col>
         <v-col cols="12" md="4">
-          <h3>Critical storage</h3>
+          <h3>Storage needing attention</h3>
           <v-list v-if="critical.length" lines="two">
-            <v-list-item v-for="location in critical" :key="`${location.kind}:${location.path}`" :value="`${location.kind}:${location.path}`" :title="`${location.kind}: ${location.path}`" :subtitle="!location.accessible ? 'Unavailable' : `${location.ratio?.toFixed(1)}% used`" to="/system" append-icon="mdi-chevron-right" />
+            <v-list-item v-for="location in critical" :key="`${location.kind}:${location.path}`" :value="`${location.kind}:${location.path}`" :title="`${location.kind}: ${location.path || 'Not reported'}`" :subtitle="location.diagnostic.message" to="/system" append-icon="mdi-chevron-right" />
           </v-list>
           <p v-else class="text-caption mt-1">No critical location among available measurements.</p>
           <v-btn class="mt-3" variant="tonal" color="primary" to="/system">View storage</v-btn>

@@ -1,9 +1,13 @@
 <script setup lang="ts">
 import type { StorageLocation } from "@/composables/useStorageLocations";
+import { computed } from 'vue';
+import { storageDiagnostic } from '@/composables/storageDiagnostics';
 
-defineProps<{ title: string; locations: StorageLocation[]; loading?: boolean; error?: string; interval?: number }>();
+const props = defineProps<{ title: string; locations: StorageLocation[]; loading?: boolean; error?: string; interval?: number; lastSuccessAt?: string }>();
 const emit = defineEmits<{ 'update:interval': [value: number] }>();
 const threshold = Number(import.meta.env.VITE_SYSTEM_STORAGE_SPACE_TRESHOLD);
+const diagnosed = computed(() => props.locations.map(location => ({ ...location, diagnostic: storageDiagnostic(location, threshold) })));
+const capacityAlerts = computed(() => diagnosed.value.filter(location => ['full', 'saturated'].includes(location.diagnostic.state)));
 </script>
 
 <template>
@@ -25,8 +29,17 @@ const threshold = Number(import.meta.env.VITE_SYSTEM_STORAGE_SPACE_TRESHOLD);
       </v-row>
     </v-card-title>
     <v-progress-linear v-if="loading" indeterminate color="primary" />
-    <v-card-text v-if="error" class="text-warning">{{ error }}</v-card-text>
+    <v-card-text v-if="error">
+      <v-alert type="warning" variant="tonal">{{ error }}</v-alert>
+      <p v-if="lastSuccessAt" class="text-caption mt-2">Last valid measurements: {{ new Date(lastSuccessAt).toLocaleString() }}. Current capacity is unknown.</p>
+    </v-card-text>
     <v-card-text v-else-if="!locations.length && !loading">No storage location available.</v-card-text>
+    <v-card-text v-if="capacityAlerts.length">
+      <v-alert v-for="location in capacityAlerts" :key="location.path" :type="location.diagnostic.state === 'full' ? 'error' : 'warning'" variant="tonal" class="mb-2">
+        <strong>{{ location.diagnostic.message }}: {{ location.path || 'Not reported' }}</strong>
+        <div>{{ location.diagnostic.hint }}</div>
+      </v-alert>
+    </v-card-text>
     <v-table v-if="locations.length">
       <thead>
         <tr>
@@ -37,16 +50,19 @@ const threshold = Number(import.meta.env.VITE_SYSTEM_STORAGE_SPACE_TRESHOLD);
         </tr>
       </thead>
       <tbody>
-        <tr v-for="location in locations" :key="location.path">
+        <tr v-for="location in diagnosed" :key="location.path">
           <td>
-            {{ location.path }}
-            <span v-if="!location.accessible" class="text-warning">(Unavailable)</span>
+            {{ location.path || 'Not reported' }}
+            <div class="mt-1">
+              <v-chip size="small" :color="location.diagnostic.color">{{ location.diagnostic.message }}</v-chip>
+            </div>
+            <div v-if="location.diagnostic.hint && !['full', 'saturated'].includes(location.diagnostic.state)" class="text-caption mt-1 storage-diagnostic">{{ location.diagnostic.hint }}</div>
             <div v-if="location.sharedWith?.length" class="text-caption text-medium-emphasis">
               Shared volume: {{ location.sharedWith.join(', ') }}
             </div>
           </td>
-          <td>{{ location.free === null ? 'Unavailable' : location.free.toFixed(2) }}</td>
-          <td>{{ location.total === null ? 'Unavailable' : location.total.toFixed(2) }}</td>
+          <td>{{ location.free === null ? 'Not measured' : location.free.toFixed(2) }}</td>
+          <td>{{ location.total === null ? 'Not measured' : location.total.toFixed(2) }}</td>
           <td>
             <v-progress-linear
               v-if="location.ratio !== null"
@@ -58,10 +74,18 @@ const threshold = Number(import.meta.env.VITE_SYSTEM_STORAGE_SPACE_TRESHOLD);
             >
               <strong>{{ Math.ceil(location.ratio) }} %</strong>
             </v-progress-linear>
-            <span v-else>Unavailable</span>
+            <span v-else>Not measured</span>
           </td>
         </tr>
       </tbody>
     </v-table>
   </v-card>
 </template>
+
+<style scoped>
+.storage-diagnostic {
+  min-width: 160px;
+  max-width: 340px;
+  white-space: normal;
+}
+</style>
