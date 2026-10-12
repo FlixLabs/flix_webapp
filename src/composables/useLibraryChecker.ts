@@ -1,3 +1,4 @@
+import { mediaFileFields } from '@/composables/mediaFileDetails';
 import { computed } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import type { Ref } from 'vue';
@@ -64,14 +65,10 @@ export function useLibraryChecker(
             item.status = compare_item.status;
           }
           if (compare_item.movieFile) {
-            item.relativePath = compare_item.movieFile.relativePath;
+            Object.assign(item, mediaFileFields(compare_item.movieFile));
 
             if (compare_item.movieFile.mediaInfo) {
               item.runTime = compare_item.movieFile.mediaInfo.runTime;
-            }
-
-            if (compare_item.movieFile.quality) {
-              item.quality = compare_item.movieFile.quality.quality.name;
             }
           }
           if (compare_item.statistics) {

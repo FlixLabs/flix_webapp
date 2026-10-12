@@ -48,6 +48,18 @@ This project is developed entirely in my free time, and while it is already func
 
 ---
 
+### Media File Details
+
+Movie sheets in Library, Dashboard and Outings, and episode details in Library
+and Outings, share the same file information layout: filename, size, quality,
+resolution, video/audio codecs, scanned audio languages, subtitles and file-added
+date. These values come from existing Radarr/Sonarr responses, with or without
+the optional API; opening a movie sheet does not fetch extra metadata.
+
+Missing scan information is shown as **Not provided**, not inferred from a release
+title or language profile. **File added** is the file import date, not the date
+the movie or series was added to the library. File sizes use decimal GB.
+
 ## Recommended IDE Setup
 
 [VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).

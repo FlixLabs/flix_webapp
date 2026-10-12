@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MediaFileDetails from './MediaFileDetails.vue';
 import MediaImage from './MediaImage.vue';
 import ReleaseSelectionDialog from './ReleaseSelectionDialog.vue';
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -265,56 +266,7 @@ onBeforeUnmount(() => {
           :class="{ 'media-details-concealed': showFileDetails && concealFileDetails }"
           >
           <slot name="details" />
-        <v-row
-          v-if="showFileDetails !== false && item.relativePath"
-          class="media-file-details"
-          >
-          <v-col>
-            <v-row>
-              <v-col>
-                <v-tooltip
-                  :text="item.relativePath"
-                  >
-                  <template
-                    #activator="{ props }"
-                    >
-                    <span
-                      v-bind="props"
-                      style="cursor:pointer;"
-                      >
-                      <v-text-field
-                        label="File"
-                        variant="outlined"
-                        v-model="item.relativePath"
-                        :disabled="true"
-                        />
-                    </span>
-                  </template>
-                </v-tooltip>
-              </v-col>
-            </v-row>
-            <v-row
-              class="mt-0"
-              >
-              <v-col>
-                <v-text-field
-                  label="Size (GB)"
-                  variant="outlined"
-                  :model-value="item.statistics?.sizeOnDisk != null ? (item.statistics.sizeOnDisk / 1e9).toFixed(2) : 'Unavailable'"
-                  :disabled="true"
-                  />
-              </v-col>
-              <v-col>
-                <v-text-field
-                  label="Quality"
-                  variant="outlined"
-                  :model-value="item.quality"
-                  :disabled="true"
-                  />
-              </v-col>
-            </v-row>
-          </v-col>
-        </v-row>
+          <MediaFileDetails v-if="showFileDetails && item.relativePath" :item="item" />
           <slot name="episodes" />
         </div>
         </v-card-text>
