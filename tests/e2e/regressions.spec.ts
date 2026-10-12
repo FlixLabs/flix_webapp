@@ -50,6 +50,7 @@ test('download deletion can be cancelled and only deletes the queue item', async
 
 test('calendar overflow opens all event titles', async ({ page, mutations }) => {
   await page.goto('/calendar');
+  await page.getByRole('button', { name: 'Calendar', exact: true }).click();
   await page.getByText(/\d+ more/).first().click();
   const dialog = page.locator('.v-dialog');
   await expect(dialog.getByText('Calendar movie 7 with a long title (Digital)', { exact: true })).toBeVisible();

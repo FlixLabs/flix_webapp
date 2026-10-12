@@ -76,6 +76,19 @@ update, reload monitoring before making another change.
 
 ### Media Sheet Navigation
 
+The **Calendar** supports month/week/day navigation, **Today**, movie/series
+toggles and All/Monitored/Missing/Available filters. Filters do not refetch data.
+Available requires a service-reported file; Missing requires an explicit missing
+file and a release date not in the future, excluding cinema-only events. Unknown
+file/monitoring states are not guessed. Events and overflow lists link to the
+media sheet in Library. Calendar date, view and filters persist when returning.
+Desktop defaults to the month grid, with two-line events and highlighted today;
+mobile defaults to a grouped agenda with full titles. Both layouts remain
+selectable, and the agenda paginates seven event days at a time. Busy days show
+four events with **Show all events** opening the complete day list.
+Requests cover the displayed days, include unmonitored media and discard late
+responses after period/instance changes. Standalone mode remains supported.
+
 Existing media sheets have a lazy-loaded **Media settings** editor for quality
 profiles and existing tags. Sonarr 3 language profiles are available only when
 the service reports a compatible version; newer language preferences remain
