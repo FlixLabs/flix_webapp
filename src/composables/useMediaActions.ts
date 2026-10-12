@@ -21,6 +21,7 @@ export function canSearchItem(type: MediaType, item: MediaActionItem | null): bo
 }
 
 interface MediaActionsOptions extends MediaServiceOptions {
+  requestTimeoutMs?: number;
   showSuccessAlert: (message: string) => void;
   showErrorAlert: (message: string) => void;
   refreshContent: (type: MediaType) => void;
@@ -38,8 +39,11 @@ export function useMediaActions(options: MediaActionsOptions) {
     errorMessage: string,
   ) {
     const { base_url, api_key } = getConfig(type);
+    const controller = options.requestTimeoutMs ? new AbortController() : null;
+    const timeout = controller ? setTimeout(() => controller.abort(), options.requestTimeoutMs) : null;
     try {
       const response = await fetch(base_url + "/api/v3/" + path, {
+        ...(controller ? { signal: controller.signal } : {}),
         method,
         headers: {
           Accept: "application/json",
@@ -55,6 +59,8 @@ export function useMediaActions(options: MediaActionsOptions) {
     } catch {
       options.showErrorAlert(errorMessage);
       return null;
+    } finally {
+      if (timeout !== null) clearTimeout(timeout);
     }
   }
 

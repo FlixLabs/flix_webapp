@@ -12,6 +12,7 @@ import { useMediaService } from '@/composables/useMediaService';
 import { useCount } from '@/composables/useCount';
 import { useLibraryFilters, savedLibraryFilters, saveLibraryFilters } from '@/composables/useLibraryFilters';
 import LibraryFilters from '@/components/common/LibraryFilters.vue';
+import LibraryBulkActions from '@/components/common/LibraryBulkActions.vue';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from '@/composables/usePagination';
@@ -79,6 +80,23 @@ const series_total_pages = computed(() =>
 const { paginatedItems: paginated_series } = usePagination(filtered_series, serie_page, items_per_page);
 const { total: total_series } = useCount(filtered_series);
 const { state: isLoadingSerieEpisodes, reset: resetIsLoadingSerieEpisodes } = useResettable(false);
+
+const selectionMode = ref(false);
+const selectedIds = ref<number[]>([]);
+const bulkPending = ref(false);
+const visibleSelectionItems = computed(() => selected_view.value === 'movies' ? filtered_movies.value : filtered_series.value);
+const currentSelectionPage = computed(() => selected_view.value === 'movies' ? paginated_movies.value : paginated_series.value);
+const selectionLoading = computed(() => selected_view.value === 'movies' ? isLoadingMovie.value : isLoadingSerie.value);
+function toggleSelection(id: number) {
+  if (bulkPending.value || selectionLoading.value || !Number.isInteger(id) || id <= 0) return;
+  selectedIds.value = selectedIds.value.includes(id) ? selectedIds.value.filter(value => value !== id) : [...selectedIds.value, id];
+}
+function selectPage() {
+  if (bulkPending.value || selectionLoading.value) return;
+  selectedIds.value = [...new Set([...selectedIds.value, ...currentSelectionPage.value.map(item => item.id).filter(id => Number.isInteger(id) && id > 0)])];
+}
+watch([search, filters, selected_view, selectedInstanceData, useAPI], () => { selectedIds.value = []; }, { deep: true, flush: 'sync' });
+watch(selectionMode, () => { selectedIds.value = []; });
 
 const { state: showFileUpload, reset: resetShowFileUpload } = useResettable(false);
 const { state: fileUpload, reset: resetFileUpload } = useResettable<File | undefined>(undefined);
@@ -372,31 +390,37 @@ watch(selectedInstance, () => {
     >
       <template #actions>
       <div
-        v-if="(selected_view == 'movies' && filtered_movies.length > 0) || (selected_view == 'series' && filtered_series.length > 0)"
-        class="d-flex justify-end align-center"
+        v-if="selectionMode || (selected_view == 'movies' && filtered_movies.length > 0) || (selected_view == 'series' && filtered_series.length > 0)"
+        class="d-flex justify-end align-center flex-wrap ga-2"
         >
-        <v-btn-group>
-          <v-btn
-            color="primary"
-            prepend-icon="mdi-file-export-outline"
-            variant="outlined"
-            @click="exportLibrary()"
-            >
-            Export
-          </v-btn>
-          <v-btn
-            color="primary"
-            prepend-icon="mdi-file-import-outline"
-            variant="outlined"
-            @click="switchShowFileUpload"
-            >
-            Import
-          </v-btn>
-        </v-btn-group>
+        <v-btn variant="outlined" color="primary" :active="selectionMode" :aria-pressed="selectionMode" :disabled="bulkPending || (!selectionMode && selectionLoading)" @click="selectionMode = !selectionMode">
+          Select media
+        </v-btn>
+        <v-menu>
+          <template #activator="{ props: menuProps }">
+            <v-btn v-bind="menuProps" color="primary" variant="outlined" append-icon="mdi-chevron-down" :disabled="bulkPending">Library tools</v-btn>
+          </template>
+          <v-list role="menu" density="compact">
+            <v-list-item role="menuitem" title="Export" prepend-icon="mdi-file-export-outline" :disabled="!visibleSelectionItems.length" @click="exportLibrary()" />
+            <v-list-item role="menuitem" title="Import" prepend-icon="mdi-file-import-outline" @click="switchShowFileUpload" />
+          </v-list>
+        </v-menu>
       </div>
       </template>
     </MediaBrowserToolbar>
     <LibraryFilters v-model="filters" :statuses="statuses" :qualities="qualities" :years="years" />
+    <LibraryBulkActions
+      v-if="selectionMode"
+      v-model:selected-ids="selectedIds"
+      :items="visibleSelectionItems"
+      :page-selection-disabled="selectionLoading || !currentSelectionPage.length"
+      :type="selected_view"
+      :use-api="useAPI"
+      :instance="selectedInstanceData"
+      @busy="bulkPending = $event"
+      @select-page="selectPage"
+      @refresh="getContent(selected_view)"
+    />
     <v-row
       v-if="showFileUpload"
       >
@@ -407,6 +431,7 @@ watch(selectedInstance, () => {
           v-model="fileUpload"
           @update:model-value="handleFileUpload"
           accept=".json,application/json"
+          :disabled="bulkPending"
           density="compact"
           variant="compact"
           />
@@ -423,6 +448,10 @@ watch(selectedInstance, () => {
         announcementName="Release"
         :showHasFile="true"
         empty-message="No movies found"
+        :selection-mode="selectionMode"
+        :selected-ids="selectedIds"
+        :selection-disabled="bulkPending || isLoadingMovie"
+        @toggle-selection="toggleSelection"
         @card-click="handleMovieClick"
       />
       <MediaDialog
@@ -450,6 +479,10 @@ watch(selectedInstance, () => {
         announcementName="Premiere"
         :showHasFile="false"
         empty-message="No series found"
+        :selection-mode="selectionMode"
+        :selected-ids="selectedIds"
+        :selection-disabled="bulkPending || isLoadingSerie"
+        @toggle-selection="toggleSelection"
         @card-click="handleSerieClick"
       />
       <MediaDialog
