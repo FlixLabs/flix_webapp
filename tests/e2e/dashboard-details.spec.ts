@@ -18,6 +18,7 @@ test('movie details display the full synopsis and metadata without another reque
   await expect(dialog).toContainText(overview);
   await expect(dialog).toContainText('PG-13');
   await expect(dialog).toContainText('120');
+  await dialog.locator('.dialog-flex-text').evaluate(el => { el.scrollTop = el.scrollHeight; });
   await expect(dialog.getByRole('textbox', { name: 'File', exact: true })).toHaveValue('Movie.mkv');
   await expect(dialog.getByRole('button', { name: 'Remove', exact: true })).toBeEnabled();
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
