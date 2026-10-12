@@ -7,9 +7,18 @@ const props = defineProps<{
   announcementName: 'Release' | 'Premiere';
   showAnnouncement?: boolean;
   showHasFile: boolean;
+  selectionMode?: boolean;
+  selectedIds?: number[];
+  selectionDisabled?: boolean;
 }>();
 
-const emit = defineEmits(['card-click']);
+const emit = defineEmits(['card-click', 'toggle-selection']);
+
+function cardClick(id: number) {
+  if (props.selectionMode) {
+    if (!props.selectionDisabled) emit('toggle-selection', id);
+  } else emit('card-click', id);
+}
 </script>
 
 <template>
@@ -19,8 +28,8 @@ const emit = defineEmits(['card-click']);
     density="compact"
     >
     <v-col
-      v-for="(item, index) in paginated_items"
-      :key="index"
+      v-for="item in paginated_items"
+      :key="item[idField]"
       cols="6"
       sm="4"
       md="3"
@@ -29,8 +38,9 @@ const emit = defineEmits(['card-click']);
       >
       <v-card
         class="media-card"
-        :aria-label="`Open ${item.title}`"
-        @click="emit('card-click', item[idField])"
+        :aria-label="`${selectionMode ? 'Select' : 'Open'} ${item.title}`"
+        :role="selectionMode ? 'group' : undefined"
+        @click="cardClick(item[idField])"
         >
         <MediaImage
           :src="item.prependAvatar ?? item.poster"
@@ -39,6 +49,16 @@ const emit = defineEmits(['card-click']);
           height="250"
           cover
           />
+        <v-checkbox-btn
+          v-if="selectionMode"
+          class="position-absolute top-0 right-0 bg-surface rounded ma-2"
+          :aria-label="`Select ${item.title}`"
+          :model-value="selectedIds?.includes(item[idField]) || false"
+          :disabled="selectionDisabled || !Number.isInteger(item[idField]) || item[idField] <= 0"
+          color="primary"
+          @click.stop
+          @update:model-value="emit('toggle-selection', item[idField])"
+        />
         <v-card-title
           class="title-line text-center text-wrap"
           :title="item.title"

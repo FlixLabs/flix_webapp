@@ -74,6 +74,21 @@ media, and work with or without Flix API. An unknown monitoring state is not
 treated as disabled: use **Reload monitoring** to read it. After an uncertain
 update, reload monitoring before making another change.
 
+### Library Bulk Actions
+
+Use **Select media** to choose individual cards or **Select page** to include the
+current page. Selection is retained across pages, but cleared on filter, media
+type or instance changes. **Selection actions** groups monitoring, unmonitoring,
+search, clearing selection and removal. **Library tools** groups import/export.
+The visible buttons retain their labels and positions during processing.
+Removal requires confirmation and deletes the media files too.
+
+Batches run sequentially with progress and **Stop after current item**. Failed
+and ineligible media remain selected; successful media are deselected. Search
+skips media that cannot yet be searched, and monitoring skips unknown states.
+An instance/context change stops further writes. No batch runs automatically.
+These actions also work without Flix API.
+
 ## Recommended IDE Setup
 
 [VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
