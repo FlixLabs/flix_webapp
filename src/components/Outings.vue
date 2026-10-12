@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { mediaFileFields } from '@/composables/mediaFileDetails';
 import { readApiJson, requireList, requireObject } from '@/composables/apiResponse';
 
 import { ref, watch, computed } from 'vue';
@@ -298,9 +299,7 @@ function getSerieEpisodes(serie_id: number) {
                     const matched = lookup[key];
                     if (matched) {
                       episodeData.hasFile = matched.hasFile;
-                      episodeData.relativePath = matched.episodeFile ? matched.episodeFile.relativePath : null,
-                      episodeData.sizeOnDisk = matched.episodeFile ? matched.episodeFile.size : null,
-                      episodeData.quality = matched.episodeFile ? matched.episodeFile.quality.quality.name : null
+                      Object.assign(episodeData, mediaFileFields(matched.episodeFile));
                     }
                   });
                 })

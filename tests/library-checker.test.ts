@@ -38,3 +38,13 @@ it('enriches valid library entries without replacing their upcoming date', async
   expect(state.error).not.toHaveBeenCalled();
   expect(state.items.value[0]).toMatchObject({ year: 2025, release_date: '2026-10-09', already_in_library: true });
 });
+
+it('keeps scanned file details when enriching dashboard and outings results', async () => {
+  const state = setup([{ id: 1, tmdbId: 10, movieFile: {
+    relativePath: 'Movie.mkv', size: 4e9, quality: {},
+    mediaInfo: { resolution: '1920x1080', videoCodec: 'x264' },
+  } }]);
+  await state.isAlreadyInLibrary();
+  expect(state.error).not.toHaveBeenCalled();
+  expect(state.items.value[0]).toMatchObject({ sizeOnDisk: 4e9, fileDetails: { resolution: '1920x1080', videoCodec: 'x264' } });
+});

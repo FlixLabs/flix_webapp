@@ -2,10 +2,13 @@ import { shallowReactive, watch, onScopeDispose } from 'vue';
 import type { Ref } from 'vue';
 import { useMediaService, type MediaServiceOptions, type MediaType } from './useMediaService';
 import { useMediaActions, type MediaActionItem } from './useMediaActions';
+import type { MediaFileDetails } from './mediaFileDetails';
 
 interface DashboardItem extends MediaActionItem {
   selected_quality?: number;
   relativePath?: string;
+  sizeOnDisk?: number | null;
+  fileDetails?: MediaFileDetails;
   quality?: string;
   statistics?: { sizeOnDisk?: number };
   hasFile?: boolean;
@@ -59,6 +62,8 @@ export function useDashboardActions(options: Options) {
         result.id = remove ? undefined : created.id;
         if (remove) {
           result.relativePath = undefined;
+          result.sizeOnDisk = undefined;
+          result.fileDetails = undefined;
           result.quality = undefined;
           result.statistics = undefined;
           result.hasFile = false;

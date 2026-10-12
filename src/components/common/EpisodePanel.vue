@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import MediaFileDetails from './MediaFileDetails.vue';
 import { computed } from 'vue';
 
 const props = withDefaults(defineProps<{
@@ -84,56 +85,7 @@ function formatSizeGb(sizeInBytes: number) {
                     Missing
                   </v-chip>
                 </div>
-                <v-row
-                  v-if="episode.relativePath"
-                  class="mt-4"
-                  >
-                  <v-col>
-                    <v-row>
-                      <v-col>
-                        <v-tooltip
-                          :text="episode.relativePath"
-                          >
-                          <template
-                            #activator="{ props }"
-                            >
-                            <span
-                              v-bind="props"
-                              style="cursor:pointer;"
-                              >
-                              <v-text-field
-                                label="File"
-                                variant="outlined"
-                                v-model="episode.relativePath"
-                                :disabled="true"
-                                />
-                            </span>
-                          </template>
-                        </v-tooltip>
-                      </v-col>
-                    </v-row>
-                    <v-row
-                      class="mt-0"
-                      >
-                      <v-col>
-                        <v-text-field
-                          label="Size (GB)"
-                          variant="outlined"
-                          :model-value="(episode.sizeOnDisk / 1e9).toFixed(2)"
-                          :disabled="true"
-                          />
-                      </v-col>
-                      <v-col>
-                        <v-text-field
-                          label="Quality"
-                          variant="outlined"
-                          :model-value="episode.quality"
-                          :disabled="true"
-                          />
-                      </v-col>
-                    </v-row>
-                  </v-col>
-                </v-row>
+                <MediaFileDetails v-if="episode.relativePath" class="mt-4" :item="episode" />
               </div>
             </v-list-item>
           </v-list>

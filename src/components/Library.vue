@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { mediaFileFields } from '@/composables/mediaFileDetails';
 import { readApiJson, requireList, optionalList } from '@/composables/apiResponse';
 
 
@@ -131,7 +132,7 @@ function getContent(type: 'movies' | 'series') {
             }
 
             if (item.movieFile.quality) {
-              quality = item.movieFile.quality.quality.name;
+              quality = item.movieFile.quality.quality?.name;
             }
           }
         }
@@ -164,6 +165,7 @@ function getContent(type: 'movies' | 'series') {
           qualityProfileId: item.qualityProfileId,
           quality: quality,
           relativePath: relativePath,
+          ...(type === 'movies' && item.movieFile ? mediaFileFields(item.movieFile) : {}),
           statistics: item.statistics
         });
       }
@@ -208,9 +210,7 @@ function getSerieEpisodes(serie_id: number) {
         episode: episode.episodeNumber,
         airDate: episode.airDate,
         hasFile: episode.hasFile,
-        relativePath: episode.episodeFile ? episode.episodeFile.relativePath : null,
-        sizeOnDisk: episode.episodeFile ? episode.episodeFile.size : null,
-        quality: episode.episodeFile ? episode.episodeFile.quality.quality.name : null
+        ...mediaFileFields(episode.episodeFile)
       }));
 
     })

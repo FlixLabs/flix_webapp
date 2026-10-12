@@ -56,10 +56,13 @@ test('movie details hide the scroll hint as soon as scrolling starts and keep ac
   expect(await dialog.locator('.dialog-flex').evaluate(el => el.scrollTop)).toBe(0);
   await body.evaluate(el => { el.scrollTop = el.scrollHeight; });
   await expect(hint).not.toBeVisible();
+  await expect(dialog.getByText('File added', { exact: true })).toBeInViewport();
+  await dialog.getByRole('textbox', { name: 'File', exact: true }).scrollIntoViewIfNeeded();
   await expect(dialog.getByRole('textbox', { name: 'File', exact: true })).toBeInViewport();
   await expect(dialog.getByRole('textbox', { name: 'File', exact: true })).toHaveValue('Movie.mkv');
-  await expect(dialog.getByRole('textbox', { name: 'Size (GB)', exact: true })).toBeInViewport();
-  await expect(dialog.getByRole('textbox', { name: 'Quality', exact: true })).toBeInViewport();
+  await dialog.locator('.media-file-details').getByText('Size (GB)', { exact: true }).scrollIntoViewIfNeeded();
+  await expect(dialog.locator('.media-file-details').getByText('Size (GB)', { exact: true })).toBeInViewport();
+  await expect(dialog.locator('.media-file-details').getByText('Quality', { exact: true })).toBeInViewport();
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   await page.locator('.media-card').click();
   await expect.poll(() => body.evaluate(el => el.scrollTop)).toBe(0);
