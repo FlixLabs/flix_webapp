@@ -3,7 +3,8 @@ import MediaFileDetails from './MediaFileDetails.vue';
 import MediaMonitoring from './MediaMonitoring.vue';
 import MediaImage from './MediaImage.vue';
 import ReleaseSelectionDialog from './ReleaseSelectionDialog.vue';
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { mediaNeighbors } from '@/composables/mediaNeighbors';
 
 const props = withDefaults(defineProps<{
   modelValue: boolean;
@@ -17,13 +18,21 @@ const props = withDefaults(defineProps<{
   addDisabled?: boolean;
   showFileDetails?: boolean;
   activator?: HTMLElement | null;
+  navigationItems?: Record<string, unknown>[];
+  navigationPending?: boolean;
 }>(), {
   showFileDetails: true,
 });
 
-const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'release-grabbed']);
+const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'release-grabbed', 'navigate']);
 const releaseDialog = ref(false);
 const monitoringPending = ref(false);
+const neighbors = computed(() => mediaNeighbors(props.navigationItems ?? [], props.item));
+const navigationDisabled = computed(() => props.actionPending || props.navigationPending || monitoringPending.value || releaseDialog.value);
+function navigate(direction: 'previous' | 'next') {
+  const target = neighbors.value[direction];
+  if (target && !navigationDisabled.value) emit('navigate', target);
+}
 watch(() => props.modelValue, value => { if (!value) releaseDialog.value = false; });
 
 function releaseGrabbed() {
@@ -178,8 +187,14 @@ onBeforeUnmount(() => {
     <v-card
       class="dialog-flex"
       >
-      <v-card-title>
-        {{ mediaType }}
+      <v-card-title class="d-flex align-center ga-2">
+        <span>{{ mediaType }}</span>
+        <v-spacer />
+        <div v-if="neighbors.index >= 0 && neighbors.total > 1" class="d-flex align-center ga-1" role="group" aria-label="Media navigation">
+          <v-btn icon="mdi-chevron-left" variant="text" size="small" aria-label="Previous media" :disabled="navigationDisabled || !neighbors.previous" @click="navigate('previous')" />
+          <span class="text-caption text-medium-emphasis" aria-live="polite">{{ neighbors.index + 1 }} / {{ neighbors.total }}</span>
+          <v-btn icon="mdi-chevron-right" variant="text" size="small" aria-label="Next media" :disabled="navigationDisabled || !neighbors.next" @click="navigate('next')" />
+        </div>
       </v-card-title>
       <div class="dialog-body">
         <v-card-text
