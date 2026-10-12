@@ -15,11 +15,22 @@ If you wish to enable the optional backend, you can retrieve it here: [flix_api]
 - **Track Upcoming** movie releases and TV episode schedules
 - **Monitor Ongoing Downloads** for films and series
 - **View System Information** for Radarr and Sonarr (host, system status, disk space, logs, and alerts)
+- **Integration Diagnostics** for Radarr and Sonarr, with service availability, versions, last valid response and individual retries
 
 ### With the Optional Backend
 - **Multi-Instance Management** for Radarr and Sonarr
 - **Authentication** options for enhanced security
 - **Color** options for enhanced UI
+- **API and Storage Agent Diagnostics**, distinguishing an unreachable agent from inaccessible storage volumes
+
+In **System > Integrations**, checks run automatically every 60 seconds only
+while the section is open. **Check All** and each service's **Retry** button
+perform read-only requests. They never start searches, downloads or deployments.
+Standalone mode checks Radarr and Sonarr directly without contacting Flix API.
+Diagnostic messages do not display API keys or agent tokens. A degraded agent
+is reachable but cannot provide measurements for one or more volumes; this is
+different from an unavailable agent. Failed retries preserve the date of the
+last valid response for the selected instance.
 
 This project is developed entirely in my free time, and while it is already functional, improvements in **security** and **code factorization** are always welcome. Contributions and feedback are greatly appreciated!
 
