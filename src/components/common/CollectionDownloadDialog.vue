@@ -1,0 +1,62 @@
+<script setup lang="ts">
+import { computed, ref, watch } from 'vue';
+import { useFlixStore } from '@/stores/flixStore';
+import { useQualityProfiles } from '@/composables/useQualityProfiles';
+import { useCollectionDownloads, downloadableCollectionMovies, type CollectionDownloadMovie } from '@/composables/useCollectionDownloads';
+import DialogSheet from './DialogSheet.vue';
+import ReadFeedback from './ReadFeedback.vue';
+
+const visible = defineModel<boolean>({ required: true });
+const props = defineProps<{ movies: CollectionDownloadMovie[]; context: string; disabled: boolean; activator?: HTMLElement | null }>();
+const emit = defineEmits<{ refresh: [] }>();
+const store = useFlixStore();
+const useAPI = ref(import.meta.env.VITE_FLIX_API_USE === 'true');
+const selectedInstanceData = computed(() => store.selectedInstanceData);
+const options = { useAPI, selectedInstanceData };
+const { pending, results, run } = useCollectionDownloads(options);
+const { qualityMovieItems, qualityMovie, qualityReads, getQualityProfileList } = useQualityProfiles({ ...options, showErrorAlert: () => {} });
+const selectedIds = ref<number[]>([]);
+const candidates = computed(() => downloadableCollectionMovies(props.movies));
+const selected = computed(() => candidates.value.filter(movie => selectedIds.value.includes(movie.tmdbId)));
+const needsQuality = computed(() => selected.value.some(movie => !movie.localId));
+const submitted = ref(false);
+const blocked = computed(() => pending.value || submitted.value || props.disabled || !selected.value.length
+  || (needsQuality.value && (!qualityReads.movies.state.hasData || qualityReads.movies.state.loading
+    || !!qualityReads.movies.state.error || !qualityMovieItems.value.some(profile => profile.value === qualityMovie.value))));
+watch(visible, value => {
+  if (!value) return;
+  submitted.value = false;
+  results.value = [];
+  selectedIds.value = candidates.value.map(movie => movie.tmdbId);
+  if (candidates.value.some(movie => !movie.localId)) void getQualityProfileList('movies');
+}, { immediate: true });
+watch(() => props.context, () => { visible.value = false; selectedIds.value = []; });
+async function confirm() {
+  if (blocked.value) return;
+  submitted.value = true;
+  const context = props.context;
+  await run(selected.value, qualityMovie.value);
+  if (context === props.context) emit('refresh');
+}
+function close(value: boolean) { if (!pending.value) visible.value = value; }
+</script>
+
+<template>
+  <DialogSheet :model-value="visible" :activator="activator" title="Missing movies" label="Download missing movies" :context="context" :close-disabled="pending" @update:model-value="close">
+    <p class="mb-3">Confirm the films Radarr should search for. Films not in your library will be added first.</p>
+    <v-list density="compact" aria-label="Missing movies">
+      <v-list-item v-for="movie in candidates" :key="movie.tmdbId" :subtitle="movie.localId ? 'Existing quality profile' : 'Add and search'">
+        <template #title><span class="text-wrap">{{ movie.title }}</span></template>
+        <template #prepend><v-checkbox-btn v-model="selectedIds" :value="movie.tmdbId" :aria-label="`Request ${movie.title}`" :disabled="pending || submitted || disabled" /></template>
+      </v-list-item>
+    </v-list>
+    <template v-if="needsQuality">
+      <ReadFeedback :state="qualityReads.movies.state" label="Quality profiles" :disabled="pending" @retry="getQualityProfileList('movies')" />
+      <v-select v-model="qualityMovie" :items="qualityMovieItems" label="Quality for new movies" variant="outlined" class="mt-3" :loading="qualityReads.movies.state.loading" :disabled="pending || submitted" hide-details />
+    </template>
+    <v-list v-if="results.length" density="compact" aria-label="Download request results" aria-live="polite">
+      <v-list-item v-for="result in results" :key="result.tmdbId" :title="result.title" :subtitle="result.message" :prepend-icon="result.state === 'requested' ? 'mdi-check-circle-outline' : result.state === 'failed' ? 'mdi-alert-circle-outline' : 'mdi-minus-circle-outline'" />
+    </v-list>
+    <template #actions><v-btn color="primary" :loading="pending" :disabled="blocked" @click="confirm">Request downloads</v-btn></template>
+  </DialogSheet>
+</template>

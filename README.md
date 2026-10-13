@@ -198,6 +198,14 @@ preview. The collection link on a library movie sheet opens its saga. No films a
 automatically added, monitored or downloaded. Custom and series collections are
 not included. Radarr must support `/api/v3/collection`.
 
+**Download missing** lets you select released missing films and explicitly confirm
+their searches. Existing films keep their current quality profile; new films use
+the chosen profile and configured movie root folder. Each film is checked again
+before a request, available/future/unknown films are excluded, and requests run
+sequentially without automatic write retries. A requested search does not guarantee
+that Radarr will find a release or start a download. This works with or without
+the Flix API and requires no API or storage-agent changes.
+
 Movies, Series and Collections share the library navigation controls. Collection
 posters keep their portrait proportions, and collection/media sheets share their
 Close button, overflow handling and fading backdrop blur. Empty detail sections
