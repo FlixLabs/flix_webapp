@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
 import { ref, watch } from 'vue';
+import { useDialogActivator } from '@/composables/useDialogActivator';
 
 const props = withDefaults(defineProps<{
   modelValue: boolean;
@@ -12,6 +13,8 @@ const props = withDefaults(defineProps<{
 const emits = defineEmits(['update:modelValue', 'cancel', 'confirm']);
 
 const internalVisible = ref(props.modelValue);
+const dialogActivator = useDialogActivator(() => internalVisible.value);
+const cancelButton = ref<{ $el: HTMLElement } | null>(null);
 
 watch(() => props.modelValue, (newVal) => {
   internalVisible.value = newVal;
@@ -35,6 +38,10 @@ function confirm() {
 <template>
   <v-dialog
     v-model="internalVisible"
+    :activator="dialogActivator"
+    :open-on-click="false"
+    aria-label="Confirm deletion"
+    @after-enter="cancelButton?.$el.focus({ preventScroll: true })"
     max-width="600px"
     class="blur-dialog"
     >
@@ -47,6 +54,7 @@ function confirm() {
       </v-card-text>
       <v-card-actions>
         <v-btn
+          ref="cancelButton"
           @click="cancel"
           color="secondary"
           >

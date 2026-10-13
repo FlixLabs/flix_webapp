@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { onUnmounted, watch } from 'vue';
+import { onUnmounted, ref, watch } from 'vue';
+import { useDialogActivator, preserveNestedDialogFocus } from '@/composables/useDialogActivator';
 import { useManualImport } from '@/composables/useManualImport';
 import type { MediaServiceOptions } from '@/composables/useMediaService';
 
@@ -8,6 +9,10 @@ const emit = defineEmits<{ requested: []; finished: [] }>();
 const actions = useManualImport(props.options);
 const { dialog, confirming, type, title, files, media, qualities, episodes, loadingEpisodes, loading,
   busy, error, selected, canReview, commandId, commandState } = actions;
+const dialogActivator = useDialogActivator(() => dialog.value);
+const confirmationActivator = useDialogActivator(() => confirming.value);
+const cancelButton = ref<{ $el: HTMLElement } | null>(null);
+const importCard = ref<{ $el: HTMLElement } | null>(null);
 let timer: ReturnType<typeof setInterval> | undefined;
 async function check() {
   if (await actions.checkStatus()) emit('finished');
@@ -31,8 +36,8 @@ defineExpose({ open: actions.open, close: actions.close });
 </script>
 
 <template>
-  <v-dialog :model-value="dialog" max-width="960" scrollable :fullscreen="$vuetify.display.xs" :persistent="busy || confirming || commandId !== null" @update:model-value="value => { if (!value && !busy && !confirming && commandId === null) actions.close(); }">
-    <v-card>
+  <v-dialog :model-value="dialog" :activator="dialogActivator" :open-on-click="false" :aria-label="`Manual Import - ${title}`" max-width="960" scrollable :fullscreen="$vuetify.display.xs" :persistent="busy || confirming || commandId !== null" @after-enter="preserveNestedDialogFocus(importCard?.$el)" @update:model-value="value => { if (!value && !busy && !confirming && commandId === null) actions.close(); }">
+    <v-card ref="importCard">
       <v-card-title>Manual Import</v-card-title>
       <v-card-subtitle class="text-wrap">{{ title }}</v-card-subtitle>
       <v-card-text>
@@ -84,7 +89,7 @@ defineExpose({ open: actions.open, close: actions.close });
       </v-card-actions>
     </v-card>
   </v-dialog>
-  <v-dialog v-model="confirming" max-width="640" :persistent="busy">
+  <v-dialog v-model="confirming" :activator="confirmationActivator" :open-on-click="false" aria-label="Confirm Manual Import" max-width="640" :persistent="busy" @after-enter="cancelButton?.$el.focus({ preventScroll: true })">
     <v-card>
       <v-card-title>Confirm Manual Import</v-card-title>
       <v-card-text>
@@ -97,7 +102,7 @@ defineExpose({ open: actions.open, close: actions.close });
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn :disabled="busy" @click="confirming = false">Cancel</v-btn>
+        <v-btn ref="cancelButton" :disabled="busy" @click="confirming = false">Cancel</v-btn>
         <v-btn color="warning" :loading="busy" :disabled="!canReview" @click="confirm">Confirm Import</v-btn>
       </v-card-actions>
     </v-card>

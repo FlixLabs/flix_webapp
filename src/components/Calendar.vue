@@ -8,6 +8,7 @@ import { useCalendar, calendarDate, calendarDay, calendarRange, moveCalendar, ma
 import PageNavigation from '@/components/common/PageNavigation.vue';
 import CalendarEventList from '@/components/common/CalendarEventList.vue';
 import { useDisplay } from 'vuetify';
+import { useDialogActivator } from '@/composables/useDialogActivator';
 
 defineOptions({ name: 'FlixCalendar' });
 
@@ -53,6 +54,7 @@ const title = computed(() => {
   return `${range.start.toLocaleDateString()} - ${range.end.toLocaleDateString()}`;
 });
 const dayEventsDialog = ref(false); const selectedDay = ref('');
+const dialogActivator = useDialogActivator(() => dayEventsDialog.value);
 const selectedDayTitle = computed(() => selectedDay.value ? calendarDate(selectedDay.value)?.toLocaleDateString(undefined, { dateStyle: 'long' }) : '');
 const selectedDayEvents = computed(() => visibleEvents.value.filter(event => calendarDay(event.start) === selectedDay.value));
 function openDayEvents(_event: Event, day: { date: string }) { selectedDay.value = day.date; dayEventsDialog.value = true; }
@@ -132,7 +134,7 @@ watch([rangeKey, () => store.selectedInstance, () => getConfig('movies').base_ur
       <v-pagination v-if="agendaPages > 1" v-model="agendaPage" :length="agendaPages" :total-visible="3" aria-label="Agenda pages" />
     </div>
   </v-container>
-  <v-dialog v-model="dayEventsDialog" max-width="600" scrollable>
+  <v-dialog v-model="dayEventsDialog" :activator="dialogActivator" :open-on-click="false" :aria-label="`Events - ${selectedDayTitle}`" max-width="600" scrollable>
     <v-card>
       <v-card-title class="text-wrap">{{ selectedDayTitle }}</v-card-title>
       <v-card-subtitle>{{ selectedDayEvents.length }} {{ selectedDayEvents.length === 1 ? 'event' : 'events' }}</v-card-subtitle>

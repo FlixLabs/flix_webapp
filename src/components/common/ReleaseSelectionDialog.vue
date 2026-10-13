@@ -4,6 +4,7 @@ import { useFlixStore } from '@/stores/flixStore';
 import { useReleaseSearch, type Release } from '@/composables/useReleaseSearch';
 import type { MediaActionItem } from '@/composables/useMediaActions';
 import type { MediaType } from '@/composables/useMediaService';
+import { useDialogActivator, preserveNestedDialogFocus } from '@/composables/useDialogActivator';
 
 const model = defineModel<boolean>({ required: true });
 const props = defineProps<{ mediaType: MediaType; item: MediaActionItem | null }>();
@@ -17,6 +18,10 @@ const { releases, seasons, seasonEpisodes, season, episodeId, isSearching, isLoa
 const filter = ref('');
 const selectedRelease = shallowRef<Release | null>(null);
 const confirming = computed({ get: () => !!selectedRelease.value, set: value => { if (!value) selectedRelease.value = null; } });
+const dialogActivator = useDialogActivator(() => model.value);
+const confirmationActivator = useDialogActivator(() => confirming.value);
+const cancelButton = ref<{ $el: HTMLElement } | null>(null);
+const releaseCard = ref<{ $el: HTMLElement } | null>(null);
 const seasonItems = computed(() => seasons.value.map(value => ({ title: `Season ${value}`, value })));
 const episodeItems = computed(() => [
   { title: 'All episodes / season packs', value: null },
@@ -58,8 +63,8 @@ async function download() {
 
 <template>
   <!-- Keep select-menu measurements stable while the dialog opens. -->
-  <v-dialog v-model="model" max-width="1200" transition="fade-transition" scrollable :persistent="isGrabbing">
-    <v-card>
+  <v-dialog v-model="model" :activator="dialogActivator" :open-on-click="false" :aria-label="`Choose Release - ${item?.title ?? ''}`" max-width="1200" transition="fade-transition" scrollable :persistent="isGrabbing" @after-enter="preserveNestedDialogFocus(releaseCard?.$el)">
+    <v-card ref="releaseCard">
       <v-card-title class="text-wrap">Choose Release - {{ item?.title }}</v-card-title>
       <v-card-text>
         <v-alert v-if="error && !confirming" type="error" class="mb-4">{{ error }}</v-alert>
@@ -111,7 +116,7 @@ async function download() {
       <v-card-actions><v-spacer /><v-btn :disabled="isGrabbing" @click="model = false">Close</v-btn></v-card-actions>
     </v-card>
   </v-dialog>
-  <v-dialog v-model="confirming" max-width="600" :persistent="isGrabbing">
+  <v-dialog v-model="confirming" :activator="confirmationActivator" :open-on-click="false" aria-label="Download this release?" max-width="600" :persistent="isGrabbing" @after-enter="cancelButton?.$el.focus({ preventScroll: true })">
     <v-card>
       <v-card-title>Download this release?</v-card-title>
       <v-card-text>
@@ -124,7 +129,7 @@ async function download() {
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn :disabled="isGrabbing" @click="selectedRelease = null">Cancel</v-btn>
+        <v-btn ref="cancelButton" :disabled="isGrabbing" @click="selectedRelease = null">Cancel</v-btn>
         <v-btn color="primary" :loading="isGrabbing" @click="download">Download</v-btn>
       </v-card-actions>
     </v-card>

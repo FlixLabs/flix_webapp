@@ -12,6 +12,9 @@ const props = defineProps<{
     justify="center"
     align="center"
     class="mt-4"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
     >
     <v-progress-circular
       indeterminate

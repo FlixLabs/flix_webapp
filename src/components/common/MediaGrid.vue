@@ -19,6 +19,10 @@ function cardClick(id: number) {
     if (!props.selectionDisabled) emit('toggle-selection', id);
   } else emit('card-click', id);
 }
+
+function keyboardOpen(event: KeyboardEvent, id: number) {
+  if (!event.repeat && !props.selectionMode) cardClick(id);
+}
 </script>
 
 <template>
@@ -39,8 +43,12 @@ function cardClick(id: number) {
       <v-card
         class="media-card"
         :aria-label="`${selectionMode ? 'Select' : 'Open'} ${item.title}`"
-        :role="selectionMode ? 'group' : undefined"
+        :role="selectionMode ? 'group' : 'button'"
+        :tabindex="selectionMode ? undefined : 0"
+        :aria-haspopup="selectionMode ? undefined : 'dialog'"
         @click="cardClick(item[idField])"
+        @keydown.enter.self.prevent="keyboardOpen($event, item[idField])"
+        @keydown.space.self.prevent="keyboardOpen($event, item[idField])"
         >
         <MediaImage
           :src="item.prependAvatar ?? item.poster"

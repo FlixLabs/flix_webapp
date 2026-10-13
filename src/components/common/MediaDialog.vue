@@ -8,6 +8,7 @@ import MediaImage from './MediaImage.vue';
 import ReleaseSelectionDialog from './ReleaseSelectionDialog.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { mediaNeighbors } from '@/composables/mediaNeighbors';
+import { useDialogActivator, preserveNestedDialogFocus } from '@/composables/useDialogActivator';
 
 const props = withDefaults(defineProps<{
   modelValue: boolean;
@@ -29,6 +30,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'release-grabbed', 'navigate']);
 const releaseDialog = ref(false);
+const dialogActivator = useDialogActivator(() => props.modelValue);
 const monitoringPending = ref(false);
 const settingsPending = ref(false);
 const mediaBusy = computed(() => monitoringPending.value || settingsPending.value);
@@ -131,6 +133,11 @@ function refreshScrollHint() {
   });
 }
 
+function afterEnter() {
+  refreshScrollHint();
+  preserveNestedDialogFocus(dialogScrollEl.value);
+}
+
 function resetScroll() {
   if (dialogScrollEl.value) dialogScrollEl.value.scrollTop = 0;
   refreshScrollHint();
@@ -178,14 +185,15 @@ onBeforeUnmount(() => {
 
 <template>
   <v-dialog
-    :activator="activator ?? undefined"
-    :open-on-click="activator ? false : undefined"
+    :activator="activator ?? dialogActivator"
+    :open-on-click="false"
+    :aria-label="`${mediaType === 'Movie' ? 'Movie' : 'Series'}: ${item?.title ?? 'Media details'}`"
     :model-value="modelValue"
     @update:model-value="val => emit('update:modelValue', val)"
     max-width="980px"
     max-height="min(815px, calc(100% - 48px))"
     scrollable
-    @after-enter="refreshScrollHint"
+    @after-enter="afterEnter"
     class="blur-dialog"
     transition="fade-transition"
     >

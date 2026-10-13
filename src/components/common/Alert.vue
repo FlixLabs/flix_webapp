@@ -37,7 +37,9 @@ function hideAlert() {
       :icon="alert.icon || undefined"
       class="fixed-alert"
       :text="alert.text"
-      @click="hideAlert"
+      closable
+      close-label="Dismiss notification"
+      @click:close="hideAlert"
       />
   </transition>
 </template>

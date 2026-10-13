@@ -4,10 +4,12 @@ import { useRouter } from 'vue-router';
 import { useFlixStore } from '@/stores/flixStore';
 import { mediaQuery } from '@/composables/mediaLinks';
 import type { MediaType } from '@/composables/useMediaService';
+import { useDialogActivator } from '@/composables/useDialogActivator';
 
 const props = defineProps<{ mediaId: number; type: MediaType }>();
 const router = useRouter(); const store = useFlixStore();
 const dialog = ref(false); const copied = ref(false); const error = ref('');
+const dialogActivator = useDialogActivator(() => dialog.value);
 const link = computed(() => new URL(router.resolve({ path: '/library', query: mediaQuery(props.type, props.mediaId, import.meta.env.VITE_FLIX_API_USE === 'true' ? store.selectedInstance : null) }).href, window.location.origin).href);
 async function copy() {
   copied.value = false; error.value = '';
@@ -20,7 +22,7 @@ async function copy() {
 
 <template>
   <v-btn icon="mdi-link-variant" variant="text" size="small" aria-label="Share media" @click="dialog = true; copied = false; error = ''" />
-  <v-dialog v-model="dialog" max-width="600">
+  <v-dialog v-model="dialog" :activator="dialogActivator" :open-on-click="false" aria-label="Share media link" max-width="600">
     <v-card>
       <v-card-title>Share media link</v-card-title>
       <v-card-text>

@@ -22,8 +22,9 @@
   transform: translateY(0);
 }
 
-.flix-app :is(a, button, [tabindex]):focus-visible {
-  outline: 2px solid rgb(var(--v-theme-primary));
+.flix-skip-link:focus-visible,
+:is(.flix-app, .v-overlay-container) :is(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid rgb(var(--v-theme-on-surface));
   outline-offset: 3px;
 }
 
@@ -95,5 +96,10 @@
 @media (prefers-reduced-motion: reduce) {
   .media-card {
     transition: none;
+  }
+
+  :is(.flix-app, .v-overlay-container) :is(.v-overlay__content, .v-overlay__scrim, .v-alert) {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }
