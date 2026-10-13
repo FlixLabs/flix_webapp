@@ -6,6 +6,7 @@ import { readApiJson, requireList, optionalList } from '@/composables/apiRespons
 
 import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { rankSearchResults } from '@/composables/useSearchRelevance';
+import { supplementMediaSearch, type MediaSearchResult } from '@/composables/translatedMediaSearch';
 import { useFlixStore } from '@/stores/flixStore';
 import { useMediaService } from '@/composables/useMediaService';
 import { useCount } from '@/composables/useCount';
@@ -142,45 +143,54 @@ function getContent(type: 'movies' | 'series') {
   return fetch(base_url + '/api/v3/' + url_type + '/lookup?' + params, { signal: request.signal, cache: 'no-store' })
     .then(async response => {
       if (!response.ok) throw new Error(`Search failed (${response.status})`);
-      const json_data: any = requireList(await readApiJson(response), 'search', ['title']);
+      const json_data = requireList<MediaSearchResult>(await readApiJson(response), 'search', ['title']);
       if (!request.isCurrent()) return;
-      if (!Array.isArray(json_data)) throw new Error('Invalid search response');
 
-      let items = [];
-      for (let item of rankSearchResults(json_data, term)) {
-        let title = item.title;
-        const year_str = '(' + item.year + ')';
+      function publishResults(results: MediaSearchResult[]) {
+        let items = [];
+        for (let item of rankSearchResults(results, term)) {
+          let title = item.title;
+          const year_str = '(' + item.year + ')';
 
-        if (title.includes(year_str)) {
-          title = title.replace(year_str, '').trim();
+          if (title.includes(year_str)) {
+            title = title.replace(year_str, '').trim();
+          }
+
+          const selectedQuality = (type === 'movies') ? qualityMovie.value : qualitySerie.value;
+
+          items.push({
+            id: item.id,
+            tmdbId: item.tmdbId,
+            tvdbId: item.tvdbId,
+            prependAvatar: optionalList(item.images, 'images').find((img: any) => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
+            title: title,
+            year: item.year,
+            overview: item.overview,
+            certification: item.certification,
+            runTime: item.runtime,
+            release_date: type === 'movies' ? item.digitalRelease ?? item.inCinemas : item.firstAired,
+            selected_quality: selectedQuality,
+            already_in_library: false
+          });
         }
 
-        const selectedQuality = (type === 'movies') ? qualityMovie.value : qualitySerie.value;
-
-        items.push({
-          id: item.id,
-          tmdbId: item.tmdbId,
-          tvdbId: item.tvdbId,
-          prependAvatar: optionalList(item.images, 'images').find((img: any) => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
-          title: title,
-          year: item.year,
-          overview: item.overview,
-          certification: item.certification,
-          runTime: item.runtime,
-          release_date: type === 'movies' ? item.digitalRelease ?? item.inCinemas : item.firstAired,
-          selected_quality: selectedQuality,
-          already_in_library: false
-        });
+        if (type == 'movies') {
+          movieItems.value = items;
+        }
+        if (type == 'series') {
+          serieItems.value = items;
+        }
       }
-
-      if (type == 'movies') {
-        movieItems.value = items;
-        checkMovies();
-      }
-      if (type == 'series') {
-        serieItems.value = items;
-        checkSeries();
-      }
+      publishResults(json_data);
+      const supplemented = await supplementMediaSearch(json_data, {
+        query: term, type, serviceUrl: base_url, serviceKey: api_key,
+        tmdbUrl: import.meta.env.VITE_TMDB_BASE_URL, tmdbKey: import.meta.env.VITE_TMDB_API_KEY,
+        language: navigator.language || 'en-US', signal: request.signal,
+      });
+      if (!request.isCurrent()) return;
+      if (supplemented !== json_data) publishResults(supplemented);
+      if (type === 'movies') checkMovies();
+      else checkSeries();
       request.success();
     })
     .catch(error => {
