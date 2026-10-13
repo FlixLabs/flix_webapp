@@ -16,6 +16,7 @@ import { DEFAULT_THEME_NAME, LIGHT_THEME_NAME, DEFAULT_PRIMARY, DEFAULT_LIGHT_PR
 
 const vuetify = createVuetify({
   defaults: {
+    VDialog: { transition: 'fade-transition' },
     VCard: { rounded: 'lg', elevation: 0, border: true },
     VBtn: { rounded: 'lg' },
     VBtnGroup: { VBtn: { rounded: 0 } },

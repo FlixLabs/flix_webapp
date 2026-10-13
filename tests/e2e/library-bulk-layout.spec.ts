@@ -10,6 +10,30 @@ async function settleLayout(page: Page) {
   });
 }
 
+test('library tools stay together without displacing or overflowing the navigation', async ({ page, mutations }) => {
+  await page.route(/\/api\/v3\/movie\?/, route => route.fulfill({ json: Array.from({ length: 241 }, (_, index) => ({ ...movie, id: index + 1 })) }));
+  await page.goto('/library');
+  const select = page.getByRole('button', { name: 'Select media', exact: true });
+  const tools = page.getByRole('button', { name: 'Library tools', exact: true });
+  await expect(select).toBeVisible();
+  for (const width of [320, 412, 768, 1024, 1280, 1440, 1920]) {
+    await page.setViewportSize({ width, height: 1200 });
+    await settleLayout(page);
+    const first = (await select.boundingBox())!;
+    const second = (await tools.boundingBox())!;
+    expect(Math.abs(first.y + first.height / 2 - second.y - second.height / 2)).toBeLessThanOrEqual(1);
+    expect(second.x).toBeGreaterThanOrEqual(first.x + first.width);
+    expect(second.x + second.width).toBeLessThanOrEqual(width);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    if (width >= 960) {
+      const tabs = (await page.getByRole('button', { name: 'Movies (241)', exact: true }).boundingBox())!;
+      const pagination = (await page.getByRole('navigation', { name: 'Media results pages' }).locator('button').first().boundingBox())!;
+      expect(Math.abs(tabs.y + tabs.height / 2 - pagination.y - pagination.height / 2)).toBeLessThanOrEqual(2);
+    }
+  }
+  expect(mutations).toEqual([]);
+});
+
 test('library buttons retain their positions during selection and processing', async ({ page, mutations }) => {
   await page.route(/\/api\/v3\/movie\?/, route => route.fulfill({ json: Array.from({ length: 13 }, (_, index) => ({
     ...movie, id: index + 1, title: `Movie ${index + 1}`, monitored: true,

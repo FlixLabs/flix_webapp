@@ -54,14 +54,45 @@
   border-top: 1px solid var(--flix-border);
 }
 
-.flix-app .v-btn {
+:is(.flix-app, .v-overlay-container) .v-btn {
   text-transform: none;
   letter-spacing: 0;
   font-weight: 600;
 }
 
+.collection-link .v-btn__content { min-width: 0; }
+.collection-link .v-btn__prepend { flex-shrink: 0; }
+
+/* Keep blur on the fading scrim, including while its dialog is leaving. */
+.v-dialog > .v-overlay__scrim {
+  background: rgba(0, 0, 0, var(--v-overlay-opacity, 0.32));
+  opacity: 1;
+  -webkit-backdrop-filter: blur(5px);
+  backdrop-filter: blur(5px);
+}
+
+.dialog-flex { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.dialog-body { display: flex; flex: 1 1 auto; min-height: 0; position: relative; overflow: hidden; }
+.dialog-flex-text {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior-y: contain;
+  scrollbar-gutter: stable; font-size: inherit; letter-spacing: 0.03125em;
+  line-height: inherit; padding: 16px 24px 24px;
+}
+.dialog-flex-text.dialog-no-overflow { overflow-y: hidden; }
+
 .flix-app .v-btn-group {
   border-radius: 12px;
+}
+
+/* Grouped button defaults keep inner joins square, but not the outer corners. */
+.flix-app .v-btn-group--horizontal > .v-btn:first-child {
+  border-start-start-radius: inherit;
+  border-end-start-radius: inherit;
+}
+
+.flix-app .v-btn-group--horizontal > .v-btn:last-child {
+  border-start-end-radius: inherit;
+  border-end-end-radius: inherit;
 }
 
 :where(.flix-app) .v-card-title {
