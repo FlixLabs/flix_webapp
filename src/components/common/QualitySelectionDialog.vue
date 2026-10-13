@@ -1,6 +1,7 @@
 <script setup lang="ts">
 
 import { ref, watch } from 'vue';
+import { useDialogActivator } from '@/composables/useDialogActivator';
 
 type QualityItem = { title: string; value: any };
 
@@ -13,6 +14,7 @@ const props = defineProps<{
 const emits = defineEmits(['update:modelValue', 'cancel', 'confirm']);
 
 const internalVisible = ref(props.modelValue);
+const dialogActivator = useDialogActivator(() => internalVisible.value);
 
 const selected = ref<any>(null);
 
@@ -48,6 +50,9 @@ function confirm() {
 <template>
   <v-dialog
     v-model="internalVisible"
+    :activator="dialogActivator"
+    :open-on-click="false"
+    aria-label="Choose quality"
     max-width="600px"
     class="blur-dialog"
     >

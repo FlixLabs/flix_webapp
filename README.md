@@ -178,6 +178,24 @@ yarn lint
 yarn test
 ```
 
+### Keyboard Accessibility
+
+The interface declares English as its language. **Skip to content** bypasses
+the header when navigating with a keyboard. Library and Outings cards open with
+Enter or Space; selection mode uses the individual checkboxes instead of adding
+a second card tab stop.
+
+Media, release, import, quality, sharing and calendar dialogs have accessible
+names. Vuetify traps focus and returns it to the captured opener; destructive
+confirmations initially focus **Cancel**. Escape closes non-persistent dialogs;
+in-progress operations keep their existing close restrictions.
+
+Focus indicators cover fields and teleported dialogs using the surface text
+color, independently of custom accents. Reduced-motion preferences shorten
+dialog transitions. Loading messages are announced politely, and notifications
+have a keyboard-accessible dismissal button. These checks are not a complete
+WCAG conformance audit.
+
 ### Loading Performance
 
 Pages are loaded on first navigation using Vue Router dynamic imports. Visiting
