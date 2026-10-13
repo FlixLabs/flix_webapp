@@ -43,5 +43,10 @@ export function useMediaService(options: MediaServiceOptions) {
         };
   }
 
-  return { getConfig };
+  function serviceContext() {
+    return JSON.stringify([options.useAPI.value, options.selectedInstanceData.value?.name,
+      getConfig('movies').base_url, getConfig('movies').api_key,
+      getConfig('series').base_url, getConfig('series').api_key]);
+  }
+  return { getConfig, serviceContext };
 }

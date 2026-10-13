@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { readApiJson, requireObject, requireList, optionalList } from '@/composables/apiResponse';
+import { useReadRequest } from '@/composables/useReadRequest';
+import ReadFeedback from '@/components/common/ReadFeedback.vue';
 
 
 import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue';
@@ -26,7 +28,7 @@ const selectedInstance = computed(() => store.selectedInstance);
 const selectedInstanceData = computed(() => store.selectedInstanceData);
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
-const { getConfig } = useMediaService({ useAPI, selectedInstanceData });
+const { getConfig, serviceContext } = useMediaService({ useAPI, selectedInstanceData });
 const importDialog = ref<InstanceType<typeof ManualImportDialog> | null>(null);
 const importType = ref<'movies' | 'series'>('movies');
 const importOptions = { useAPI, selectedInstanceData };
@@ -118,10 +120,29 @@ watch([mediaType, view, page], async () => {
   navigation.value?.scrollToStart();
 });
 
-const downloadRequestIds = { movies: 0, series: 0 };
+const reads = {
+  movies: {
+    queue: useReadRequest(() => [useAPI.value, selectedInstance.value, getConfig('movies').base_url, getConfig('movies').api_key]),
+    history: useReadRequest(() => [useAPI.value, selectedInstance.value, getConfig('movies').base_url, getConfig('movies').api_key]),
+  },
+  series: {
+    queue: useReadRequest(() => [useAPI.value, selectedInstance.value, getConfig('series').base_url, getConfig('series').api_key]),
+    history: useReadRequest(() => [useAPI.value, selectedInstance.value, getConfig('series').base_url, getConfig('series').api_key]),
+  },
+};
+const activeRead = computed(() => reads[mediaType.value][view.value].state);
+const actionsDisabled = computed(() => activeRead.value.loading || !!activeRead.value.error || !activeRead.value.hasData);
+for (const type of ['movies', 'series'] as const) {
+  watch(() => reads[type].queue.state.loading, loading => {
+    (type === 'movies' ? isLoadingMovieRecords : isLoadingSerieRecords).value = loading;
+  }, { flush: 'sync' });
+  watch(() => reads[type].history.state.loading, loading => {
+    (type === 'movies' ? isLoadingMovieHistory : isLoadingSerieHistory).value = loading;
+  }, { flush: 'sync' });
+}
 
 function getDownload(type: 'movies' | 'series') {
-  const requestId = ++downloadRequestIds[type];
+  const read = reads[type].queue.begin();
   let base_url = '';
   let api_key = '';
 
@@ -136,12 +157,12 @@ function getDownload(type: 'movies' | 'series') {
     ({ base_url, api_key } = getConfig('series'));
   }
 
-  fetch(base_url + '/api/v3/queue?apikey=' + api_key)
+  return fetch(base_url + '/api/v3/queue?apikey=' + api_key, { signal: read.signal, cache: 'no-store' })
     .then(async (response) => {
       const json_data: any = requireObject(await readApiJson(response), 'downloads');
       requireList(json_data.records, 'download records');
       const currentConfig = getConfig(type);
-      if (requestId !== downloadRequestIds[type] || currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
+      if (!read.isCurrent() || currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
 
       let items = [];
       for (let item of json_data.records) {
@@ -172,22 +193,18 @@ function getDownload(type: 'movies' | 'series') {
       if (type == 'series') {
         serieRecords.value = items;
       }
+      read.success();
     })
     .catch((error) => {
-      if (requestId === downloadRequestIds[type]) showErrorAlert(error);
+      read.fail(error);
     })
     .finally(() => {
-      if (requestId !== downloadRequestIds[type]) return;
-      if (type == 'movies') {
-        resetIsLoadingMovieRecords();
-      }
-      if (type == 'series') {
-        resetIsLoadingSerieRecords();
-      }
+      read.finish();
     });
 }
 
 function getHistory(type: 'movies' | 'series') {
+  const read = reads[type].history.begin();
   let base_url = '';
   let api_key = '';
 
@@ -202,10 +219,11 @@ function getHistory(type: 'movies' | 'series') {
     ({ base_url, api_key } = getConfig('series'));
   }
 
-  fetch(base_url + '/api/v3/history?apikey=' + api_key)
+  return fetch(base_url + '/api/v3/history?apikey=' + api_key, { signal: read.signal, cache: 'no-store' })
     .then(async (response) => {
       const json_data: any = requireObject(await readApiJson(response), 'downloads');
       requireList(json_data.records, 'download records');
+      if (!read.isCurrent()) return;
 
       let items = [];
       for (let item of json_data.records) {
@@ -231,17 +249,13 @@ function getHistory(type: 'movies' | 'series') {
       if (type == 'series') {
         serieHistory.value = items;
       }
+      read.success();
     })
     .catch((error) => {
-      showErrorAlert(error);
+      read.fail(error);
     })
     .finally(() => {
-      if (type == 'movies') {
-        resetIsLoadingMovieHistory();
-      }
-      if (type == 'series') {
-        resetIsLoadingSerieHistory();
-      }
+      read.finish();
     });
 }
 
@@ -254,7 +268,8 @@ const startInterval = (key: string, refVar: Ref<number>, callback: () => void) =
   }
 
   intervalIds[key] = setInterval(() => {
-    callback();
+    const [type, view] = key.split(':') as ['movies' | 'series', 'queue' | 'history'];
+    if (!reads[type][view].state.loading && !isRemoving.value) callback();
   }, refVar.value * 1000);
 };
 
@@ -263,6 +278,9 @@ const watchAndStartInterval = (key: string, refVar: Ref<number>, callback: () =>
     const v = Number(refVar.value);
     if (!Number.isNaN(v) && v > 0) {
       startInterval(key, refVar, callback);
+    } else {
+      clearInterval(intervalIds[key]);
+      delete intervalIds[key];
     }
   });
 };
@@ -296,7 +314,7 @@ onUnmounted(() => {
   Object.values(intervalIds).forEach(id => clearInterval(id));
 });
 
-watch(selectedInstance, () => {
+watch(serviceContext, () => {
   resetDeleteConfirmationDialog();
   resetItemToDelete();
   resetMovieRecords();
@@ -353,6 +371,7 @@ watch(selectedInstance, () => {
         />
       </div>
     </PageNavigation>
+    <ReadFeedback :state="activeRead" :label="`${mediaType === 'movies' ? 'Movie' : 'Series'} ${view === 'queue' ? 'downloads' : 'history'}`" :disabled="isRemoving" @retry="refreshActive" />
     <v-card class="mt-4">
       <v-card-title class="d-flex flex-wrap align-center justify-space-between ga-3">
         <span>{{ mediaType === 'movies' ? 'Movie' : 'Series' }} {{ view === 'queue' ? 'downloads' : 'history' }}</span>
@@ -376,7 +395,7 @@ watch(selectedInstance, () => {
           :mobile-breakpoint="600"
           hide-default-footer
           class="downloads-table mt-4"
-          :no-data-text="search || (view === 'queue' && queueFilter !== 'all') ? 'No matching items found' : view === 'queue' ? 'No download information found' : 'No history information found'"
+          :no-data-text="activeRead.error ? 'Data unavailable. Retry to load this view.' : search || (view === 'queue' && queueFilter !== 'all') ? 'No matching items found' : view === 'queue' ? 'No download information found' : 'No history information found'"
         >
           <template #item.title="{ item }">
             <div class="download-title">{{ item.title }}</div>
@@ -406,7 +425,7 @@ watch(selectedInstance, () => {
               size="small"
               prepend-icon="mdi-file-import-outline"
               :aria-label="'Manual import ' + item.title"
-              :disabled="isRemoving"
+              :disabled="isRemoving || actionsDisabled"
               @click="importType = mediaType; importDialog?.open(mediaType, item)"
             >Manual Import</v-btn>
             <v-btn
@@ -414,7 +433,7 @@ watch(selectedInstance, () => {
               variant="text"
               size="small"
               prepend-icon="mdi-trash-can-outline"
-              :disabled="isRemoving || !Number.isInteger(item.id)"
+              :disabled="isRemoving || actionsDisabled || !Number.isInteger(item.id)"
               :aria-label="'Remove ' + item.title"
               @click="openDeleteConfirmationDialog(mediaType, item)"
             >Remove</v-btn>

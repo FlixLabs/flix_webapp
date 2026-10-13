@@ -10,11 +10,13 @@ const props = defineProps<{
   selectionMode?: boolean;
   selectedIds?: number[];
   selectionDisabled?: boolean;
+  disabled?: boolean;
 }>();
 
 const emit = defineEmits(['card-click', 'toggle-selection']);
 
 function cardClick(id: number) {
+  if (props.disabled) return;
   if (props.selectionMode) {
     if (!props.selectionDisabled) emit('toggle-selection', id);
   } else emit('card-click', id);
@@ -42,9 +44,11 @@ function keyboardOpen(event: KeyboardEvent, id: number) {
       >
       <v-card
         class="media-card"
+        :disabled="disabled"
         :aria-label="`${selectionMode ? 'Select' : 'Open'} ${item.title}`"
         :role="selectionMode ? 'group' : 'button'"
-        :tabindex="selectionMode ? undefined : 0"
+        :tabindex="selectionMode ? undefined : disabled ? -1 : 0"
+        :aria-disabled="disabled || undefined"
         :aria-haspopup="selectionMode ? undefined : 'dialog'"
         @click="cardClick(item[idField])"
         @keydown.enter.self.prevent="keyboardOpen($event, item[idField])"
@@ -98,7 +102,7 @@ function keyboardOpen(event: KeyboardEvent, id: number) {
             Missing
           </v-chip>
           <v-chip
-            v-if="item.status"
+            v-if="typeof item.status === 'string' && item.status"
             color="blue"
             size="small"
             class="ml-1"

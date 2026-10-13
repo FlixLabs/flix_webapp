@@ -2,6 +2,8 @@
 import { mediaFileFields } from '@/composables/mediaFileDetails';
 import { monitoringFields } from '@/composables/useMediaMonitoring';
 import { readApiJson, requireList, optionalList } from '@/composables/apiResponse';
+import { useReadRequest } from '@/composables/useReadRequest';
+import ReadFeedback from '@/components/common/ReadFeedback.vue';
 
 
 import { ref, watch, computed, onMounted, toRaw } from 'vue';
@@ -35,7 +37,7 @@ const selectedInstance = computed(() => store.selectedInstance);
 const selectedInstanceData = computed(() => store.selectedInstanceData);
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
-const { getConfig } = useMediaService({ useAPI, selectedInstanceData });
+const { getConfig, serviceContext } = useMediaService({ useAPI, selectedInstanceData });
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
@@ -81,14 +83,31 @@ const { total: total_series } = useCount(filtered_series);
 const { state: isLoadingSerieEpisodes, reset: resetIsLoadingSerieEpisodes } = useResettable(false);
 const contentLoaded = ref({ movies: false, series: false });
 const contentRequests = { movies: 0, series: 0 };
+const libraryReads = {
+  movies: useReadRequest(() => [useAPI.value, selectedInstance.value, getConfig('movies').base_url, getConfig('movies').api_key]),
+  series: useReadRequest(() => [useAPI.value, selectedInstance.value, getConfig('series').base_url, getConfig('series').api_key]),
+};
+for (const type of ['movies', 'series'] as const) {
+  watch(() => libraryReads[type].state.hasData, valid => {
+    if (!valid) contentLoaded.value = { ...contentLoaded.value, [type]: false };
+  }, { flush: 'sync' });
+  watch(() => libraryReads[type].state.loading, loading => {
+    (type === 'movies' ? isLoadingMovie : isLoadingSerie).value = loading;
+  }, { flush: 'sync' });
+  watch(() => libraryReads[type].state.error, error => {
+    if (error && !libraryReads[type].state.hasData) (type === 'movies' ? movieItems : serieItems).value = [];
+  }, { flush: 'sync' });
+}
 let episodeRequest = 0;
+const episodeRead = useReadRequest(() => [serieDialog.value, selectedSerie.value?.id, serviceContext()]);
+watch(() => episodeRead.state.loading, value => { isLoadingSerieEpisodes.value = value; }, { flush: 'sync' });
 
 const selectionMode = ref(false);
 const selectedIds = ref<number[]>([]);
 const bulkPending = ref(false);
 const visibleSelectionItems = computed(() => selected_view.value === 'movies' ? filtered_movies.value : filtered_series.value);
 const currentSelectionPage = computed(() => selected_view.value === 'movies' ? paginated_movies.value : paginated_series.value);
-const selectionLoading = computed(() => selected_view.value === 'movies' ? isLoadingMovie.value : isLoadingSerie.value);
+const selectionLoading = computed(() => libraryReads[selected_view.value].state.loading || !contentLoaded.value[selected_view.value]);
 function toggleSelection(id: number) {
   if (bulkPending.value || selectionLoading.value || !Number.isInteger(id) || id <= 0) return;
   selectedIds.value = selectedIds.value.includes(id) ? selectedIds.value.filter(value => value !== id) : [...selectedIds.value, id];
@@ -115,6 +134,7 @@ const { deleteConfirmationDialog, resetDeleteConfirmationDialog, openDeleteConfi
 
 function getContent(type: 'movies' | 'series') {
   const request = ++contentRequests[type];
+  const read = libraryReads[type].begin();
   contentLoaded.value = { ...contentLoaded.value, [type]: false };
   let base_url = '';
   let api_key = '';
@@ -131,11 +151,12 @@ function getContent(type: 'movies' | 'series') {
     url_type = 'series';
   }
 
-  fetch(base_url + '/api/v3/' + url_type + '?apikey=' + api_key)
+  return fetch(base_url + '/api/v3/' + url_type + '?apikey=' + api_key, { signal: read.signal, cache: 'no-store' })
     .then(async (response) => {
       const json_data: any = requireList(await readApiJson(response), 'library', ['title']);
+      if (json_data.some((item: any) => !Number.isSafeInteger(item.id) || item.id <= 0)) throw new Error('Invalid library response. Please try again.');
       const currentConfig = getConfig(type);
-      if (request !== contentRequests[type] || currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
+      if (!read.isCurrent() || request !== contentRequests[type] || currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
 
       let items = [];
       for (let item of json_data) {
@@ -203,35 +224,32 @@ function getContent(type: 'movies' | 'series') {
         serieItems.value = items;
       }
       contentLoaded.value = { ...contentLoaded.value, [type]: true };
+      read.success();
     })
     .catch((error) => {
-      if (request === contentRequests[type]) showErrorAlert(error);
+      read.fail(error);
     })
     .finally(() => {
-      if (request !== contentRequests[type]) return;
-      if (type == 'movies') {
-        resetIsLoadingMovie();
-      }
-      if (type == 'series') {
-        resetIsLoadingSerie();
-      }
+      read.finish();
     });
 }
 
 function getSerieEpisodes(serie_id: number) {
+  if (!selectedSerie.value || selectedSerie.value.id !== serie_id) return;
   const request = ++episodeRequest;
   const { base_url, api_key } = getConfig('series');
 
   serieDialog.value = true;
+  const read = episodeRead.begin();
   isLoadingSerieEpisodes.value = true;
 
-  serieEpisodes.value = [];
+  if (!episodeRead.state.hasData) serieEpisodes.value = [];
 
-  fetch(base_url + '/api/v3/episode?includeEpisodeFile=true&apikey=' + api_key + '&seriesId=' + serie_id)
+  return fetch(base_url + '/api/v3/episode?includeEpisodeFile=true&apikey=' + api_key + '&seriesId=' + serie_id, { signal: read.signal, cache: 'no-store' })
     .then(async (response) => {
       const json_data: any = requireList(await readApiJson(response), 'library', ['title']);
       const currentConfig = getConfig('series');
-      if (request !== episodeRequest || !serieDialog.value || selectedSerie.value?.id !== serie_id || currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
+      if (!read.isCurrent() || request !== episodeRequest || !serieDialog.value || selectedSerie.value?.id !== serie_id || currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
 
       serieEpisodes.value = json_data.map((episode: any) => ({
         title: episode.title,
@@ -241,12 +259,12 @@ function getSerieEpisodes(serie_id: number) {
         hasFile: episode.hasFile,
         ...mediaFileFields(episode.episodeFile)
       }));
-
+      read.success();
     })
     .catch((error) => {
-      if (request === episodeRequest && serieDialog.value) showErrorAlert(error);
+      read.fail(error);
     })
-    .finally(() => { if (request === episodeRequest) isLoadingSerieEpisodes.value = false; });
+    .finally(read.finish);
 }
 
 function openMovie(movie_id: number) {
@@ -372,12 +390,12 @@ onMounted(() => {
   getContent('series');
 });
 
-watch(selectedInstance, () => {
+watch(serviceContext, () => {
   resetMovieDialog(); resetSerieDialog(); resetSelectedMovie(); resetSelectedSerie();
   episodeRequest++;
   getContent('movies');
   getContent('series');
-});
+}, { flush: 'sync' });
 </script>
 
 <template>
@@ -419,6 +437,7 @@ watch(selectedInstance, () => {
       </div>
       </template>
     </MediaBrowserToolbar>
+    <ReadFeedback :state="libraryReads[selected_view].state" :label="selected_view === 'movies' ? 'Movie library' : 'Series library'" :disabled="bulkPending" @retry="getContent(selected_view)" />
     <LibraryFilters v-model="filters" :statuses="statuses" :qualities="qualities" :years="years" />
     <LibraryBulkActions
       v-if="selectionMode"
@@ -461,12 +480,15 @@ watch(selectedInstance, () => {
         empty-message="No movies found"
         :selection-mode="selectionMode"
         :selected-ids="selectedIds"
-        :selection-disabled="bulkPending || isLoadingMovie"
+        :selection-disabled="bulkPending || !contentLoaded.movies"
+        :actions-disabled="!contentLoaded.movies"
+        :unavailable="!!libraryReads.movies.state.error"
         @toggle-selection="toggleSelection"
         @card-click="handleMovieClick"
       />
       <MediaDialog
         v-model="movieDialog"
+        :read-only="!contentLoaded.movies"
         mediaType="Movie"
         :item="selectedMovie"
         :navigation-items="paginated_movies"
@@ -495,12 +517,15 @@ watch(selectedInstance, () => {
         empty-message="No series found"
         :selection-mode="selectionMode"
         :selected-ids="selectedIds"
-        :selection-disabled="bulkPending || isLoadingSerie"
+        :selection-disabled="bulkPending || !contentLoaded.series"
+        :actions-disabled="!contentLoaded.series"
+        :unavailable="!!libraryReads.series.state.error"
         @toggle-selection="toggleSelection"
         @card-click="handleSerieClick"
       />
       <MediaDialog
         v-model="serieDialog"
+        :read-only="!contentLoaded.series || !!episodeRead.state.error"
         mediaType="Serie"
         :item="selectedSerie"
         :navigation-items="paginated_series"
@@ -515,6 +540,9 @@ watch(selectedInstance, () => {
         @add=""
         @remove="openDeleteConfirmationDialog('series', $event)"
         >
+        <template #status>
+          <ReadFeedback :state="episodeRead.state" label="Series episodes" @retry="getSerieEpisodes(selectedSerie?.id)" />
+        </template>
         <template
           #details
           >

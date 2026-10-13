@@ -16,6 +16,9 @@ export const test = base.extend<{ mutations: { method: string; path: string; bod
     await page.addInitScript(() => window.addEventListener('error', event => {
       if (event.message) console.error(`[browser-error] ${event.message}`);
     }));
+    await page.addInitScript(() => window.addEventListener('unhandledrejection', event => {
+      console.error(`[browser-error] ${event.reason instanceof Error ? event.reason.message : String(event.reason)}`);
+    }));
     await page.addInitScript(() => sessionStorage.setItem('flix_webapp_is_authenticated', 'true'));
     await page.route('**/*', async route => {
       const request = route.request();

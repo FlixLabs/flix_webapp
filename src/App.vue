@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { readApiJson, requireObject, requireList } from '@/composables/apiResponse';
 import { sharedRead } from '@/composables/sharedRead';
+import { useReadRequest } from '@/composables/useReadRequest';
+import ReadFeedback from '@/components/common/ReadFeedback.vue';
+import { useConnectivity } from '@/composables/useConnectivity';
 
 
 import { RouterView, useRouter } from 'vue-router'
@@ -13,6 +16,7 @@ import Loading from '@/components/common/Loading.vue';
 import { useDisplay } from 'vuetify';
 
 const router = useRouter();
+const online = useConnectivity();
 const { xs } = useDisplay();
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
@@ -24,6 +28,10 @@ const { state: drawerSelected, reset: resetDrawerSelected } = useResettable('das
 
 const store = useFlixStore();
 const isLoadingInstances = ref(false);
+const instanceRead = useReadRequest(() => useAPI.value);
+const authenticationRead = useReadRequest(() => useAPI.value);
+const showAuthenticationError = computed(() => router.currentRoute.value.path !== '/login' && !!authenticationRead.state.error);
+watch(() => instanceRead.state.loading, value => { isLoadingInstances.value = value; }, { flush: 'sync' });
 
 const initialDrawerOptions = [
   { title: 'Dashboard', icon: 'mdi-view-dashboard-outline', value: 'dashboard' },
@@ -61,32 +69,44 @@ const drawerSelectOption = (option: any) => {
 };
 
 function getData() {
+  const read = instanceRead.begin();
   isLoadingInstances.value = true;
   let base_url = import.meta.env.VITE_FLIX_API_URL;
 
-  fetch(base_url + '/instances')
+  return fetch(base_url + '/instances', { signal: read.signal, cache: 'no-store' })
     .then(async (response) => {
       if (!response.ok) throw new Error('Unable to load instances');
       const json_data = await readApiJson(response);
+      if (!read.isCurrent()) return;
       store.setInstances(requireList<import('@/composables/useMediaService').MediaInstance>(json_data, 'instances', ['name']));
+      read.success();
     })
     .catch((error) => {
-      showErrorAlert(error);
+      read.fail(error);
     })
     .finally(() => {
-      isLoadingInstances.value = false;
+      read.finish();
     });
 }
 
+function getAuthentication() {
+    const read = authenticationRead.begin();
+    return sharedRead(import.meta.env.VITE_FLIX_API_URL + '/auth')
+      .then(json => {
+        if (!read.isCurrent()) return;
+        const data = requireObject<{ username?: string; password?: string }>(json, 'authentication');
+        store.authenticationEnabled = !!(data.username && data.password);
+        read.success();
+      })
+      .catch(read.fail).finally(read.finish);
+}
+watch(() => router.currentRoute.value.path, () => {
+  if (useAPI.value && router.currentRoute.value.path !== '/login' && authenticationRead.state.error && !authenticationRead.state.loading) getAuthentication();
+});
 onMounted(() => {
   if (useAPI.value) {
     getData();
-    sharedRead(import.meta.env.VITE_FLIX_API_URL + '/auth')
-      .then(json => {
-        const data = requireObject<{ username?: string; password?: string }>(json, 'authentication');
-        store.authenticationEnabled = !!(data.username && data.password);
-      })
-      .catch(showErrorAlert);
+    getAuthentication();
   }
 });
 </script>
@@ -131,7 +151,11 @@ onMounted(() => {
           variant="outlined"
           density="compact"
           hide-details
-          />
+          >
+          <template #append-inner>
+            <v-btn icon="mdi-refresh" size="x-small" variant="text" aria-label="Reload instances" :loading="instanceRead.state.loading" :disabled="instanceRead.state.loading" @click.stop="getData" />
+          </template>
+        </v-select>
       </template>
     </v-app-bar>
 
@@ -155,6 +179,11 @@ onMounted(() => {
 
     <v-main id="main-content" class="flix-main" tabindex="-1">
       <Alert :alert="alert" @update:alert="alert = $event" />
+      <v-container v-if="!online || instanceRead.state.error || showAuthenticationError" class="pb-0">
+        <v-alert v-if="!online" type="warning" variant="tonal" role="status">Your browser reports it is offline. Some services may be unreachable.</v-alert>
+        <ReadFeedback :state="instanceRead.state" label="API instances" @retry="getData" />
+        <ReadFeedback v-if="showAuthenticationError" :state="authenticationRead.state" label="API authentication" @retry="getAuthentication" />
+      </v-container>
       <v-container v-if="currentPage" class="flix-page-heading pb-0">
         <div class="d-flex align-center ga-3">
           <v-icon :icon="currentPage.icon" color="primary" size="28" />
@@ -164,7 +193,7 @@ onMounted(() => {
       <RouterView v-if="!useAPI || !$route.meta.requiresInstance || store.selectedInstanceData" />
       <v-container v-else>
         <Loading :is-loading="isLoadingInstances" sentence="Loading instances..." />
-        <v-alert v-if="!isLoadingInstances" type="warning">
+        <v-alert v-if="!isLoadingInstances && !instanceRead.state.error" type="warning">
           No instance available. Please check the API configuration.
           <v-btn variant="text" @click="getData">Retry</v-btn>
         </v-alert>

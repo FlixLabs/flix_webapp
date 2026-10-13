@@ -74,13 +74,10 @@ app.use(pinia)
     if (import.meta.env.VITE_FLIX_API_USE === 'true') {
       const base_url = import.meta.env.VITE_FLIX_API_URL;
 
-      fetch(base_url + '/color')
-        .then(async (response) => {
-          const { primary } = await response.json()
-          if (isCustomPrimary(primary)) {
-            applyPrimary(vuetify.theme.themes.value, primary)
-          }
-        });
+      const response = await fetch(base_url + '/color', { signal: AbortSignal.timeout(15000) });
+      if (!response.ok) return;
+      const { primary } = await response.json();
+      if (isCustomPrimary(primary)) applyPrimary(vuetify.theme.themes.value, primary);
     }
   } catch {}
 })()

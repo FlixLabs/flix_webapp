@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { readApiJson, requireObject, requireList } from '@/composables/apiResponse';
+import { useReadRequest } from '@/composables/useReadRequest';
+import ReadFeedback from '@/components/common/ReadFeedback.vue';
 
 
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue';
@@ -33,7 +35,7 @@ const selectedInstance = computed(() => store.selectedInstance);
 const selectedInstanceData = computed(() => store.selectedInstanceData);
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
-const { getConfig } = useMediaService({ useAPI, selectedInstanceData });
+const { getConfig, serviceContext } = useMediaService({ useAPI, selectedInstanceData });
 const integrations = useIntegrationStatus({ useAPI, selectedInstanceData, active: computed(() => section.value === 'integrations') });
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
@@ -77,34 +79,36 @@ function progressColor(ratio: number): string {
   return ratio >= threshold ? 'red' : 'blue';
 }
 
+const endpoints: Endpoint[] = ['config/host', 'system/status', 'diskspace', 'rootfolder', 'log', 'health'];
+function createReads(type: 'movies' | 'series') {
+  return Object.fromEntries(endpoints.map(endpoint => [endpoint, useReadRequest(() => [useAPI.value, selectedInstance.value, getConfig(type).base_url, getConfig(type).api_key])])) as Record<Endpoint, ReturnType<typeof useReadRequest>>;
+}
+const reads = { movies: createReads('movies'), series: createReads('series') };
+const activeEndpoints = computed<Endpoint[]>(() => section.value === 'storage'
+  ? storageAgent.enabled.value ? [] : ['diskspace', 'rootfolder']
+  : section.value === 'status' ? ['config/host', 'system/status']
+    : section.value === 'logs' ? ['log'] : section.value === 'health' ? ['health'] : []);
+for (const type of ['movies', 'series'] as const) watch(() => activeEndpoints.value.some(endpoint => reads[type][endpoint].state.loading), value => {
+  (type === 'movies' ? isLoadingMovie : isLoadingSerie).value = value;
+}, { flush: 'sync' });
+
 function getData(
   type: 'movies' | 'series',
   endpoint: Endpoint
 ) {
+  if (reads[type][endpoint].state.loading) return;
+  const read = reads[type][endpoint].begin();
   let base_url = '';
   let api_key = '';
 
-  const ignoreLoading = [
-    'diskspace',
-    'rootfolder',
-    'log',
-    'health'
-  ]
-
   if (type == 'movies') {
-    if (!ignoreLoading.includes(endpoint)) {
-      isLoadingMovie.value = true;
-    }
     ({ base_url, api_key } = getConfig('movies'));
   }
   if (type == 'series') {
-    if (!ignoreLoading.includes(endpoint)) {
-      isLoadingSerie.value = true;
-    }
     ({ base_url, api_key } = getConfig('series'));
   }
 
-  fetch(base_url + '/api/v3/' + endpoint + '?apikey=' + api_key)
+  return fetch(base_url + '/api/v3/' + endpoint + '?apikey=' + api_key, { signal: read.signal, cache: 'no-store' })
     .then(async (response) => {
       if (!response.ok) throw new Error(`Unable to load ${endpoint}`);
       const json_data: any = await readApiJson(response);
@@ -112,7 +116,7 @@ function getData(
       else requireObject(json_data, endpoint);
       if (endpoint === 'log') requireList(json_data.records, 'logs');
       const currentConfig = getConfig(type);
-      if (currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
+      if (!read.isCurrent() || currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
 
       if (endpoint === 'rootfolder') {
         if (type === 'movies') rootFoldersMovie.value = json_data;
@@ -203,23 +207,20 @@ function getData(
           healthListSerie.value = data;
         }
       }
+      read.success();
     })
     .catch((error) => {
-      showErrorAlert(error);
+      read.fail(error);
     })
     .finally(() => {
-      if (type == 'movies') {
-        resetIsLoadingMovie();
-      }
-      if (type == 'series') {
-        resetIsLoadingSerie();
-      }
+      read.finish();
     });
 }
 
 function calculateUptime(startTimeStr: string): string {
   const startTime = new Date(startTimeStr);
   const now = new Date();
+  if (!Number.isFinite(startTime.getTime()) || startTime > now) return 'Unavailable';
   const diff = now.getTime() - startTime.getTime();
 
   const totalSeconds = Math.floor(diff / 1000);
@@ -274,11 +275,11 @@ const tasks: Array<{
   refVar: { value: number };
   callback: () => void;
 }> = [
-  { category: 'movies', type: 'systemStatus', refVar: systemStatusMovieInterval, callback: () => { (systemStatusMovie.value as any).uptime = calculateUptime((systemStatusMovie.value as any).startTime as string); }},
+  { category: 'movies', type: 'systemStatus', refVar: systemStatusMovieInterval, callback: () => { if (systemStatusMovie.value?.startTime && !reads.movies['system/status'].state.error) systemStatusMovie.value.uptime = calculateUptime(systemStatusMovie.value.startTime); }},
   { category: 'movies', type: 'diskList', refVar: diskListMovieInterval, callback: () => { getData('movies', 'diskspace'); getData('movies', 'rootfolder'); } },
   { category: 'movies', type: 'logList', refVar: logListMovieInterval, callback: () => getData('movies', 'log') },
   { category: 'movies', type: 'healthList', refVar: healthListMovieInterval, callback: () => getData('movies', 'health') },
-  { category: 'series', type: 'systemStatus', refVar: systemStatusSerieInterval, callback: () => { (systemStatusSerie.value as any).uptime = calculateUptime((systemStatusSerie.value as any).startTime as string); }},
+  { category: 'series', type: 'systemStatus', refVar: systemStatusSerieInterval, callback: () => { if (systemStatusSerie.value?.startTime && !reads.series['system/status'].state.error) systemStatusSerie.value.uptime = calculateUptime(systemStatusSerie.value.startTime); }},
   { category: 'series', type: 'diskList', refVar: diskListSerieInterval, callback: () => { getData('series', 'diskspace'); getData('series', 'rootfolder'); } },
   { category: 'series', type: 'logList', refVar: logListSerieInterval, callback: () => getData('series', 'log') },
   { category: 'series', type: 'healthList', refVar: healthListSerieInterval, callback: () => getData('series', 'health') },
@@ -313,13 +314,17 @@ onMounted(() => {
   });
 });
 
-watch(selectedInstance, () => {
+watch(serviceContext, () => {
+  configHostMovie.value = {}; configHostSerie.value = {};
+  systemStatusMovie.value = {}; systemStatusSerie.value = {};
+  logListMovie.value = []; logListSerie.value = [];
+  healthListMovie.value = []; healthListSerie.value = [];
   rootFoldersMovie.value = [];
   rootFoldersSerie.value = [];
   diskListMovie.value = [];
   diskListSerie.value = [];
   fetchDataOnMount.forEach(({ category, endpoint }) => getData(category, endpoint));
-});
+}, { flush: 'sync' });
 
 onUnmounted(() => {
   Object.values(intervalIds).forEach(clearInterval);
@@ -335,6 +340,7 @@ onUnmounted(() => {
       <v-btn v-else prepend-icon="mdi-refresh" :loading="integrations.services.value.some(service => service.state === 'checking')"
         @click="integrations.refresh">Check All</v-btn>
     </SectionNavigation>
+    <ReadFeedback v-for="endpoint in activeEndpoints" :key="`${selectedMedia}:${endpoint}`" :state="reads[selectedMedia][endpoint].state" :label="`${selectedMedia === 'movies' ? 'Radarr' : 'Sonarr'} ${endpoint}`" @retry="getData(selectedMedia, endpoint)" />
     <IntegrationStatusPanel v-if="section === 'integrations'" :services="integrations.services.value"
       @retry="integrations.check" />
     <v-row v-show="section !== 'integrations'" class="mt-4">
@@ -631,8 +637,8 @@ onUnmounted(() => {
           >
           No system information found
         </v-alert>
-        <v-alert v-if="section === 'logs' && !isLoadingMovie && !logListMovie.length" type="info" class="mt-4">No logs found</v-alert>
-        <v-alert v-if="section === 'health' && !isLoadingMovie && !healthListMovie.length" type="info" class="mt-4">No health issues reported</v-alert>
+        <v-alert v-if="section === 'logs' && !isLoadingMovie && reads.movies.log.state.hasData && !reads.movies.log.state.error && !logListMovie.length" type="info" class="mt-4">No logs found</v-alert>
+        <v-alert v-if="section === 'health' && !isLoadingMovie && reads.movies.health.state.hasData && !reads.movies.health.state.error && !healthListMovie.length" type="info" class="mt-4">No health issues reported</v-alert>
         <Loading
           :isLoading="isLoadingMovie"
           sentence="Loading data..."
@@ -921,8 +927,8 @@ onUnmounted(() => {
           >
           No system information found
         </v-alert>
-        <v-alert v-if="section === 'logs' && !isLoadingSerie && !logListSerie.length" type="info" class="mt-4">No logs found</v-alert>
-        <v-alert v-if="section === 'health' && !isLoadingSerie && !healthListSerie.length" type="info" class="mt-4">No health issues reported</v-alert>
+        <v-alert v-if="section === 'logs' && !isLoadingSerie && reads.series.log.state.hasData && !reads.series.log.state.error && !logListSerie.length" type="info" class="mt-4">No logs found</v-alert>
+        <v-alert v-if="section === 'health' && !isLoadingSerie && reads.series.health.state.hasData && !reads.series.health.state.error && !healthListSerie.length" type="info" class="mt-4">No health issues reported</v-alert>
         <Loading
           :isLoading="isLoadingSerie"
           sentence="Loading data..."
