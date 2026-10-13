@@ -345,6 +345,8 @@ watch(serviceContext, () => {
           v-model="mediaType"
           :total-movies="view === 'queue' ? movieRecords.length : movieHistory.length"
           :total-series="view === 'queue' ? serieRecords.length : serieHistory.length"
+          :movies-pending="!reads.movies[view].state.hasData"
+          :series-pending="!reads.series[view].state.hasData"
         />
         <v-btn-toggle v-model="view" color="primary" variant="outlined" mandatory aria-label="Download view">
           <v-btn value="queue" prepend-icon="mdi-download-outline">Queue</v-btn>

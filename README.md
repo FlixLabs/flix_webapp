@@ -178,6 +178,37 @@ yarn lint
 yarn test
 ```
 
+### Automatic Movie Collections
+
+**Library > Collections** groups movie sagas reported by Radarr. Only collections
+connected to the selected movie library are shown. Collection metadata is loaded
+with the library to populate the counter; the collection view remains lazy-loaded.
+Requests are bounded and retriable, and work with or without the Flix API.
+Media counters show `(...)` until their totals are known, then the actual number
+(including zero). Switching between library views reuses collection metadata.
+
+Each saga shows its films in release-year order (unknown years last). **Available**
+means the matching TMDB movie has a local file according to the library response;
+an added movie without a file is still **Missing**. Unreleased films are marked
+**Upcoming**, and incomplete availability metadata stays **Unknown**. Counts do
+not use Radarr's `isExisting` or `missingMovies` as file availability.
+
+Films in the library open their existing media sheet; other films have a read-only
+preview. The collection link on a library movie sheet opens its saga. No films are
+automatically added, monitored or downloaded. Custom and series collections are
+not included. Radarr must support `/api/v3/collection`.
+
+Movies, Series and Collections share the library navigation controls. Collection
+posters keep their portrait proportions, and collection/media sheets share their
+Close button, overflow handling and fading backdrop blur. Empty detail sections
+never create a scroll hint; real overflow remains scrollable.
+
+Galleries use the same media card (poster, two-line title, subtitle, status area
+and hover/focus effects). Film, series and collection sheets share their frame,
+poster/metadata summary and footer. Known collection counts appear in their view
+button, like movie/series counts. Saga members show at most two rows per page:
+four on mobile, six on tablets and eight on desktop.
+
 ### Network Recovery
 
 Read requests use a 15-second deadline, cancel obsolete work and discard late

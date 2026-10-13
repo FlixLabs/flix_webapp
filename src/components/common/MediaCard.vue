@@ -1,0 +1,40 @@
+<script setup lang="ts">
+import MediaImage from './MediaImage.vue';
+
+const props = defineProps<{
+  title: string;
+  poster?: string;
+  subtitle?: string | number;
+  label?: string;
+  posterHeight?: number;
+  disabled?: boolean;
+  selectionMode?: boolean;
+  selected?: boolean;
+  selectionDisabled?: boolean;
+}>();
+const emit = defineEmits<{ open: []; select: [] }>();
+function activate() {
+  if (props.disabled) return;
+  if (props.selectionMode) { if (!props.selectionDisabled) emit('select'); }
+  else emit('open');
+}
+function keyboard(event: KeyboardEvent) { if (!event.repeat && !props.selectionMode) activate(); }
+</script>
+
+<template>
+  <v-card class="media-card" :disabled="disabled" :aria-label="label || `${selectionMode ? 'Select' : 'Open'} ${title}`" :role="selectionMode ? 'group' : 'button'" :tabindex="selectionMode ? undefined : disabled ? -1 : 0" :aria-disabled="disabled || undefined" :aria-haspopup="selectionMode ? undefined : 'dialog'" @click="activate" @keydown.enter.self.prevent="keyboard" @keydown.space.self.prevent="keyboard">
+    <MediaImage :src="poster" :alt="title" class="w-100" :height="posterHeight" :aspect-ratio="2 / 3" cover />
+    <v-checkbox-btn v-if="selectionMode" class="position-absolute top-0 right-0 bg-surface rounded ma-2" :aria-label="`Select ${title}`" :model-value="selected || false" :disabled="selectionDisabled" color="primary" @click.stop @update:model-value="emit('select')" />
+    <v-card-title class="title-line text-center text-wrap" :title="title"><span class="title-text">{{ title }}</span></v-card-title>
+    <v-card-text class="media-date text-center d-flex align-center justify-center">{{ subtitle }}</v-card-text>
+    <div class="media-card-status d-flex justify-center align-center flex-wrap ga-1 px-2 pb-2"><slot /></div>
+  </v-card>
+</template>
+
+<style scoped>
+.media-card { height: 100%; }
+.title-line { font-size: 1rem; line-height: 1.2; font-weight: bold; height: 3.4rem; display: flex; align-items: center; overflow: hidden; }
+.title-text { width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: break-word; hyphens: none; }
+.media-date { height: 56px; }
+.media-card-status { min-height: 64px; align-content: center; }
+</style>

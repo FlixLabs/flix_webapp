@@ -454,8 +454,8 @@ watch(serviceContext, () => {
       :total-pages="selected_view === 'movies' ? movies_total_pages : series_total_pages"
       v-model:search="search"
       v-model:selected-view="selected_view"
-      :total-movies="total_movies"
-      :total-series="total_series"
+      :total-movies="reads.movies.state.hasData ? total_movies : undefined"
+      :total-series="reads.series.state.hasData ? total_series : undefined"
     >
     </MediaBrowserToolbar>
     <ReadFeedback :state="reads[selected_view].state" label="Upcoming media" @retry="getContent(selected_view)" />

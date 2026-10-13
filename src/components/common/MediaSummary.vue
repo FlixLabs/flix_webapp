@@ -1,0 +1,47 @@
+<script setup lang="ts">
+import { computed } from 'vue';
+import MediaImage from './MediaImage.vue';
+
+interface SummaryItem {
+  title?: string;
+  poster?: string;
+  prependAvatar?: string;
+  overview?: string;
+  year?: number;
+  release_date?: string;
+  certification?: string;
+  runTime?: string | number;
+}
+const props = defineProps<{ item: SummaryItem; announcementName?: string; facts?: { label: string; value: string | number }[] }>();
+const metadata = computed(() => props.facts ?? (props.item.year ? [
+  { label: 'Certification', value: props.item.certification || 'Unavailable' },
+  { label: 'Year', value: props.item.year },
+  { label: 'Runtime', value: props.item.runTime || 'Unavailable' },
+] : [{ label: props.announcementName || 'Release', value: props.item.release_date || 'Unavailable' }]));
+</script>
+
+<template>
+  <v-row class="media-summary">
+    <v-col cols="6">
+      <v-card><MediaImage :src="item.prependAvatar ?? item.poster" :alt="item.title" class="media-poster" :aspect-ratio="2 / 3" cover /></v-card>
+    </v-col>
+    <v-col cols="6">
+      <v-row class="title-line text-center"><v-col>{{ item.title }}</v-col></v-row>
+      <v-row class="text-center">
+        <v-col v-for="fact in metadata" :key="fact.label" cols="12" sm>
+          <v-row no-gutters><v-col class="meta-label">{{ fact.label }}</v-col></v-row>
+          <v-row no-gutters><v-col class="meta-value">{{ fact.value }}</v-col></v-row>
+        </v-col>
+      </v-row>
+      <v-row v-if="item.overview"><v-col>{{ item.overview }}</v-col></v-row>
+      <slot />
+    </v-col>
+  </v-row>
+</template>
+
+<style scoped>
+.title-line { font-size: 1rem; line-height: 1.2; font-weight: bold; overflow-wrap: anywhere; }
+.media-poster { width: 100%; }
+.meta-label { font-size: 0.8rem; opacity: 0.8; overflow-wrap: anywhere; }
+.meta-value { margin-top: 2px; line-height: 1.2; }
+</style>

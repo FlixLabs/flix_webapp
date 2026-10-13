@@ -70,9 +70,3 @@ function confirm() {
     </v-card>
   </v-dialog>
 </template>
-
-<style scoped>
-.blur-dialog {
-  backdrop-filter: blur(5px);
-}
-</style>

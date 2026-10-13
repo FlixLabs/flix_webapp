@@ -3,10 +3,11 @@ import { mediaFileFields } from '@/composables/mediaFileDetails';
 import { monitoringFields } from '@/composables/useMediaMonitoring';
 import { readApiJson, requireList, optionalList } from '@/composables/apiResponse';
 import { useReadRequest } from '@/composables/useReadRequest';
+import { libraryCollections, parseCollections, type MovieCollection } from '@/composables/collections';
 import ReadFeedback from '@/components/common/ReadFeedback.vue';
 
 
-import { ref, watch, computed, onMounted, toRaw } from 'vue';
+import { ref, watch, computed, onMounted, toRaw, defineAsyncComponent } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { usePersistentPreference, isString, isMediaType } from '@/composables/usePersistentPreference';
 import { useMediaService } from '@/composables/useMediaService';
@@ -30,6 +31,20 @@ import MediaBrowserToolbar from '@/components/common/MediaBrowserToolbar.vue';
 import MediaBrowserResults from '@/components/common/MediaBrowserResults.vue';
 import SeriesSizeField from '@/components/common/SeriesSizeField.vue';
 import { useEpisodeSummary } from '@/composables/useEpisodeSummary';
+
+const LibraryCollections = defineAsyncComponent(() => import('./common/LibraryCollections.vue'));
+const showCollections = ref(false);
+const collectionSearch = ref<string | null>('');
+const collectionPage = ref(1);
+const requestedCollection = ref<{ tmdbId: number }>();
+function browseCollections(id?: number) {
+  if (bulkPending.value) return;
+  selected_view.value = 'movies';
+  selectionMode.value = false;
+  requestedCollection.value = id ? { tmdbId: id } : undefined;
+  showCollections.value = true;
+  resetMovieDialog();
+}
 
 const store = useFlixStore();
 
@@ -57,6 +72,15 @@ const activePage = computed({
   get: () => selected_view.value === 'movies' ? movie_page.value : serie_page.value,
   set: value => { (selected_view.value === 'movies' ? movie_page : serie_page).value = value; },
 });
+const browserSearch = computed({
+  get: () => showCollections.value ? collectionSearch.value : search.value,
+  set: value => { if (showCollections.value) collectionSearch.value = value; else search.value = value ?? ''; },
+});
+const browserPage = computed({
+  get: () => showCollections.value ? collectionPage.value : activePage.value,
+  set: value => { if (showCollections.value) collectionPage.value = value; else activePage.value = value; },
+});
+watch(collectionSearch, () => { collectionPage.value = 1; });
 
 const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
 const { state: movieItems, reset: resetMovieItems } = useResettable<any[]>([]);
@@ -87,6 +111,25 @@ const libraryReads = {
   movies: useReadRequest(() => [useAPI.value, selectedInstance.value, getConfig('movies').base_url, getConfig('movies').api_key]),
   series: useReadRequest(() => [useAPI.value, selectedInstance.value, getConfig('series').base_url, getConfig('series').api_key]),
 };
+const collectionSource = ref<MovieCollection[]>([]);
+const collectionRead = useReadRequest(serviceContext);
+const connectedCollections = computed(() => libraryCollections(collectionSource.value, movieItems.value));
+const totalCollections = computed(() => collectionRead.state.hasData && libraryReads.movies.state.hasData
+  ? connectedCollections.value.length : undefined);
+const collectionPages = computed(() => Math.ceil(connectedCollections.value.filter(collection =>
+  collection.title.toLocaleLowerCase().includes((collectionSearch.value ?? '').trim().toLocaleLowerCase())).length / items_per_page));
+async function loadCollections() {
+  const request = collectionRead.begin();
+  try {
+    const config = getConfig('movies');
+    if (!config.base_url) throw new Error('Select a configured instance to load collections.');
+    const data = parseCollections(await readApiJson(await fetch(`${config.base_url}/api/v3/collection?apikey=${encodeURIComponent(config.api_key)}`, { signal: request.signal, cache: 'no-store' })));
+    if (!request.isCurrent()) return;
+    collectionSource.value = data;
+    request.success();
+  } catch (error) { request.fail(error); }
+  finally { request.finish(); }
+}
 for (const type of ['movies', 'series'] as const) {
   watch(() => libraryReads[type].state.hasData, valid => {
     if (!valid) contentLoaded.value = { ...contentLoaded.value, [type]: false };
@@ -195,6 +238,7 @@ function getContent(type: 'movies' | 'series') {
         items.push({
           id: item.id,
           tmdbId: tmdbId,
+          collection: type === 'movies' ? item.collection : undefined,
           tvdbId: tvdbId,
           prependAvatar: optionalList(item.images, 'images').find((img: any) => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
           title: title,
@@ -388,13 +432,16 @@ watch(selected_view, () => {
 onMounted(() => {
   getContent('movies');
   getContent('series');
+  void loadCollections();
 });
 
 watch(serviceContext, () => {
+  collectionSource.value = [];
   resetMovieDialog(); resetSerieDialog(); resetSelectedMovie(); resetSelectedSerie();
   episodeRequest++;
   getContent('movies');
   getContent('series');
+  void loadCollections();
 }, { flush: 'sync' });
 </script>
 
@@ -410,17 +457,22 @@ watch(serviceContext, () => {
     />
   <v-container>
     <MediaBrowserToolbar
-      v-model:page="activePage"
-      :total-pages="selected_view === 'movies' ? movies_total_pages : series_total_pages"
-      v-model:search="search"
+      show-collections
+      :total-collections="totalCollections"
+      :collections-disabled="bulkPending"
+      v-model:collections="showCollections"
+      @collections-open="browseCollections()"
+      v-model:page="browserPage"
+      :total-pages="showCollections ? collectionPages : selected_view === 'movies' ? movies_total_pages : series_total_pages"
+      v-model:search="browserSearch"
       v-model:selected-view="selected_view"
-      :total-movies="total_movies"
-      :total-series="total_series"
+      :total-movies="libraryReads.movies.state.hasData ? total_movies : undefined"
+      :total-series="libraryReads.series.state.hasData ? total_series : undefined"
     >
-      <template #actions>
+      <template v-if="!showCollections" #actions>
       <div
         v-if="selectionMode || (selected_view == 'movies' && filtered_movies.length > 0) || (selected_view == 'series' && filtered_series.length > 0)"
-        class="d-flex justify-end align-center flex-wrap ga-2"
+        class="library-tools d-flex justify-end align-center flex-nowrap ga-2"
         >
         <v-btn variant="outlined" color="primary" :active="selectionMode" :aria-pressed="selectionMode" :disabled="bulkPending || (!selectionMode && selectionLoading)" @click="selectionMode = !selectionMode">
           Select media
@@ -437,8 +489,9 @@ watch(serviceContext, () => {
       </div>
       </template>
     </MediaBrowserToolbar>
-    <ReadFeedback :state="libraryReads[selected_view].state" :label="selected_view === 'movies' ? 'Movie library' : 'Series library'" :disabled="bulkPending" @retry="getContent(selected_view)" />
-    <LibraryFilters v-model="filters" :statuses="statuses" :qualities="qualities" :years="years" />
+    <LibraryCollections v-if="showCollections" v-model:page="collectionPage" :search="collectionSearch" :movies="movieItems" :source="collectionSource" :collection-state="collectionRead.state" :context="serviceContext()" :library-state="libraryReads.movies.state" :initial-collection="requestedCollection" @retry-collections="loadCollections" @open-movie="handleMovieClick" @retry-library="getContent('movies')" />
+    <ReadFeedback v-if="!showCollections" :state="libraryReads[selected_view].state" :label="selected_view === 'movies' ? 'Movie library' : 'Series library'" :disabled="bulkPending" @retry="getContent(selected_view)" />
+    <LibraryFilters v-show="!showCollections" v-model="filters" :statuses="statuses" :qualities="qualities" :years="years" />
     <LibraryBulkActions
       v-if="selectionMode"
       v-model:selected-ids="selectedIds"
@@ -452,7 +505,7 @@ watch(serviceContext, () => {
       @refresh="getContent(selected_view)"
     />
     <v-row
-      v-if="showFileUpload"
+      v-if="showFileUpload && !showCollections"
       >
       <v-col
         class="d-flex justify-end align-center"
@@ -471,6 +524,7 @@ watch(serviceContext, () => {
       v-if="selected_view == 'movies'"
       >
       <MediaBrowserResults
+        v-if="!showCollections"
         :items="paginated_movies"
         :total="total_movies"
         :is-loading="isLoadingMovie"
@@ -491,7 +545,7 @@ watch(serviceContext, () => {
         :read-only="!contentLoaded.movies"
         mediaType="Movie"
         :item="selectedMovie"
-        :navigation-items="paginated_movies"
+        :navigation-items="showCollections ? [] : paginated_movies"
         :navigation-pending="isLoadingMovie"
         @navigate="handleMovieClick($event.id)"
         announcementName="Release"
@@ -502,7 +556,15 @@ watch(serviceContext, () => {
         @release-grabbed="showSuccessAlert('Release queued successfully')"
         @add=""
         @remove="openDeleteConfirmationDialog('movies', $event)"
-      />
+      >
+        <template #metadata>
+          <div v-if="Number.isSafeInteger(selectedMovie?.collection?.tmdbId) && selectedMovie.collection.tmdbId > 0" class="d-flex justify-center mt-3">
+            <v-btn class="collection-link" max-width="100%" variant="tonal" color="primary" prepend-icon="mdi-filmstrip-box-multiple" :title="`Collection: ${selectedMovie.collection.title || 'View saga'}`" :disabled="!contentLoaded.movies" @click="browseCollections(selectedMovie.collection.tmdbId)">
+              <span class="text-truncate">Collection: {{ selectedMovie.collection.title || 'View saga' }}</span>
+            </v-btn>
+          </div>
+        </template>
+      </MediaDialog>
     </div>
     <div
       v-else-if="selected_view == 'series'"

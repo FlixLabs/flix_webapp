@@ -308,7 +308,7 @@ onBeforeUnmount(cancelSearch);
           hide-details
         />
         <div class="d-flex flex-wrap align-center justify-space-between ga-3 mt-3">
-          <MediaTypeToggle v-model="mediaType" :total-movies="total_movies" :total-series="total_series" />
+          <MediaTypeToggle v-model="mediaType" :total-movies="total_movies" :total-series="total_series" :movies-pending="(search ?? '').trim().length >= 3 && !requests.movies.state.hasData" :series-pending="(search ?? '').trim().length >= 3 && !requests.series.state.hasData" />
           <v-pagination
             v-if="activeTotal > items_per_page"
             v-model="activePage"

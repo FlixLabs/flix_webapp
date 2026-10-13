@@ -6,6 +6,7 @@ import { useMediaService, type MediaType } from '@/composables/useMediaService';
 import { usePersistentPreference } from '@/composables/usePersistentPreference';
 import { useCalendar, calendarDate, calendarDay, calendarRange, moveCalendar, matchesCalendarFilter, type CalendarEvent, type CalendarView, type CalendarFilter } from '@/composables/useCalendar';
 import PageNavigation from '@/components/common/PageNavigation.vue';
+import MediaCount from '@/components/common/MediaCount.vue';
 import CalendarEventList from '@/components/common/CalendarEventList.vue';
 import { useDisplay } from 'vuetify';
 import { useDialogActivator } from '@/composables/useDialogActivator';
@@ -88,8 +89,8 @@ watch([rangeKey, () => store.selectedInstance, () => getConfig('movies').base_ur
         <v-col cols="6" md="3"><v-select v-model="filter" :items="filterOptions" label="Event filter" variant="outlined" density="compact" hide-details /></v-col>
         <v-col cols="12" class="d-flex align-center justify-space-between flex-wrap ga-2">
           <v-btn-toggle v-model="mediaTypes" multiple color="primary" variant="outlined" density="comfortable" aria-label="Calendar media types">
-            <v-btn value="movies" prepend-icon="mdi-movie-open-outline">Movies <span class="ml-1 text-medium-emphasis">({{ count('movies') }})</span></v-btn>
-            <v-btn value="series" prepend-icon="mdi-television-classic">Series <span class="ml-1 text-medium-emphasis">({{ count('series') }})</span></v-btn>
+            <v-btn value="movies" prepend-icon="mdi-movie-open-outline">Movies<MediaCount class="text-medium-emphasis" :total="count('movies')" :pending="loading" /></v-btn>
+            <v-btn value="series" prepend-icon="mdi-television-classic">Series<MediaCount class="text-medium-emphasis" :total="count('series')" :pending="loading" /></v-btn>
           </v-btn-toggle>
           <v-btn-toggle v-model="displayLayout" mandatory color="primary" variant="outlined" density="comfortable" aria-label="Calendar layout">
             <v-btn value="calendar" prepend-icon="mdi-calendar-month-outline">Calendar</v-btn>
