@@ -33,6 +33,7 @@ export const test = base.extend<{ mutations: { method: string; path: string; bod
       let json: unknown = [];
       if (path === '/instances') json = [{ name: 'Test instance', radarr: { base_url: 'http://radarr.test', api_key: 'test-only', root_folder_path: '/movies' }, sonarr: { base_url: 'http://sonarr.test', api_key: 'test-only', root_folder_path: '/tv' } }];
       else if (path === '/auth' || path === '/color') json = {};
+      else if (path === '/search/movie' || path === '/search/tv') json = { results: [] };
       else if (path === '/api/v3/config/host' || path === '/api/v3/system/status') json = {};
       else if (path === '/api/v3/log') json = { records: [] };
       else if (path === '/api/v3/movie' || path === '/api/v3/movie/lookup') json = [movie];

@@ -8,6 +8,19 @@ If you wish to enable the optional backend, you can retrieve it here: [flix_api]
 
 ## Features
 
+### Dashboard Media Search
+
+Search preserves Radarr/Sonarr results and supplements translated titles with
+TMDB search in the browser's language. At most three missing candidates per media
+type and query are resolved through the service. Movies use TMDB IDs; series use
+TMDB external IDs to obtain a confirmed TVDB ID, then a Sonarr lookup. Series
+without a confirmed TVDB mapping are skipped. TMDB results are never added directly.
+Translated titles contribute to ranking without replacing the service title.
+The supplement has a 2.5-second time budget and is cancelled when the query or
+instance changes. If TMDB is unavailable, native service results remain usable.
+Identifier searches are unchanged. This works with or
+without Flix API, using the existing TMDB configuration.
+
 ### Without the Optional Backend
 - **Search, Add, and Remove** movies and TV series
 - **Manage Libraries** for Radarr and Sonarr
