@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, defineAsyncComponent } from 'vue';
+import { downloadableCollectionMovies } from '@/composables/useCollectionDownloads';
 import { libraryCollections, type LibraryMovie, type MovieCollection } from '@/composables/collections';
 import type { ReadState } from '@/composables/useReadRequest';
 import { useDialogActivator } from '@/composables/useDialogActivator';
@@ -17,6 +18,11 @@ const search = computed(() => props.search ?? '');
 const page = defineModel<number>('page', { required: true });
 const selectedId = ref<number | null>(null);
 const dialog = ref(false);
+const downloadDialog = ref(false);
+const downloadDialogReady = ref(false);
+const downloadActivator = useDialogActivator(() => downloadDialog.value);
+watch(downloadDialog, value => { if (value) downloadDialogReady.value = true; }, { flush: 'sync' });
+const CollectionDownloadDialog = defineAsyncComponent(() => import('./CollectionDownloadDialog.vue'));
 const missingDialog = ref(false);
 const preview = ref<Record<string, unknown> | null>(null);
 const memberPage = ref(1);
@@ -30,6 +36,7 @@ const pages = computed(() => Math.ceil(filtered.value.length / 12));
 const items = computed(() => filtered.value.slice((page.value - 1) * 12, page.value * 12));
 const selected = computed(() => collections.value.find(collection => collection.tmdbId === selectedId.value));
 const members = computed(() => selected.value?.members ?? []);
+const downloadable = computed(() => downloadableCollectionMovies(members.value));
 const memberPages = computed(() => Math.ceil(members.value.length / memberPageSize.value));
 const displayedMembers = computed(() => members.value.slice((memberPage.value - 1) * memberPageSize.value, memberPage.value * memberPageSize.value));
 const disabled = computed(() => props.collectionState.loading || !!props.collectionState.error || !props.collectionState.hasData || props.libraryState.loading || !!props.libraryState.error || !props.libraryState.hasData);
@@ -56,7 +63,7 @@ watch(search, () => { page.value = 1; });
 watch(pages, value => { page.value = Math.min(page.value, Math.max(1, value)); });
 watch(memberPages, value => { memberPage.value = Math.min(memberPage.value, Math.max(1, value)); });
 watch(() => props.context, (_value, previous) => {
-  dialog.value = false; missingDialog.value = false; selectedId.value = null;
+  dialog.value = false; missingDialog.value = false; downloadDialog.value = false; selectedId.value = null;
   if (previous !== undefined) initialPending.value = undefined;
   page.value = 1;
 }, { immediate: true, flush: 'sync' });
@@ -102,6 +109,8 @@ watch(selected, value => { if (!value && props.collectionState.hasData) { dialog
       </v-row>
     </section>
     <template #navigation><v-pagination v-if="memberPages > 1" v-model="memberPage" :length="memberPages" :total-visible="$vuetify.display.xs ? 3 : 5" density="compact" aria-label="Collection film pages" /></template>
+    <template #actions><v-btn v-if="downloadable.length" color="primary" prepend-icon="mdi-download-outline" :disabled="disabled" @click="downloadDialog = true">Download missing ({{ downloadable.length }})</v-btn></template>
   </DialogSheet>
+  <CollectionDownloadDialog v-if="downloadDialogReady" v-model="downloadDialog" :activator="downloadActivator" :movies="members" :context="context" :disabled="disabled" @refresh="emit('retry-library'); emit('retry-collections')" />
   <MediaDialog v-model="missingDialog" :item="preview" media-type="Movie" announcement-name="Release" :show-search="false" :show-add="false" :show-remove="false" :show-file-details="false" read-only />
 </template>
