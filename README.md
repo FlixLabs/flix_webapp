@@ -178,6 +178,19 @@ yarn lint
 yarn test
 ```
 
+### Loading Performance
+
+Pages are loaded on first navigation using Vue Router dynamic imports. Visiting
+one page does not download the JavaScript for every other page.
+
+Concurrent authentication bootstrap and library-membership reads share one
+request per exact URL, including service credentials. Each consumer receives
+independent data. Results and errors are discarded when the request finishes;
+subsequent reads remain fresh, and mutation readbacks are never shared.
+Library matching uses an external-ID index and skips empty search results.
+Responses from an old search, instance or unmounted page cannot enrich the
+current results. These changes also support standalone Radarr/Sonarr mode.
+
 ### GitLab Releases
 
 The version in `package.json` is the release source of truth. Each repository
