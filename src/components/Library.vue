@@ -5,7 +5,6 @@ import { readApiJson, requireList, optionalList } from '@/composables/apiRespons
 
 
 import { ref, watch, computed, onMounted, toRaw } from 'vue';
-import { useRoute } from 'vue-router';
 import { useFlixStore } from '@/stores/flixStore';
 import { usePersistentPreference, isString, isMediaType } from '@/composables/usePersistentPreference';
 import { useMediaService } from '@/composables/useMediaService';
@@ -19,6 +18,7 @@ import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useMediaActions, canSearchItem } from '@/composables/useMediaActions';
 import { useDialog } from '@/composables/useDialog';
+import { useMediaSheetRoute } from '@/composables/useMediaSheetRoute';
 import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
 import MediaDialog from '@/components/common/MediaDialog.vue';
@@ -30,7 +30,6 @@ import SeriesSizeField from '@/components/common/SeriesSizeField.vue';
 import { useEpisodeSummary } from '@/composables/useEpisodeSummary';
 
 const store = useFlixStore();
-const route = useRoute();
 
 const selectedInstance = computed(() => store.selectedInstance);
 const selectedInstanceData = computed(() => store.selectedInstanceData);
@@ -80,6 +79,9 @@ const series_total_pages = computed(() =>
 const { paginatedItems: paginated_series } = usePagination(filtered_series, serie_page, items_per_page);
 const { total: total_series } = useCount(filtered_series);
 const { state: isLoadingSerieEpisodes, reset: resetIsLoadingSerieEpisodes } = useResettable(false);
+const contentLoaded = ref({ movies: false, series: false });
+const contentRequests = { movies: 0, series: 0 };
+let episodeRequest = 0;
 
 const selectionMode = ref(false);
 const selectedIds = ref<number[]>([]);
@@ -112,6 +114,8 @@ const { deleteConfirmationDialog, resetDeleteConfirmationDialog, openDeleteConfi
 });
 
 function getContent(type: 'movies' | 'series') {
+  const request = ++contentRequests[type];
+  contentLoaded.value = { ...contentLoaded.value, [type]: false };
   let base_url = '';
   let api_key = '';
   let url_type = '';
@@ -131,7 +135,7 @@ function getContent(type: 'movies' | 'series') {
     .then(async (response) => {
       const json_data: any = requireList(await readApiJson(response), 'library', ['title']);
       const currentConfig = getConfig(type);
-      if (currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
+      if (request !== contentRequests[type] || currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
 
       let items = [];
       for (let item of json_data) {
@@ -198,11 +202,13 @@ function getContent(type: 'movies' | 'series') {
       if (type == 'series') {
         serieItems.value = items;
       }
+      contentLoaded.value = { ...contentLoaded.value, [type]: true };
     })
     .catch((error) => {
-      showErrorAlert(error);
+      if (request === contentRequests[type]) showErrorAlert(error);
     })
     .finally(() => {
+      if (request !== contentRequests[type]) return;
       if (type == 'movies') {
         resetIsLoadingMovie();
       }
@@ -213,6 +219,7 @@ function getContent(type: 'movies' | 'series') {
 }
 
 function getSerieEpisodes(serie_id: number) {
+  const request = ++episodeRequest;
   const { base_url, api_key } = getConfig('series');
 
   serieDialog.value = true;
@@ -223,6 +230,8 @@ function getSerieEpisodes(serie_id: number) {
   fetch(base_url + '/api/v3/episode?includeEpisodeFile=true&apikey=' + api_key + '&seriesId=' + serie_id)
     .then(async (response) => {
       const json_data: any = requireList(await readApiJson(response), 'library', ['title']);
+      const currentConfig = getConfig('series');
+      if (request !== episodeRequest || !serieDialog.value || selectedSerie.value?.id !== serie_id || currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
 
       serieEpisodes.value = json_data.map((episode: any) => ({
         title: episode.title,
@@ -235,12 +244,12 @@ function getSerieEpisodes(serie_id: number) {
 
     })
     .catch((error) => {
-      showErrorAlert(error);
+      if (request === episodeRequest && serieDialog.value) showErrorAlert(error);
     })
-    .finally(() => { isLoadingSerieEpisodes.value = false; });
+    .finally(() => { if (request === episodeRequest) isLoadingSerieEpisodes.value = false; });
 }
 
-function handleMovieClick(movie_id: number) {
+function openMovie(movie_id: number) {
   const movie = movieItems.value.find(movie => movie.id === movie_id);
   if (movie) {
     selectedMovie.value = movie;
@@ -248,23 +257,23 @@ function handleMovieClick(movie_id: number) {
   }
 }
 
-function handleSerieClick(serie_id: number) {
+function openSerie(serie_id: number) {
   const serie = serieItems.value.find(serie => serie.id === serie_id);
   if (serie) {
+    if (selectedSerie.value?.id === serie_id && serieDialog.value) return;
     selectedSerie.value = serie;
     getSerieEpisodes(serie.id);
   }
 }
 
-watch([() => route.query.media, () => route.query.id, movieItems, serieItems], () => {
-  const type = route.query.media;
-  if (type !== 'movies' && type !== 'series') return;
-  selected_view.value = type;
-  const id = Number(route.query.id);
-  if (!Number.isInteger(id) || id <= 0) return;
-  if (type === 'movies' && selectedMovie.value?.id !== id) handleMovieClick(id);
-  if (type === 'series' && selectedSerie.value?.id !== id) handleSerieClick(id);
-}, { immediate: true });
+const { openLink } = useMediaSheetRoute({
+  useAPI, view: selected_view, items: { movies: movieItems, series: serieItems },
+  dialogs: { movies: movieDialog, series: serieDialog }, loaded: contentLoaded,
+  open: (type, id) => { if (type === 'movies') openMovie(id); else openSerie(id); },
+  showError: showErrorAlert,
+});
+function handleMovieClick(id: number) { openLink('movies', id); }
+function handleSerieClick(id: number) { openLink('series', id); }
 
 const { grouped_episodes, totalSerieSizeOnDisk } = useEpisodeSummary(serieEpisodes);
 
@@ -364,6 +373,8 @@ onMounted(() => {
 });
 
 watch(selectedInstance, () => {
+  resetMovieDialog(); resetSerieDialog(); resetSelectedMovie(); resetSelectedSerie();
+  episodeRequest++;
   getContent('movies');
   getContent('series');
 });

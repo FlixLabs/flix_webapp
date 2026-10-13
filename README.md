@@ -76,6 +76,14 @@ update, reload monitoring before making another change.
 
 ### Media Sheet Navigation
 
+Existing media sheets provide **Share media** with a canonical Library URL and
+the selected instance name (no service URLs or API keys). Clipboard copying is
+available on supported secure origins; otherwise the link can be selected and
+copied manually. Opening a Library card adds a browser-history entry; previous/
+next media replace that sheet entry, and Back/Forward close/reopen the sheet
+without resetting list filters or pagination. Direct links survive login and
+report unavailable media/instances instead of opening another instance's ID.
+
 The **Calendar** supports month/week/day navigation, **Today**, movie/series
 toggles and All/Monitored/Missing/Available filters. Filters do not refetch data.
 Available requires a service-reported file; Missing requires an explicit missing
