@@ -27,7 +27,10 @@ function keyboard(event: KeyboardEvent) { if (!event.repeat && !props.selectionM
     <v-checkbox-btn v-if="selectionMode" class="position-absolute top-0 right-0 bg-surface rounded ma-2" :aria-label="`Select ${title}`" :model-value="selected || false" :disabled="selectionDisabled" color="primary" @click.stop @update:model-value="emit('select')" />
     <v-card-title class="title-line text-center text-wrap" :title="title"><span class="title-text">{{ title }}</span></v-card-title>
     <v-card-text class="media-date text-center d-flex align-center justify-center">{{ subtitle }}</v-card-text>
-    <div class="media-card-status d-flex justify-center align-center flex-wrap ga-1 px-2 pb-2"><slot /></div>
+    <div class="media-card-status d-flex flex-column justify-center align-center ga-1 px-1 pb-2">
+      <div class="media-card-tags d-flex justify-center align-center flex-nowrap ga-1"><slot /></div>
+      <slot name="status-caption" />
+    </div>
   </v-card>
 </template>
 
@@ -37,4 +40,7 @@ function keyboard(event: KeyboardEvent) { if (!event.repeat && !props.selectionM
 .title-text { width: 100%; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; overflow-wrap: break-word; hyphens: none; }
 .media-date { height: 56px; }
 .media-card-status { min-height: 64px; align-content: center; }
+.media-card-tags { width: 100%; min-width: 0; }
+.media-card-tags :deep(.v-chip) { min-width: 0; flex-shrink: 1; }
+.media-card-tags :deep(.v-chip__content) { min-width: 0; max-width: 100%; }
 </style>
