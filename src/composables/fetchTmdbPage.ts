@@ -8,8 +8,8 @@ export interface TmdbItem {
   overview?: string;
 }
 
-export async function fetchTmdbPage(url: string): Promise<{ results: TmdbItem[]; total_pages: number }> {
-  const response = await fetch(url);
+export async function fetchTmdbPage(url: string, options: { signal?: AbortSignal } = {}): Promise<{ results: TmdbItem[]; total_pages: number }> {
+  const response = await fetch(url, { signal: options.signal ?? AbortSignal.timeout(15000) });
   if (!response.ok) {
     throw new Error(`Unable to load upcoming media (TMDB HTTP ${response.status}).`);
   }

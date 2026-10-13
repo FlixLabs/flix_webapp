@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useReadRequest } from '@/composables/useReadRequest';
+import ReadFeedback from '@/components/common/ReadFeedback.vue';
 import { readApiJson, requireList, optionalList } from '@/composables/apiResponse';
 
 
@@ -30,7 +32,7 @@ const selectedInstance = computed(() => store.selectedInstance);
 const selectedInstanceData = computed(() => store.selectedInstanceData);
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
-const { getConfig } = useMediaService({ useAPI, selectedInstanceData });
+const { getConfig, serviceContext } = useMediaService({ useAPI, selectedInstanceData });
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
@@ -61,7 +63,7 @@ const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(fals
 const { state: movieItems, reset: resetMovieItems } = useResettable<any[]>([]);
 const { paginatedItems: paginated_movies } = usePagination(movieItems, movie_page, items_per_page);
 const { total: total_movies } = useCount(movieItems);
-const { isAlreadyInLibrary: checkMovies } = useLibraryChecker("movies", movieItems, showErrorAlert, useAPI);
+const { isAlreadyInLibrary: checkMovies, readState: movieLibraryRead } = useLibraryChecker("movies", movieItems, () => undefined, useAPI);
 
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
 const { state: serieItems, reset: resetSerieItems } = useResettable<any[]>([]);
@@ -75,9 +77,9 @@ watch([mediaType, activePage], async () => {
   await nextTick();
   navigation.value?.scrollToStart();
 });
-const { isAlreadyInLibrary: checkSeries } = useLibraryChecker("series", serieItems, showErrorAlert, useAPI);
+const { isAlreadyInLibrary: checkSeries, readState: seriesLibraryRead } = useLibraryChecker("series", serieItems, () => undefined, useAPI);
 
-const { qualityMovieItems, qualitySerieItems, qualityMovie, qualitySerie, getQualityProfileList } = useQualityProfiles({
+const { qualityMovieItems, qualitySerieItems, qualityMovie, qualitySerie, getQualityProfileList, qualityReads } = useQualityProfiles({
   useAPI, selectedInstanceData, showErrorAlert, initialQuality: 1
 });
 
@@ -89,14 +91,23 @@ const { deleteConfirmationDialog, resetDeleteConfirmationDialog, openDeleteConfi
   deleteItem,
 });
 
-const requests = { movies: { id: 0, controller: null as AbortController | null }, series: { id: 0, controller: null as AbortController | null } };
+const requests = {
+  movies: useReadRequest(() => [search.value, useAPI.value, selectedInstance.value, getConfig('movies').base_url, getConfig('movies').api_key]),
+  series: useReadRequest(() => [search.value, useAPI.value, selectedInstance.value, getConfig('series').base_url, getConfig('series').api_key]),
+};
+for (const type of ['movies', 'series'] as const) watch(() => requests[type].state.loading, value => {
+  (type === 'movies' ? isLoadingMovie : isLoadingSerie).value = value;
+}, { flush: 'sync' });
+function readOnly(type: 'movies' | 'series') {
+  return [requests[type].state, type === 'movies' ? movieLibraryRead : seriesLibraryRead, qualityReads[type].state]
+    .some(state => state.loading || !!state.error || !state.hasData);
+}
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 
 function cancelSearch() {
   clearTimeout(searchTimer);
   for (const request of Object.values(requests)) {
-    request.id++;
-    request.controller?.abort();
+    request.reset();
   }
   resetIsLoadingMovie();
   resetIsLoadingSerie();
@@ -105,10 +116,7 @@ function cancelSearch() {
 function getContent(type: 'movies' | 'series') {
   const term = (search.value ?? '').trim();
   if (term.length < 3) return;
-  const request = requests[type];
-  request.controller?.abort();
-  const id = ++request.id;
-  request.controller = new AbortController();
+  const request = requests[type].begin();
   let base_url = '';
   let api_key = '';
   let url_type = '';
@@ -125,17 +133,17 @@ function getContent(type: 'movies' | 'series') {
   }
 
   if (!base_url) {
-    if (type === 'movies') resetIsLoadingMovie();
-    else resetIsLoadingSerie();
+    request.fail(new Error('Service not configured. Select a configured instance.'));
+    request.finish();
     return;
   }
 
   const params = new URLSearchParams({ term, apikey: api_key });
-  fetch(base_url + '/api/v3/' + url_type + '/lookup?' + params, { signal: request.controller.signal })
+  return fetch(base_url + '/api/v3/' + url_type + '/lookup?' + params, { signal: request.signal, cache: 'no-store' })
     .then(async response => {
       if (!response.ok) throw new Error(`Search failed (${response.status})`);
       const json_data: any = requireList(await readApiJson(response), 'search', ['title']);
-      if (id !== request.id) return;
+      if (!request.isCurrent()) return;
       if (!Array.isArray(json_data)) throw new Error('Invalid search response');
 
       let items = [];
@@ -173,22 +181,18 @@ function getContent(type: 'movies' | 'series') {
         serieItems.value = items;
         checkSeries();
       }
+      request.success();
     })
     .catch(error => {
-      if (id === request.id && error.name !== 'AbortError') showErrorAlert(error);
+      request.fail(error);
     })
     .finally(() => {
-      if (id !== request.id) return;
-      if (type == 'movies') {
-        resetIsLoadingMovie();
-      }
-      if (type == 'series') {
-        resetIsLoadingSerie();
-      }
+      request.finish();
     });
 }
 
 function addToList(type: 'movies' | 'series', item: any) {
+  if (readOnly(type)) return;
   item.qualityProfileId = item.selected_quality;
   addItem(type, item);
 }
@@ -224,7 +228,7 @@ onMounted(() => {
   getQualityProfileList('series');
 });
 
-watch(selectedInstance, () => {
+watch(serviceContext, () => {
   detailDialog.value = false;
   selectedItem.value = null;
   resetDeleteConfirmationDialog();
@@ -267,6 +271,7 @@ onBeforeUnmount(cancelSearch);
     :show-remove="!!selectedItem.already_in_library"
     :show-file-details="!!selectedItem.already_in_library"
     :action-pending="isPending(detailType, selectedItem)"
+    :read-only="readOnly(detailType)"
     :add-disabled="!detailQualities.some(quality => quality.value === selectedItem.selected_quality)"
     @add="addToList(detailType, selectedItem)"
     @remove="openDeleteConfirmationDialog(detailType, selectedItem)"
@@ -315,6 +320,9 @@ onBeforeUnmount(cancelSearch);
           />
         </div>
     </PageNavigation>
+    <ReadFeedback :state="requests[mediaType].state" label="Search results" @retry="getContent(mediaType)" />
+    <ReadFeedback :state="mediaType === 'movies' ? movieLibraryRead : seriesLibraryRead" label="Library status" @retry="mediaType === 'movies' ? checkMovies() : checkSeries()" />
+    <ReadFeedback :state="qualityReads[mediaType].state" label="Quality profiles" @retry="getQualityProfileList(mediaType)" />
     <DashboardAttention class="mt-4" />
     <section :aria-label="mediaType === 'movies' ? 'Movie results' : 'Series results'" :aria-busy="activeLoading">
       <MediaList
@@ -322,12 +330,13 @@ onBeforeUnmount(cancelSearch);
         :paginated_items="activeItems"
         :qualityItems="mediaType === 'movies' ? qualityMovieItems : qualitySerieItems"
         :is-pending="isPending"
+        :actions-disabled="readOnly(mediaType)"
         @add="addToList"
         @remove="openDeleteConfirmationDialog"
         @details="openDetails"
       />
       <Loading :isLoading="activeLoading" sentence="Research in progress..." />
-      <v-alert v-if="!activeItems.length && !activeLoading" type="info" class="mt-4">
+      <v-alert v-if="!activeItems.length && !activeLoading && !requests[mediaType].state.error" type="info" class="mt-4">
         {{ !search || search.trim().length < 3 ? 'Enter at least 3 characters to search for movies and series.' : mediaType === 'movies' ? 'No movies found' : 'No series found' }}
       </v-alert>
     </section>

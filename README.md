@@ -178,6 +178,29 @@ yarn lint
 yarn test
 ```
 
+### Network Recovery
+
+Read requests use a 15-second deadline, cancel obsolete work and discard late
+responses after navigation, instance/configuration changes or unmounting.
+Failures remain visible with a **Retry** action instead of requiring a hard
+refresh. An unavailable read is not presented as a successful empty list or a
+healthy service. The existing Calendar and storage-agent diagnostics keep their
+own bounded read and refresh controls.
+
+Library and Downloads may retain last successful data only for the same context;
+failed refreshes label it as stale and block changes until a read succeeds.
+Dashboard and Outings also require verified library membership and profiles
+before changing media. Series identity and episode reads can be retried from
+the sheet. **Reload instances** beside the instance selector reads updated API
+configuration, including changed service URLs or credentials.
+
+Polling does not replace an already pending read. Connectivity events are hints,
+not proof that every service is reachable, and never replay mutations.
+If a settings write cannot be confirmed, **Retry** reads the current settings;
+it does not resend the change. Reloading those settings never triggers a write
+through the form switches. Standalone mode uses the same read recovery without
+requesting Flix API configuration.
+
 ### Keyboard Accessibility
 
 The interface declares English as its language. **Skip to content** bypasses

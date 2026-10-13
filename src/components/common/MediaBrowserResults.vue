@@ -14,6 +14,8 @@ defineProps<{
   selectionMode?: boolean;
   selectedIds?: number[];
   selectionDisabled?: boolean;
+  actionsDisabled?: boolean;
+  unavailable?: boolean;
 }>();
 defineEmits<{ "card-click": [id: number]; 'toggle-selection': [id: number] }>();
 </script>
@@ -29,10 +31,11 @@ defineEmits<{ "card-click": [id: number]; 'toggle-selection': [id: number] }>();
     :selection-mode="selectionMode"
     :selected-ids="selectedIds"
     :selection-disabled="selectionDisabled"
+    :disabled="actionsDisabled"
     @toggle-selection="$emit('toggle-selection', $event)"
     @card-click="$emit('card-click', $event)"
   />
-  <v-alert v-if="!total && !isLoading" type="info" class="mt-4">
+  <v-alert v-if="!total && !isLoading && !unavailable" type="info" class="mt-4">
     {{ emptyMessage }}
   </v-alert>
 </template>

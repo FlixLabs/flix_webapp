@@ -19,6 +19,7 @@ const props = withDefaults(defineProps<{
   showAdd: boolean;
   showRemove: boolean;
   actionPending?: boolean;
+  readOnly?: boolean;
   addDisabled?: boolean;
   showFileDetails?: boolean;
   activator?: HTMLElement | null;
@@ -33,7 +34,7 @@ const releaseDialog = ref(false);
 const dialogActivator = useDialogActivator(() => props.modelValue);
 const monitoringPending = ref(false);
 const settingsPending = ref(false);
-const mediaBusy = computed(() => monitoringPending.value || settingsPending.value);
+const mediaBusy = computed(() => props.readOnly || monitoringPending.value || settingsPending.value);
 const neighbors = computed(() => mediaNeighbors(props.navigationItems ?? [], props.item));
 const navigationDisabled = computed(() => props.actionPending || props.navigationPending || mediaBusy.value || releaseDialog.value);
 function navigate(direction: 'previous' | 'next') {
@@ -221,6 +222,7 @@ onBeforeUnmount(() => {
         class="dialog-flex-text"
         @scroll.passive="updateScrollHint"
         >
+        <slot name="status" />
         <v-row>
           <v-col>
             <v-card>
@@ -302,7 +304,7 @@ onBeforeUnmount(() => {
           :key="`${mediaType}-${item.id}`"
           :item="item"
           :type="mediaType === 'Movie' ? 'movies' : 'series'"
-          :disabled="actionPending || settingsPending"
+          :disabled="readOnly || actionPending || settingsPending"
           @busy="monitoringPending = $event"
         />
         <div
@@ -317,7 +319,7 @@ onBeforeUnmount(() => {
             :key="`${mediaType}-settings-${item.id}`"
             :item="item"
             :type="mediaType === 'Movie' ? 'movies' : 'series'"
-            :disabled="actionPending || monitoringPending || releaseDialog"
+            :disabled="readOnly || actionPending || monitoringPending || releaseDialog"
             @busy="settingsPending = $event"
           />
           <MediaHistory

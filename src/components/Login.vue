@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { readApiJson, requireObject } from '@/composables/apiResponse';
 import { sharedRead } from '@/composables/sharedRead';
+import { useReadRequest } from '@/composables/useReadRequest';
+import ReadFeedback from '@/components/common/ReadFeedback.vue';
 
 
 import { ref, onMounted } from 'vue';
@@ -20,6 +22,7 @@ const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
 const { state: isLoading, reset: resetIsLoading } = useResettable(false);
+const authenticationRead = useReadRequest(() => useAPI.value);
 
 const initial_auth_data = {
   username: null,
@@ -36,7 +39,7 @@ function getData() {
   isLoading.value = true;
 
   if (auth_data.value.username && auth_data.value.password) {
-    fetch(base_url + '/auth')
+    fetch(base_url + '/auth', { signal: AbortSignal.timeout(15000), cache: 'no-store' })
       .then(async (response) => {
         const json_data: any = requireObject(await readApiJson(response), 'authentication');
 
@@ -67,10 +70,13 @@ function getData() {
 
 function checkData() {
   let base_url = import.meta.env.VITE_FLIX_API_URL;
+  const read = authenticationRead.begin();
 
   sharedRead(base_url + '/auth')
     .then((response) => {
+      if (!read.isCurrent()) return;
       const json_data: any = requireObject(response, 'authentication');
+      read.success();
 
       if (json_data.username && json_data.password) {
         // resetIsLoading(); Not working
@@ -81,9 +87,10 @@ function checkData() {
       }
     })
     .catch((error) => {
-      showErrorAlert(error);
+      read.fail(error);
     })
     .finally(() => {
+      read.finish();
     });
 }
 
@@ -107,6 +114,7 @@ onMounted(() => {
     @update:alert="alert = $event"
     />
   <v-container>
+    <ReadFeedback :state="authenticationRead.state" label="Login configuration" @retry="checkData" />
     <div
       v-if="!isLoading"
       >

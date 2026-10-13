@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { readApiJson, requireObject } from '@/composables/apiResponse';
+import { useReadRequest } from '@/composables/useReadRequest';
+import ReadFeedback from '@/components/common/ReadFeedback.vue';
 
 
 import { computed, onMounted, watch, ref } from 'vue';
@@ -38,7 +40,11 @@ function applyPrimaryNow(hex: string) {
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
-const { state: isLoading, reset: resetIsLoading } = useResettable(false);
+const { state: isSaving, reset: resetIsSaving } = useResettable(false);
+const reads = { auth: useReadRequest(() => useAPI), color: useReadRequest(() => useAPI) };
+const isLoading = computed(() => isSaving.value || reads.auth.state.loading || reads.color.state.loading);
+let hydrating = false;
+function readOnly(key: 'auth' | 'color') { return !reads[key].state.hasData || !!reads[key].state.error || reads[key].state.loading || isSaving.value; }
 
 const { state: auth, reset: resetAuth } = useResettable(false);
 const { state: color, reset: resetColor } = useResettable(false);
@@ -55,42 +61,43 @@ const initialColorData = {
 const { state: colorData, reset: resetColorData } = useResettable(initialColorData);
 
 function getData(key: 'auth' | 'color') {
+  const read = reads[key].begin();
   const base_url = import.meta.env.VITE_FLIX_API_URL;
-
-  isLoading.value = true;
-
-  fetch(base_url + '/' + key)
+  return fetch(base_url + '/' + key, { signal: read.signal, cache: 'no-store' })
     .then(async (response) => {
       const json_data: any = requireObject(await readApiJson(response), key);
+      if (!read.isCurrent()) return;
+      hydrating = true;
+      try {
 
       if (key == 'auth') {
         store.authenticationEnabled = !!(json_data.username && json_data.password);
-        if (json_data.username && json_data.password) {
-          authData.value = json_data;
-          auth.value = true;
-        }
+        authData.value = json_data.username && json_data.password ? json_data : { ...initialAuthData };
+        auth.value = !!(json_data.username && json_data.password);
       }
 
       if (key == 'color') {
-        if (json_data.primary) {
-          colorData.value = json_data;
-          color.value = true;
-        }
+        colorData.value = json_data.primary ? json_data : { ...initialColorData };
+        color.value = !!json_data.primary;
+        applyPrimaryNow(colorData.value.primary);
       }
+      } finally { hydrating = false; }
+      read.success();
     })
     .catch((error) => {
-      showErrorAlert(error);
+      read.fail(error);
     })
     .finally(() => {
-      resetIsLoading();
+      read.finish();
     });
 }
 
 function setData(key: 'auth' | 'color') {
+  if (!useAPI || readOnly(key)) return;
   const base_url = import.meta.env.VITE_FLIX_API_URL;
   let data = null;
 
-  isLoading.value = true;
+  isSaving.value = true;
 
   if (key == 'auth') {
     if (authData.value.username && authData.value.password) {
@@ -98,6 +105,7 @@ function setData(key: 'auth' | 'color') {
       data = authData.value;
     } else {
       showErrorAlert('Username and password cannot be empty');
+      resetIsSaving();
       return;
     }
   }
@@ -107,6 +115,7 @@ function setData(key: 'auth' | 'color') {
       data = colorData.value;
     } else {
       showErrorAlert('Primary cannot be empty');
+      resetIsSaving();
       return;
     }
   }
@@ -117,9 +126,11 @@ function setData(key: 'auth' | 'color') {
         'Accept': 'application/json',
         'Content-Type': 'application/json;charset=utf-8'
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
+      signal: AbortSignal.timeout(15000)
     })
     .then(async (response) => {
+      if (!response.ok) throw new Error('Unable to confirm the settings change.');
       if (response.ok) {
         showSuccessAlert();
 
@@ -131,36 +142,41 @@ function setData(key: 'auth' | 'color') {
       }
     })
     .catch((error) => {
+      reads[key].state.error = 'The result of the change could not be confirmed. Reload settings before trying again.';
       showErrorAlert(error);
     })
     .finally(() => {
-      resetIsLoading();
+      resetIsSaving();
     });
 }
 
 function deleteData(key: 'auth' | 'color') {
+  if (!useAPI || readOnly(key)) return;
   const base_url = import.meta.env.VITE_FLIX_API_URL;
 
-  isLoading.value = true;
+  isSaving.value = true;
 
   fetch(base_url + '/' + key, {
       method: 'DELETE',
+      signal: AbortSignal.timeout(15000),
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json;charset=utf-8'
       }
     })
     .then(async (response) => {
+      if (!response.ok) throw new Error('Unable to confirm the settings change.');
       if (response.ok) {
         showSuccessAlert();
         if (key == 'auth') store.authenticationEnabled = false;
       }
     })
     .catch((error) => {
+      reads[key].state.error = 'The result of the change could not be confirmed. Reload settings before trying again.';
       showErrorAlert(error);
     })
     .finally(() => {
-      resetIsLoading();
+      resetIsSaving();
     });
 }
 
@@ -172,28 +188,31 @@ onMounted(() => {
 });
 
 watch(auth, (newValue) => {
+  if (hydrating) return;
   if (!newValue) {
     deleteData('auth');
 
     authData.value.username = null;
     authData.value.password = null;
   }
-});
+}, { flush: 'sync' });
 
 watch(color, (newValue) => {
+  if (hydrating) return;
   if (!newValue) {
     deleteData('color');
 
     colorData.value.primary = DEFAULT_PRIMARY;
     applyPrimaryNow(DEFAULT_PRIMARY);
   }
-});
+}, { flush: 'sync' });
 </script>
 
 <template>
   <Alert :alert="alert" @update:alert="alert = $event" />
   <v-container>
     <SectionNavigation v-if="useAPI" v-model="section" :sections="sections" />
+    <ReadFeedback v-if="useAPI" :state="section === 'security' ? reads.auth.state : reads.color.state" :label="section === 'security' ? 'Authentication settings' : 'Color settings'" :disabled="isSaving" @retry="getData(section === 'security' ? 'auth' : 'color')" />
     <v-row :class="{ 'mt-4': useAPI }">
       <v-col v-show="section === 'appearance'" cols="12">
         <h3>Appearance</h3>
@@ -213,6 +232,7 @@ watch(color, (newValue) => {
               <v-switch
                 v-model="color"
                 label="Custom primary color"
+                :disabled="readOnly('color')"
                 inset
                 color="primary"
                 hide-details
@@ -222,8 +242,8 @@ watch(color, (newValue) => {
                   <v-color-picker v-model="colorData.primary" show-swatches />
                 </div>
                 <div class="d-flex justify-end ga-2 mt-4">
-                  <v-btn variant="text" :disabled="isLoading" @click="color = false">Reset</v-btn>
-                  <v-btn color="primary" variant="outlined" :disabled="isLoading" @click="setData('color')">Save</v-btn>
+                  <v-btn variant="text" :disabled="readOnly('color')" @click="color = false">Reset</v-btn>
+                  <v-btn color="primary" variant="outlined" :disabled="readOnly('color')" @click="setData('color')">Save</v-btn>
                 </div>
               </template>
             </template>
@@ -237,6 +257,7 @@ watch(color, (newValue) => {
             <v-switch
               v-model="auth"
               label="Basic authentication"
+              :disabled="readOnly('auth')"
               inset
               color="primary"
               hide-details
@@ -259,7 +280,7 @@ watch(color, (newValue) => {
                 clearable
               />
               <div class="d-flex justify-end">
-                <v-btn color="primary" variant="outlined" @click="setData('auth')">Save</v-btn>
+                <v-btn color="primary" variant="outlined" :disabled="readOnly('auth')" @click="setData('auth')">Save</v-btn>
               </div>
             </template>
           </v-card-text>

@@ -6,6 +6,7 @@ const props = defineProps<{
   paginated_items: any | null;
   qualityItems: any | null;
   isPending?: (type: 'movies' | 'series', item: any) => boolean;
+  actionsDisabled?: boolean;
 }>();
 
 const emit = defineEmits(['add', 'remove', 'details']);
@@ -73,14 +74,14 @@ const emit = defineEmits(['add', 'remove', 'details']);
               :menu-props="{ maxWidth: 400 }"
               label="Quality"
               variant="outlined"
-              :disabled="item.already_in_library || isPending?.(mediaType, item)"
+              :disabled="actionsDisabled || item.already_in_library || isPending?.(mediaType, item)"
               />
           </v-col>
           <v-col>
             <v-btn
               v-if="!item.already_in_library && qualityItems.length"
               :loading="isPending?.(mediaType, item)"
-              :disabled="isPending?.(mediaType, item)"
+              :disabled="actionsDisabled || isPending?.(mediaType, item)"
               color="primary"
               variant="outlined"
               @click="emit('add', mediaType, item)"
@@ -103,7 +104,7 @@ const emit = defineEmits(['add', 'remove', 'details']);
             <v-btn
               v-if="item.already_in_library"
               :loading="isPending?.(mediaType, item)"
-              :disabled="isPending?.(mediaType, item)"
+              :disabled="actionsDisabled || isPending?.(mediaType, item)"
               color="error"
               variant="outlined"
               @click="emit('remove', mediaType, item)"

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useReadRequest } from '@/composables/useReadRequest';
+import ReadFeedback from '@/components/common/ReadFeedback.vue';
 import { mediaFileFields } from '@/composables/mediaFileDetails';
 import { readApiJson, requireList, requireObject } from '@/composables/apiResponse';
 
@@ -34,7 +36,7 @@ const store = useFlixStore();
 const selectedInstanceData = computed(() => store.selectedInstanceData);
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
-const { getConfig } = useMediaService({ useAPI, selectedInstanceData });
+const { getConfig, serviceContext } = useMediaService({ useAPI, selectedInstanceData });
 
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
@@ -70,7 +72,7 @@ const movies_total_pages = computed(() =>
 );
 const { paginatedItems: paginated_movies } = usePagination(filtered_movies, movie_page, items_per_page);
 const { total: total_movies } = useCount(filtered_movies);
-const { isAlreadyInLibrary: checkMovies } = useLibraryChecker("movies", movieItems, showErrorAlert, useAPI);
+const { isAlreadyInLibrary: checkMovies, readState: movieLibraryRead } = useLibraryChecker("movies", movieItems, () => undefined, useAPI);
 
 const { state: isLoadingSerie, reset: resetIsLoadingSerie } = useResettable(false);
 const { state: serieItems, reset: resetSerieItems } = useResettable<any[]>([]);
@@ -83,12 +85,30 @@ const series_total_pages = computed(() =>
 );
 const { paginatedItems: paginated_series } = usePagination(filtered_series, serie_page, items_per_page);
 const { total: total_series } = useCount(filtered_series);
-const { isAlreadyInLibrary: checkSeries } = useLibraryChecker("series", serieItems, showErrorAlert, useAPI);
+const { isAlreadyInLibrary: checkSeries, readState: seriesLibraryRead } = useLibraryChecker("series", serieItems, () => undefined, useAPI);
 const { state: isLoadingSerieEpisodes, reset: resetIsLoadingSerieEpisodes } = useResettable(false);
+const episodeRead = useReadRequest(() => [serieDialog.value, selectedSerie.value?.tmdbId, serviceContext()]);
+const identityRead = useReadRequest(() => [serieDialog.value, selectedSerie.value?.tmdbId, serviceContext()]);
+watch(() => episodeRead.state.loading, value => { isLoadingSerieEpisodes.value = value; }, { flush: 'sync' });
 
-const { qualityMovieItems, qualitySerieItems, qualityMovie, qualitySerie, getQualityProfileList } = useQualityProfiles({
+const { qualityMovieItems, qualitySerieItems, qualityMovie, qualitySerie, getQualityProfileList, qualityReads } = useQualityProfiles({
   useAPI, selectedInstanceData, showErrorAlert
 });
+
+const reads = {
+  movies: useReadRequest(() => [useAPI.value, selectedInstanceData.value, getConfig('movies').base_url, getConfig('movies').api_key]),
+  series: useReadRequest(() => [useAPI.value, selectedInstanceData.value, getConfig('series').base_url, getConfig('series').api_key]),
+};
+for (const type of ['movies', 'series'] as const) {
+  watch(() => reads[type].state.loading, value => { (type === 'movies' ? isLoadingMovie : isLoadingSerie).value = value; }, { flush: 'sync' });
+  watch(() => reads[type].state.error, error => {
+    if (error && !reads[type].state.hasData) (type === 'movies' ? movieItems : serieItems).value = [];
+  }, { flush: 'sync' });
+}
+function readOnly(type: 'movies' | 'series') {
+  return [reads[type].state, type === 'movies' ? movieLibraryRead : seriesLibraryRead, qualityReads[type].state]
+    .some(state => state.loading || !!state.error || !state.hasData);
+}
 
 const { addItem, deleteItem, searchItem } = useMediaActions({
   useAPI, selectedInstanceData, showSuccessAlert, showErrorAlert, refreshContent: getContent
@@ -101,6 +121,7 @@ const { deleteConfirmationDialog, resetDeleteConfirmationDialog, openDeleteConfi
 });
 
 function getContent(type: 'movies' | 'series') {
+  const read = reads[type].begin();
   const base_url = import.meta.env.VITE_TMDB_BASE_URL;
   const api_key = import.meta.env.VITE_TMDB_API_KEY;
   let url_type = '';
@@ -117,8 +138,9 @@ function getContent(type: 'movies' | 'series') {
     url_request = 'on_the_air';
   }
 
-  return fetchTmdbPage(base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key)
+  return fetchTmdbPage(base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key, { signal: read.signal })
     .then(async (json_data) => {
+      if (!read.isCurrent()) return;
 
       let items = [];
       for (const item of json_data.results) {
@@ -168,8 +190,9 @@ function getContent(type: 'movies' | 'series') {
       for (let page = 2; page <= total_pages; page++) {
         let url = base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key + '&page=' + page;
         promises.push(
-          fetchTmdbPage(url)
+          fetchTmdbPage(url, { signal: read.signal })
             .then((page_data) => {
+              if (!read.isCurrent()) return;
 
               for (const item of page_data.results) {
                 let tmdbId = null;
@@ -214,6 +237,7 @@ function getContent(type: 'movies' | 'series') {
       }
 
       return Promise.all(promises).then(() => {
+        if (!read.isCurrent()) return;
         if (type == 'movies') {
           movieItems.value = items;
           checkMovies();
@@ -222,45 +246,53 @@ function getContent(type: 'movies' | 'series') {
           serieItems.value = items;
           checkSeries();
         }
+        read.success();
       });
     })
     .catch((error) => {
-      showErrorAlert(error instanceof Error ? error.message : 'Unable to load upcoming media. Please try again.');
+      read.fail(error);
     })
     .finally(() => {
-      if (type == 'movies') {
-        resetIsLoadingMovie();
-      }
-      if (type == 'series') {
-        resetIsLoadingSerie();
-      }
+      read.finish();
     });
 }
 
 function getSerieEpisodes(serie_id: number) {
+  if (!selectedSerie.value || selectedSerie.value.tmdbId !== serie_id) return;
   const base_url = import.meta.env.VITE_TMDB_BASE_URL;
   const api_key = import.meta.env.VITE_TMDB_API_KEY;
   const { base_url: base_url_sonarr, api_key: api_key_sonarr } = getConfig('series');
 
   serieDialog.value = true;
+  const read = episodeRead.begin();
+  const mediaId = selectedSerie.value?.id;
   isLoadingSerieEpisodes.value = true;
 
-  serieEpisodes.value = [];
+  if (!episodeRead.state.hasData) serieEpisodes.value = [];
 
-  fetch(base_url + '/tv/' + serie_id + '?api_key=' + api_key)
+  return fetch(base_url + '/tv/' + serie_id + '?api_key=' + api_key, { signal: read.signal })
     .then(async (response) => {
       if (!response.ok) throw new Error(`Unable to load seasons (TMDB HTTP ${response.status}).`);
       const json_data: any = requireObject(await readApiJson(response), 'TMDB');
+      if (!read.isCurrent()) return;
       if (!json_data || !Array.isArray(json_data.seasons)
         || json_data.seasons.some((season: any) => !season || !Number.isInteger(season.season_number))) {
         throw new Error('Invalid season response from TMDB. Please try again.');
       }
       const seasonPromises = [];
+      const sonarrRecords = mediaId ? requireList(await readApiJson(await fetch(
+        base_url_sonarr + '/api/v3/episode?includeEpisodeFile=true&apikey=' + api_key_sonarr + '&seriesId=' + mediaId,
+        { signal: read.signal, cache: 'no-store' },
+      )), 'episodes') : [];
+      if (!read.isCurrent()) return;
+      const lookup: Record<string, any> = {};
+      for (const episode of sonarrRecords) lookup[`${episode.seasonNumber}:${episode.episodeNumber}`] = episode;
 
       for (const season of json_data.seasons) {
-        const seasonPromise = fetch(base_url + '/tv/' + serie_id + '/season/' + season.season_number + '?api_key=' + api_key)
+        const seasonPromise = fetch(base_url + '/tv/' + serie_id + '/season/' + season.season_number + '?api_key=' + api_key, { signal: read.signal })
           .then(async response => requireObject(await readApiJson(response), 'TMDB season'))
           .then(async seasonData => {
+            if (!read.isCurrent()) return [];
             let tmdbEpisodes: any[] = [];
 
             if (seasonData) {
@@ -283,54 +315,34 @@ function getSerieEpisodes(serie_id: number) {
                 }));
             }
 
-            if (selectedSerie.value.id) {
-              await fetch(base_url_sonarr + '/api/v3/episode?includeEpisodeFile=true&apikey=' + api_key_sonarr + '&seriesId=' + selectedSerie.value.id)
-                .then(async (response) => {
-                  const json_data_sonarr = requireList(await readApiJson(response), 'episodes');
-
-                  const lookup: Record<string, any> = {};
-                  json_data_sonarr.forEach((episodeData: any) => {
-                    const key = 'S' + String(episodeData.seasonNumber).padStart(2, '0') + 'E' + String(episodeData.episodeNumber).padStart(2, '0');
-                    lookup[key] = episodeData;
-                  });
-
-                  tmdbEpisodes.forEach((episodeData: any) => {
-                    const key = 'S' + String(episodeData.season).padStart(2, '0') + 'E' + String(episodeData.episode).padStart(2, '0');
-                    const matched = lookup[key];
-                    if (matched) {
-                      episodeData.hasFile = matched.hasFile;
-                      Object.assign(episodeData, mediaFileFields(matched.episodeFile));
-                    }
-                  });
-                })
-                .catch((error) => {
-                  showErrorAlert(error);
-                });
+            for (const episode of tmdbEpisodes) {
+              const matched = lookup[`${episode.season}:${episode.episode}`];
+              if (matched) {
+                episode.hasFile = matched.hasFile;
+                Object.assign(episode, mediaFileFields(matched.episodeFile));
+              }
             }
 
             return tmdbEpisodes;
-          })
-          .catch(error => {
-            showErrorAlert(error);
-            return [];
           });
 
         seasonPromises.push(seasonPromise);
       }
 
       const seasonsEpisodes = await Promise.all(seasonPromises);
+      if (!read.isCurrent()) return;
       const episodesArray = seasonsEpisodes.flat();
 
       serieEpisodes.value = episodesArray.filter(
         episode => episode && typeof episode.season !== 'undefined'
       );
-
+      read.success();
     })
     .catch((error) => {
-      showErrorAlert(error instanceof Error ? error.message : 'Unable to load seasons.');
+      read.fail(error);
     })
     .finally(() => {
-      isLoadingSerieEpisodes.value = false;
+      read.finish();
     });
 }
 
@@ -345,40 +357,31 @@ function handleMovieClick(movie_id: number) {
 function handleSerieClick(serie_id: number) {
   const serie = serieItems.value.find(serie => serie.tmdbId === serie_id);
   if (serie) {
-    if (!serie.tvdbId) {
-      getSerieTvdbId(serie)
-        .then(tvdbId => {
-          serie.tvdbId = tvdbId;
-        });
-    }
     selectedSerie.value = serie;
     getSerieEpisodes(serie.tmdbId);
+    if (!serie.tvdbId) void getSerieTvdbId(serie);
   }
 }
 
 const getSerieTvdbId = async (serie: any) => {
+  if (!serie || serie !== selectedSerie.value) return;
+  const read = identityRead.begin();
   const base_url = import.meta.env.VITE_TMDB_BASE_URL;
   const api_key = import.meta.env.VITE_TMDB_API_KEY;
-  let tvdbId = null;
-
-  await fetch(base_url + '/tv/' + serie.tmdbId + '/external_ids?api_key=' + api_key)
-    .then(async (response) => {
-      const json_data: any = requireObject(await readApiJson(response), 'TMDB');
-
-      tvdbId = json_data.tvdb_id;
-    })
-    .catch((error) => {
-      showErrorAlert(error);
-    })
-    .finally(() => {
-    });
-
-  return tvdbId;
+  try {
+    const data = requireObject(await readApiJson(await fetch(base_url + '/tv/' + serie.tmdbId + '/external_ids?api_key=' + api_key, { signal: read.signal })), 'TMDB');
+    if (!read.isCurrent() || serie !== selectedSerie.value) return;
+    if (!Number.isSafeInteger(data.tvdb_id) || Number(data.tvdb_id) <= 0) throw new Error('No valid TVDB identity was provided for this series.');
+    serie.tvdbId = data.tvdb_id;
+    read.success();
+  } catch (error) { read.fail(error); }
+  finally { read.finish(); }
 }
 
 const { grouped_episodes, totalSerieSizeOnDisk } = useEpisodeSummary(serieEpisodes);
 
 function openQualityDialog(type: 'movies' | 'series', item: any) {
+  if (readOnly(type)) return;
   if (type == 'movies') {
     qualityItems.value = qualityMovieItems.value;
     qualitySelected.value = qualityMovie.value;
@@ -394,7 +397,9 @@ function openQualityDialog(type: 'movies' | 'series', item: any) {
 }
 
 function confirmQuality(selectedValue: any) {
-  if (itemQuality.value?.item) {
+  if (itemQuality.value?.item && !readOnly(itemQuality.value.type)
+    && (itemQuality.value.type !== 'series' || Number.isSafeInteger(itemQuality.value.item.tvdbId) && itemQuality.value.item.tvdbId > 0)
+    && (itemQuality.value.type === 'movies' ? qualityMovieItems.value : qualitySerieItems.value).some(quality => quality.value === selectedValue)) {
     itemQuality.value.item.qualityProfileId = selectedValue;
     addItem(itemQuality.value.type, itemQuality.value.item);
   }
@@ -414,13 +419,15 @@ function searchContent(type: 'movies' | 'series', item: any) {
 
 watch(search, () => { movie_page.value = 1; serie_page.value = 1; });
 
-watch(selectedInstanceData, () => {
+watch(serviceContext, () => {
+  resetMovieDialog(); resetSerieDialog(); resetSelectedMovie(); resetSelectedSerie();
+  resetDeleteConfirmationDialog(); resetQualitySelectionDialog(); resetItemQuality();
   if (useAPI.value && !selectedInstanceData.value) return;
   getQualityProfileList('movies');
   getQualityProfileList('series');
   getContent('movies');
   getContent('series');
-}, { immediate: true });
+}, { immediate: true, flush: 'sync' });
 </script>
 
 <template>
@@ -451,6 +458,9 @@ watch(selectedInstanceData, () => {
       :total-series="total_series"
     >
     </MediaBrowserToolbar>
+    <ReadFeedback :state="reads[selected_view].state" label="Upcoming media" @retry="getContent(selected_view)" />
+    <ReadFeedback :state="selected_view === 'movies' ? movieLibraryRead : seriesLibraryRead" label="Library status" @retry="selected_view === 'movies' ? checkMovies() : checkSeries()" />
+    <ReadFeedback :state="qualityReads[selected_view].state" label="Quality profiles" @retry="getQualityProfileList(selected_view)" />
     <div
       v-if="selected_view == 'movies'"
       >
@@ -458,6 +468,8 @@ watch(selectedInstanceData, () => {
         :items="paginated_movies"
         :total="total_movies"
         :is-loading="isLoadingMovie"
+        :actions-disabled="reads.movies.state.loading || !!reads.movies.state.error || !reads.movies.state.hasData"
+        :unavailable="!!reads.movies.state.error"
         id-field="tmdbId"
         announcementName="Release"
         show-announcement
@@ -467,6 +479,7 @@ watch(selectedInstanceData, () => {
       />
       <MediaDialog
         v-model="movieDialog"
+        :read-only="readOnly('movies')"
         mediaType="Movie"
         :item="selectedMovie"
         :navigation-items="paginated_movies"
@@ -489,6 +502,8 @@ watch(selectedInstanceData, () => {
         :items="paginated_series"
         :total="total_series"
         :is-loading="isLoadingSerie"
+        :actions-disabled="reads.series.state.loading || !!reads.series.state.error || !reads.series.state.hasData"
+        :unavailable="!!reads.series.state.error"
         id-field="tmdbId"
         announcementName="Premiere"
         show-announcement
@@ -498,6 +513,7 @@ watch(selectedInstanceData, () => {
       />
       <MediaDialog
         v-model="serieDialog"
+        :read-only="readOnly('series') || !!episodeRead.state.error"
         mediaType="Serie"
         :item="selectedSerie"
         :navigation-items="paginated_series"
@@ -506,12 +522,17 @@ watch(selectedInstanceData, () => {
         announcementName="Premiere"
         :showSearch="!!selectedSerie?.already_in_library && canSearchItem('series', selectedSerie)"
         :showAdd="!!selectedSerie && !selectedSerie.already_in_library && qualitySerieItems.length > 0"
+        :add-disabled="!Number.isSafeInteger(selectedSerie?.tvdbId) || (selectedSerie?.tvdbId ?? 0) <= 0 || identityRead.state.loading || !!identityRead.state.error"
         :showRemove="!!selectedSerie?.already_in_library"
         @search="searchContent('series', $event)"
         @release-grabbed="showSuccessAlert('Release queued successfully')"
         @add="openQualityDialog('series', $event)"
         @remove="openDeleteConfirmationDialog('series', $event)"
         >
+        <template #status>
+          <ReadFeedback :state="identityRead.state" label="Series identity" @retry="getSerieTvdbId(selectedSerie)" />
+          <ReadFeedback :state="episodeRead.state" label="Series episodes" @retry="getSerieEpisodes(selectedSerie?.tmdbId)" />
+        </template>
         <template
           #details
           >

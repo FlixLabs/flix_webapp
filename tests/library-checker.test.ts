@@ -1,20 +1,20 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { createPinia, setActivePinia } from 'pinia';
-import { effectScope, ref } from 'vue';
+import { effectScope, ref, toRaw } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useLibraryChecker } from '@/composables/useLibraryChecker';
 
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
-function setup(data: unknown, status = 200, apiMode = true) {
+function setup(data: unknown, status = 200, apiMode = true, type: 'movies' | 'series' = 'movies') {
   vi.stubGlobal('sessionStorage', { getItem: () => null, setItem: vi.fn() });
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: status === 200, status, json: async () => data }));
   setActivePinia(createPinia());
   const config = { base_url: 'http://service.test', api_key: 'test', root_folder_path: '/media' };
   useFlixStore().setInstances([{ name: 'Test', radarr: config, sonarr: config }]);
-  const items = ref([{ tmdbId: 10, title: 'Example', release_date: '2026-10-09' }]);
+  const items = ref<Record<string, unknown>[]>([{ tmdbId: 10, title: 'Example', release_date: '2026-10-09' }]);
   const error = vi.fn();
-  return { items, error, ...useLibraryChecker('movies', items, error, ref(apiMode)) };
+  return { items, error, ...useLibraryChecker(type, items, error, ref(apiMode)) };
 }
 
 it.each([null, undefined, {}, { error: 'Service unavailable' }, [null]])(
@@ -112,4 +112,38 @@ it('keeps scanned file details when enriching dashboard and outings results', as
   await state.isAlreadyInLibrary();
   expect(state.error).not.toHaveBeenCalled();
   expect(state.items.value[0]).toMatchObject({ sizeOnDisk: 4e9, fileDetails: { resolution: '1920x1080', videoCodec: 'x264' } });
+});
+
+it('clears obsolete membership and file fields after a successful retry', async () => {
+  const state = setup([{ id: 1, tmdbId: 10, hasFile: true, movieFile: { relativePath: 'Old.mkv', size: 4e9 }, statistics: { sizeOnDisk: 4e9 } }]);
+  await state.isAlreadyInLibrary();
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => [] } as unknown as Response);
+  await state.isAlreadyInLibrary();
+  expect(state.items.value[0]).toMatchObject({ already_in_library: false, hasFile: false });
+  for (const field of ['id', 'relativePath', 'fileDetails', 'statistics']) expect(state.items.value[0]).not.toHaveProperty(field);
+  expect(state.readState).toMatchObject({ error: '', hasData: true });
+});
+
+it('clears old file metadata when the media exists but no longer has a file', async () => {
+  const state = setup([{ id: 1, tmdbId: 10, hasFile: true, movieFile: { relativePath: 'Old.mkv', size: 4e9 } }]);
+  await state.isAlreadyInLibrary();
+  vi.mocked(fetch).mockResolvedValue({ ok: true, json: async () => [{ id: 1, tmdbId: 10, hasFile: false }] } as unknown as Response);
+  await state.isAlreadyInLibrary();
+  expect(state.items.value[0]).toMatchObject({ id: 1, already_in_library: true, hasFile: false });
+  expect(state.items.value[0]).not.toHaveProperty('relativePath');
+});
+
+it('does not invalidate data for an identical instance configuration reload', async () => {
+  const state = setup([{ id: 1, tmdbId: 10 }]);
+  await state.isAlreadyInLibrary();
+  const store = useFlixStore();
+  store.setInstances(structuredClone(toRaw(store.instances)));
+  expect(state.readState.hasData).toBe(true);
+});
+
+it('matches Sonarr TVDB identities when TMDB is not provided', async () => {
+  const state = setup([{ id: 2, tmdbId: 0, tvdbId: 20 }], 200, true, 'series');
+  state.items.value[0]!.tvdbId = 20;
+  await state.isAlreadyInLibrary();
+  expect(state.items.value[0]).toMatchObject({ id: 2, already_in_library: true });
 });
