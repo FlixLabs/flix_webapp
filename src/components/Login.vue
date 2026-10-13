@@ -3,7 +3,8 @@ import { readApiJson, requireObject } from '@/composables/apiResponse';
 
 
 import { ref, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
+import { loginDestination } from '@/composables/mediaLinks';
 import CryptoJS from 'crypto-js';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
@@ -11,6 +12,7 @@ import Alert from '@/components/common/Alert.vue';
 import Loading from '@/components/common/Loading.vue';
 
 const router = useRouter();
+const route = useRoute();
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
 
@@ -43,7 +45,7 @@ function getData() {
           if (auth_data.value.username == json_data.username &&
               auth_data.value.password == decrypted_password.toString(CryptoJS.enc.Utf8)) {
             sessionStorage.setItem('flix_webapp_is_authenticated', 'true');
-            router.push('/dashboard');
+            router.replace(loginDestination(route.query.redirect));
           } else {
             showErrorAlert('Wrong Username or Password');
           }
@@ -74,7 +76,7 @@ function checkData() {
         isLoading.value = false;
       } else {
         sessionStorage.setItem('flix_webapp_is_authenticated', 'true');
-        router.push('/dashboard');
+        router.replace(loginDestination(route.query.redirect));
       }
     })
     .catch((error) => {
@@ -86,11 +88,11 @@ function checkData() {
 
 onMounted(() => {
   if (!useAPI.value) {
-    router.push('/dashboard');
+    router.replace(loginDestination(route.query.redirect));
   } else {
     const is_authenticated = sessionStorage.getItem('flix_webapp_is_authenticated') === 'true';
     if (is_authenticated) {
-      router.push('/dashboard');
+      router.replace(loginDestination(route.query.redirect));
     } else {
       checkData();
     }

@@ -95,7 +95,7 @@ router.beforeEach((to) => {
     const is_authenticated = sessionStorage.getItem('flix_webapp_is_authenticated') === 'true';
 
     if (to.meta.requiresAuth && !is_authenticated) {
-      return '/login';
+      return { path: '/login', query: { redirect: to.fullPath } };
     }
   }
 });

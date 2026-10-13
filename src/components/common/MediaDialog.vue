@@ -3,6 +3,7 @@ import MediaFileDetails from './MediaFileDetails.vue';
 import MediaMonitoring from './MediaMonitoring.vue';
 import MediaHistory from './MediaHistory.vue';
 import MediaSettings from './MediaSettings.vue';
+import MediaShareLink from './MediaShareLink.vue';
 import MediaImage from './MediaImage.vue';
 import ReleaseSelectionDialog from './ReleaseSelectionDialog.vue';
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
@@ -199,6 +200,12 @@ onBeforeUnmount(() => {
           <span class="text-caption text-medium-emphasis" aria-live="polite">{{ neighbors.index + 1 }} / {{ neighbors.total }}</span>
           <v-btn icon="mdi-chevron-right" variant="text" size="small" aria-label="Next media" :disabled="navigationDisabled || !neighbors.next" @click="navigate('next')" />
         </div>
+        <MediaShareLink
+          v-if="showRemove && modelValue && Number.isSafeInteger(item.id) && item.id > 0"
+          :key="`${mediaType}-share-${item.id}`"
+          :media-id="item.id"
+          :type="mediaType === 'Movie' ? 'movies' : 'series'"
+        />
       </v-card-title>
       <div class="dialog-body">
         <v-card-text

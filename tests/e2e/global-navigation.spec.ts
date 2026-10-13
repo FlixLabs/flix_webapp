@@ -75,7 +75,7 @@ test('dashboard and downloads use the same search-to-controls spacing', async ({
   const gaps: number[] = [];
   for (const path of ['/dashboard', '/downloads']) {
     await page.goto(path);
-    const search = page.locator('.page-navigation .v-input');
+    const search = page.locator('.page-navigation .v-input').filter({ has: page.getByRole('textbox', { name: 'Search', exact: true }) });
     const buttons = page.locator('.page-navigation .v-btn-toggle').first();
     await expect(search).toBeVisible();
     const field = (await search.boundingBox())!;
