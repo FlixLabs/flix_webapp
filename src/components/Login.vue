@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { readApiJson, requireObject } from '@/composables/apiResponse';
+import { sharedRead } from '@/composables/sharedRead';
 
 
 import { ref, onMounted } from 'vue';
@@ -67,9 +68,9 @@ function getData() {
 function checkData() {
   let base_url = import.meta.env.VITE_FLIX_API_URL;
 
-  fetch(base_url + '/auth')
-    .then(async (response) => {
-      const json_data: any = requireObject(await readApiJson(response), 'authentication');
+  sharedRead(base_url + '/auth')
+    .then((response) => {
+      const json_data: any = requireObject(response, 'authentication');
 
       if (json_data.username && json_data.password) {
         // resetIsLoading(); Not working

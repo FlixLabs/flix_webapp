@@ -1,12 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import LoginView from '../views/LoginView.vue'
-import DashboardView from '../views/DashboardView.vue'
-import LibraryView from '../views/LibraryView.vue'
-import CalendarView from '../views/CalendarView.vue'
-import OutingsView from '../views/OutingsView.vue'
-import DownloadsView from '../views/DownloadsView.vue'
-import SettingsView from '../views/SettingsView.vue'
-import SystemView from '../views/SystemView.vue'
 import { useResettable } from '@/composables/useResettable'
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
@@ -19,12 +11,12 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: LoginView
+    component: () => import('../views/LoginView.vue')
   },
   {
     path: '/dashboard',
     name: 'Dashboard',
-    component: DashboardView,
+    component: () => import('../views/DashboardView.vue'),
     meta: {
       requiresAuth: true,
       requiresInstance: true
@@ -33,7 +25,7 @@ const routes = [
   {
     path: '/library',
     name: 'Library',
-    component: LibraryView,
+    component: () => import('../views/LibraryView.vue'),
     meta: {
       requiresAuth: true,
       requiresInstance: true
@@ -42,7 +34,7 @@ const routes = [
   {
     path: '/calendar',
     name: 'Calendar',
-    component: CalendarView,
+    component: () => import('../views/CalendarView.vue'),
     meta: {
       requiresAuth: true,
       requiresInstance: true
@@ -51,7 +43,7 @@ const routes = [
   {
     path: '/outings',
     name: 'Outings',
-    component: OutingsView,
+    component: () => import('../views/OutingsView.vue'),
     meta: {
       requiresAuth: true,
       requiresInstance: true
@@ -60,7 +52,7 @@ const routes = [
   {
     path: '/downloads',
     name: 'Downloads',
-    component: DownloadsView,
+    component: () => import('../views/DownloadsView.vue'),
     meta: {
       requiresAuth: true,
       requiresInstance: true
@@ -69,7 +61,7 @@ const routes = [
   {
     path: '/settings',
     name: 'Settings',
-    component: SettingsView,
+    component: () => import('../views/SettingsView.vue'),
     meta: {
       requiresAuth: true
     }
@@ -77,7 +69,7 @@ const routes = [
   {
     path: '/system',
     name: 'System',
-    component: SystemView,
+    component: () => import('../views/SystemView.vue'),
     meta: {
       requiresAuth: true,
       requiresInstance: true

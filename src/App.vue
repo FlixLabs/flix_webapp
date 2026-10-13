@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { readApiJson, requireObject, requireList } from '@/composables/apiResponse';
+import { sharedRead } from '@/composables/sharedRead';
 
 
 import { RouterView, useRouter } from 'vue-router'
@@ -80,10 +81,9 @@ function getData() {
 onMounted(() => {
   if (useAPI.value) {
     getData();
-    fetch(import.meta.env.VITE_FLIX_API_URL + '/auth')
-      .then(async response => {
-        if (!response.ok) throw new Error('Unable to load authentication settings');
-        const data = requireObject<{ username?: string; password?: string }>(await readApiJson(response), 'authentication');
+    sharedRead(import.meta.env.VITE_FLIX_API_URL + '/auth')
+      .then(json => {
+        const data = requireObject<{ username?: string; password?: string }>(json, 'authentication');
         store.authenticationEnabled = !!(data.username && data.password);
       })
       .catch(showErrorAlert);
