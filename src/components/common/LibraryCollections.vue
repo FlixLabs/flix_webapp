@@ -84,8 +84,8 @@ watch(selected, value => { if (!value && props.collectionState.hasData) { dialog
   <v-row class="mt-2" density="compact">
     <v-col v-for="collection in items" :key="collection.tmdbId" cols="6" sm="4" md="3" lg="2" class="mb-4">
       <MediaCard :title="collection.title" :poster="collection.poster" :poster-height="250" :subtitle="`${collection.movies.length} films`" :label="`Open collection ${collection.title}`" :disabled="disabled" @open="openCollection(collection.tmdbId)">
-        <v-chip size="small" color="success">{{ collection.available }} available</v-chip>
-        <v-chip v-if="collection.missing" size="small" color="error">{{ collection.missing }} missing</v-chip>
+        <v-chip size="small" color="success" :title="`${collection.available} available`"><span class="text-truncate">{{ collection.available }} available</span></v-chip>
+        <v-chip v-if="collection.missing" size="small" color="error" :title="`${collection.missing} missing`"><span class="text-truncate">{{ collection.missing }} missing</span></v-chip>
       </MediaCard>
     </v-col>
   </v-row>
@@ -102,8 +102,8 @@ watch(selected, value => { if (!value && props.collectionState.hasData) { dialog
       <v-row density="compact">
         <v-col v-for="movie in displayedMembers" :key="movie.tmdbId" cols="6" sm="4" md="3">
           <MediaCard :title="movie.title" :poster="movie.poster" :subtitle="movie.year || 'Unknown year'" :label="`View ${movie.title}`" :disabled="disabled" @open="openMember(movie)">
-            <v-chip size="small" :color="colors[movie.state]">{{ movie.state }}</v-chip>
-            <span class="text-caption text-medium-emphasis w-100 text-center">{{ movie.inLibrary ? 'In library' : 'Not in library' }}</span>
+            <v-chip size="small" :color="colors[movie.state]" :title="movie.state"><span class="text-truncate">{{ movie.state }}</span></v-chip>
+            <template #status-caption><span class="text-caption text-medium-emphasis w-100 text-center">{{ movie.inLibrary ? 'In library' : 'Not in library' }}</span></template>
           </MediaCard>
         </v-col>
       </v-row>
