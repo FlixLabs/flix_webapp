@@ -87,7 +87,7 @@ async function download() {
           :items="releases"
           :item-value="release => `${release.indexerId}:${release.guid}`"
           :search="filter ?? ''"
-          :loading="isSearching"
+          :loading="isSearching ? 'primary' : false"
           :items-per-page="10"
           mobile-breakpoint="sm"
           :no-data-text="hasSearched ? 'No release found.' : 'Choose a season or episode, then search releases.'"
