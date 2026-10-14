@@ -37,8 +37,10 @@ test('downloads display reported remaining time and diagnostics', async ({ page,
   test.skip(feature !== 'downloads' && feature !== 'all');
   await page.goto('/downloads');
   await expect(page.getByText('Time remaining: 00:10:00').first()).toBeVisible();
+  await expect(page.locator('.download-warning').first()).toBeVisible();
+  await expect(page.locator('.download-warning').first()).toContainText('Not enough space');
+  await page.getByLabel('Download details for Download example', { exact: true }).first().click();
   await expect(page.getByText('0.50 / 1.00 GB remaining').first()).toBeVisible();
-  await page.getByText('Download needs attention', { exact: true }).first().click();
   await expect(page.getByText('Not enough space').first()).toBeVisible();
   expect(mutations).toEqual([]);
 });

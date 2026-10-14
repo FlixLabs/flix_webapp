@@ -10,6 +10,14 @@ If you wish to enable the optional backend, you can retrieve it here: [flix_api]
 
 ### Download Media Sheets
 
+Downloads use a compact desktop table and mobile cards backed by the same
+Vuetify table, filters and pagination. Queue responses include the service's
+movie/series so confirmed media titles appear before release names without
+per-row requests. Release names remain searchable and available in Details.
+Progress and remaining time stay visible; dates, clients, sizes and technical
+messages are collapsible. Import warnings remain visible without expanding
+Details. Missing metadata never causes a guessed title or progress value.
+
 Queue and history titles open the associated movie or series sheet in place,
 using the service's movie/series ID, never a queue ID or a parsed release name.
 The sheet is read-only and preserves Downloads filters, pagination and scroll.
