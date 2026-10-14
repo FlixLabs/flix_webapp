@@ -12,6 +12,13 @@ export function downloadMediaId(type: MediaType, record: Record<string, unknown>
   const id = nested && typeof nested === 'object' ? (nested as Record<string, unknown>).id : undefined;
   return positiveId(id) ? id : undefined;
 }
+export function downloadMediaTitle(type: MediaType, record: Record<string, unknown>): string | undefined {
+  const nested = record[type === 'movies' ? 'movie' : 'series'];
+  if (!nested || typeof nested !== 'object') return undefined;
+  const media = nested as Record<string, unknown>;
+  return positiveId(media.id) && media.id === downloadMediaId(type, record)
+    && typeof media.title === 'string' && media.title.trim() ? media.title.trim() : undefined;
+}
 
 export function useDownloadMediaSheet(options: MediaServiceOptions) {
   const { getConfig, serviceContext } = useMediaService(options);

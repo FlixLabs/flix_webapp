@@ -15,11 +15,11 @@ import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDial
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useDownloadActions } from '@/composables/useDownloadActions';
 import { downloadDetails, showRawDownloadStatus } from '@/composables/useDownloadDetails';
-import { downloadMediaId, useDownloadMediaSheet } from '@/composables/useDownloadMediaSheet';
+import { downloadMediaId, downloadMediaTitle, useDownloadMediaSheet } from '@/composables/useDownloadMediaSheet';
 import MediaDialog from '@/components/common/MediaDialog.vue';
 import Loading from '@/components/common/Loading.vue';
 import SeriesSizeField from '@/components/common/SeriesSizeField.vue';
-import DownloadDetails from '@/components/common/DownloadDetails.vue';
+import DownloadTitle from '@/components/common/DownloadTitle.vue';
 import ManualImportDialog from '@/components/common/ManualImportDialog.vue';
 import { canManualImport } from '@/composables/useManualImport';
 import MediaTypeToggle from '@/components/common/MediaTypeToggle.vue';
@@ -98,7 +98,7 @@ const filteredRecords = computed(() => {
   const term = (search.value ?? '').trim().toLocaleLowerCase();
   return activeRecords.value.filter(record =>
     (view.value !== 'queue' || queueFilter.value === 'all' || record.diagnosis?.kind === queueFilter.value)
-    && `${record.title} ${record.status ?? ''} ${record.client ?? ''} ${record.messages?.join(' ') ?? ''}`.toLocaleLowerCase().includes(term));
+    && `${record.title} ${record.mediaTitle ?? ''} ${record.status ?? ''} ${record.client ?? ''} ${record.messages?.join(' ') ?? ''}`.toLocaleLowerCase().includes(term));
 });
 const pageCount = computed(() => Math.max(1, Math.ceil(filteredRecords.value.length / itemsPerPage)));
 const activeLoading = computed(() => view.value === 'queue'
@@ -112,20 +112,16 @@ const activeInterval = computed({
   set: value => { activeIntervalRef.value.value = value; },
 });
 const headers = computed(() => [
-  { title: 'Title', key: 'title' },
-  { title: 'Status', key: 'status' },
+  { title: 'Title', key: 'title', width: view.value === 'queue' ? '38%' : '75%' },
+  { title: 'Status', key: 'status', width: view.value === 'queue' ? '20%' : '25%' },
   ...(view.value === 'queue' ? [
-    { title: 'Progress', key: 'progress', sortable: false },
-    { title: 'Actions', key: 'actions', sortable: false },
+    { title: 'Progress', key: 'progress', sortable: false, width: '25%' },
+    { title: 'Actions', key: 'actions', sortable: false, width: '17%' },
   ] : []),
 ]);
 function refreshActive() {
   if (view.value === 'queue') getDownload(mediaType.value);
   else getHistory(mediaType.value);
-}
-function formatDate(value: string) {
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 }
 watch([mediaType, view, search, selectedInstance], () => { page.value = 1; });
 watch(pageCount, value => { page.value = Math.min(page.value, value); });
@@ -171,7 +167,8 @@ function getDownload(type: 'movies' | 'series') {
     ({ base_url, api_key } = getConfig('series'));
   }
 
-  return fetch(base_url + '/api/v3/queue?apikey=' + api_key, { signal: read.signal, cache: 'no-store' })
+  const params = new URLSearchParams({ apikey: api_key, [type === 'movies' ? 'includeMovie' : 'includeSeries']: 'true' });
+  return fetch(base_url + '/api/v3/queue?' + params, { signal: read.signal, cache: 'no-store' })
     .then(async (response) => {
       const json_data: any = requireObject(await readApiJson(response), 'downloads');
       requireList(json_data.records, 'download records');
@@ -189,6 +186,7 @@ function getDownload(type: 'movies' | 'series') {
         items.push({
           id: item.id,
           mediaId: downloadMediaId(type, item),
+          mediaTitle: downloadMediaTitle(type, item),
           downloadId: item.downloadId,
           outputPath: item.outputPath,
           trackedDownloadState: item.trackedDownloadState,
@@ -251,6 +249,7 @@ function getHistory(type: 'movies' | 'series') {
         items.push({
           id: item.id,
           mediaId: downloadMediaId(type, item),
+          mediaTitle: downloadMediaTitle(type, item),
           title: item.sourceTitle,
           date: item.date,
           client: item.downloadClient,
@@ -425,27 +424,27 @@ watch(serviceContext, () => {
           :no-data-text="activeRead.error ? 'Data unavailable. Retry to load this view.' : search || (view === 'queue' && queueFilter !== 'all') ? 'No matching items found' : view === 'queue' ? 'No download information found' : 'No history information found'"
         >
           <template #item.title="{ item }">
-            <v-btn v-if="item.mediaId" variant="text" color="primary" class="download-title download-media-link px-0" :aria-label="'Open media for ' + item.title" @click="openDownloadMedia(item, $event)">{{ item.title }}</v-btn>
-            <div v-else class="download-title">{{ item.title }}</div>
-            <div class="text-caption text-medium-emphasis">{{ formatDate(item.date) }}</div>
-            <div v-if="item.client" class="text-caption text-medium-emphasis">{{ item.client }}</div>
+            <DownloadTitle :key="`${mediaType}-${view}-${item.id}`" :record="item" :queue="view === 'queue'" @open="openDownloadMedia(item, $event)" />
           </template>
           <template #item.status="{ item }">
             <template v-if="view === 'queue'">
               <v-chip size="small" :color="item.diagnosis?.color">{{ item.diagnosis?.label }}</v-chip>
               <div v-if="showRawDownloadStatus(item.status, item.diagnosis?.label)" class="text-caption text-medium-emphasis mt-1 text-capitalize">{{ item.status }}</div>
-              <p v-if="item.diagnosis?.hint" class="text-caption mt-2">{{ item.diagnosis.hint }}</p>
+              <p v-if="item.blocked" class="download-warning text-caption mt-2"><v-icon icon="mdi-alert-circle-outline" size="16" class="mr-1" />{{ item.messages?.[0] || 'No details provided by the service.' }}</p>
             </template>
             <span v-else class="text-capitalize">{{ item.status || 'Unavailable' }}</span>
           </template>
           <template #item.progress="{ item }">
-            <v-progress-linear v-if="item.progressKnown" :model-value="item.ratio" :color="item.blocked ? 'warning' : 'primary'" height="25" rounded :striped="item.diagnosis?.kind === 'downloading'">
-              <strong>{{ Math.ceil(item.ratio) }} %</strong>
-            </v-progress-linear>
-            <span v-else class="text-caption text-medium-emphasis">Progress not provided</span>
-            <DownloadDetails :record="item" />
+            <div class="download-progress">
+              <div class="d-flex flex-wrap align-center justify-space-between ga-2 text-caption mb-2">
+                <strong>{{ item.progressKnown ? `${Math.ceil(item.ratio)} %` : 'Progress not provided' }}</strong>
+                <span class="text-medium-emphasis">Time remaining: {{ item.timeLeft || 'Unavailable' }}</span>
+              </div>
+              <v-progress-linear v-if="item.progressKnown" :model-value="item.ratio" :color="item.blocked ? 'warning' : 'primary'" height="6" rounded :aria-label="'Download progress for ' + item.title" />
+            </div>
           </template>
           <template #item.actions="{ item }">
+            <div class="download-actions d-flex flex-wrap justify-end ga-1">
             <v-btn
               v-if="canManualImport(item)"
               color="primary"
@@ -465,6 +464,7 @@ watch(serviceContext, () => {
               :aria-label="'Remove ' + item.title"
               @click="openDeleteConfirmationDialog(mediaType, item)"
             >Remove</v-btn>
+            </div>
           </template>
         </v-data-table>
       </v-card-text>
@@ -473,20 +473,23 @@ watch(serviceContext, () => {
 </template>
 
 <style scoped>
-.download-media-link { height: auto; min-height: 32px; max-width: 100%; white-space: normal; }
-.download-media-link :deep(.v-btn__content) { min-width: 0; text-align: left; overflow-wrap: anywhere; }
+.download-warning { color: rgb(var(--v-theme-warning)); overflow-wrap: anywhere; }
+.download-progress { padding-block: 8px; }
+.downloads-table :deep(table) { table-layout: fixed; }
+.downloads-table :deep(.v-data-table__td) { padding-block: 12px; vertical-align: top; }
+@media (max-width: 599px) {
+  .downloads-table :deep(table), .downloads-table :deep(tbody) { display: block; width: 100%; }
+  .downloads-table :deep(thead), .downloads-table :deep(thead tr) { display: block; width: 100%; }
+  .downloads-table :deep(thead th) { display: block; width: 100%; height: auto; padding: 0 0 12px; }
+  .downloads-table :deep(.v-data-table__tr--mobile) { display: grid; grid-template-columns: minmax(0, 1fr); border: 1px solid var(--flix-border); border-radius: 12px; margin-block: 12px; padding: 12px; background: rgb(var(--v-theme-surface)); }
+  .downloads-table :deep(.v-data-table__tr--mobile > td) { display: block; width: 100%; height: auto; border: 0; padding: 6px 0; }
+  .downloads-table :deep(.v-data-table__td-title) { display: none; }
+  .downloads-table :deep(.v-data-table__td-value) { width: 100%; text-align: left; }
+}
 .queue-filter {
   flex: 0 1 220px;
   min-width: 180px;
 }
-</style>
-
-<style scoped>
-.download-title {
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
 .downloads-table :deep(.v-data-table__td-value) {
   min-width: 0;
   overflow-wrap: anywhere;

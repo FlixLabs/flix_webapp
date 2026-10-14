@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { effectScope, ref } from 'vue';
-import { downloadMediaId, useDownloadMediaSheet } from '@/composables/useDownloadMediaSheet';
+import { downloadMediaId, downloadMediaTitle, useDownloadMediaSheet } from '@/composables/useDownloadMediaSheet';
 import { showRawDownloadStatus } from '@/composables/useDownloadDetails';
 import type { MediaInstance } from '@/composables/useMediaService';
 
@@ -16,6 +16,12 @@ const button = {} as HTMLElement;
 afterEach(() => { scopes.splice(0).forEach(scope => scope.stop()); vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('download media identity', () => {
+  it('uses only a confirmed service title, never an inferred release title', () => {
+    expect(downloadMediaTitle('movies', { movieId: 42, movie: { id: 42, title: ' Movie ' } })).toBe('Movie');
+    expect(downloadMediaTitle('series', { seriesId: 43, series: { id: 43, title: 'Series' } })).toBe('Series');
+    expect(downloadMediaTitle('movies', { movieId: 42, movie: { id: 99, title: 'Wrong' } })).toBeUndefined();
+    expect(downloadMediaTitle('movies', { title: 'Movie.2026.1080p' })).toBeUndefined();
+  });
   it('never uses queue, episode or download IDs as media IDs', () => {
     expect(downloadMediaId('movies', { id: 101, downloadId: 'hash', movieId: 42 })).toBe(42);
     expect(downloadMediaId('series', { id: 101, episodeId: 10, seriesId: 43 })).toBe(43);
