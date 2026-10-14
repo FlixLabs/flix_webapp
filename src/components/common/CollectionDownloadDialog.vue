@@ -43,9 +43,9 @@ function close(value: boolean) { if (!pending.value) visible.value = value; }
 
 <template>
   <DialogSheet :model-value="visible" :activator="activator" title="Missing movies" label="Download missing movies" :context="context" :close-disabled="pending" @update:model-value="close">
-    <p class="mb-3">Confirm the films Radarr should search for. Films not in your library will be added first.</p>
-    <v-list density="compact" aria-label="Missing movies">
-      <v-list-item v-for="movie in candidates" :key="movie.tmdbId" :subtitle="movie.localId ? 'Existing quality profile' : 'Add and search'">
+    <p class="mb-3">Released films will be searched for. Upcoming films will be monitored for future releases, without an immediate search. Films not in your library will be added first.</p>
+    <v-list density="compact" aria-label="Missing movies" class="collection-request-list">
+      <v-list-item v-for="movie in candidates" :key="movie.tmdbId" :subtitle="movie.status !== 'released' ? movie.localId ? 'Monitor with existing settings' : 'Add and monitor for release' : movie.localId ? 'Search with existing quality profile' : 'Add and search'">
         <template #title><span class="text-wrap">{{ movie.title }}</span></template>
         <template #prepend><v-checkbox-btn v-model="selectedIds" :value="movie.tmdbId" :aria-label="`Request ${movie.title}`" :disabled="pending || submitted || disabled" /></template>
       </v-list-item>
@@ -54,9 +54,25 @@ function close(value: boolean) { if (!pending.value) visible.value = value; }
       <ReadFeedback :state="qualityReads.movies.state" label="Quality profiles" :disabled="pending" @retry="getQualityProfileList('movies')" />
       <v-select v-model="qualityMovie" :items="qualityMovieItems" label="Quality for new movies" variant="outlined" class="mt-3" :loading="qualityReads.movies.state.loading" :disabled="pending || submitted" hide-details />
     </template>
-    <v-list v-if="results.length" density="compact" aria-label="Download request results" aria-live="polite">
-      <v-list-item v-for="result in results" :key="result.tmdbId" :title="result.title" :subtitle="result.message" :prepend-icon="result.state === 'requested' ? 'mdi-check-circle-outline' : result.state === 'failed' ? 'mdi-alert-circle-outline' : 'mdi-minus-circle-outline'" />
+    <template v-if="results.length">
+    <v-divider class="my-4" />
+    <h3 class="text-subtitle-2 mb-2">Request results</h3>
+    <v-list density="compact" aria-label="Download request results" aria-live="polite" class="collection-request-list">
+      <v-list-item v-for="result in results" :key="result.tmdbId" :subtitle="result.message">
+        <template #title><span class="text-wrap">{{ result.title }}</span></template>
+        <template #prepend><v-icon :icon="result.state === 'requested' ? 'mdi-check-circle-outline' : result.state === 'failed' ? 'mdi-alert-circle-outline' : 'mdi-minus-circle-outline'" :color="result.state === 'requested' ? 'success' : result.state === 'failed' ? 'error' : undefined" /></template>
+      </v-list-item>
     </v-list>
+    </template>
     <template #actions><v-btn color="primary" :loading="pending" :disabled="blocked" @click="confirm">Request downloads</v-btn></template>
   </DialogSheet>
 </template>
+
+<style scoped>
+.collection-request-list { background: transparent; }
+.collection-request-list :deep(.v-list-item) { grid-template-columns: 36px minmax(0, 1fr) auto; padding: 12px 0; column-gap: 12px; }
+.collection-request-list :deep(.v-list-item__prepend) { align-self: start; justify-content: center; width: 36px; }
+.collection-request-list :deep(.v-list-item__prepend > .v-list-item__spacer) { display: none; }
+.collection-request-list :deep(.v-list-item-title) { font-size: 1rem; line-height: 1.5; overflow-wrap: anywhere; }
+.collection-request-list :deep(.v-list-item-subtitle) { margin-top: 4px; white-space: normal; overflow: visible; display: block; line-height: 1.5; }
+</style>
