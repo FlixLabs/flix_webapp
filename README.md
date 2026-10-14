@@ -1,5 +1,13 @@
 # flix_webapp
 
+## Codex Session
+
+Resume the development session:
+
+```sh
+codex resume 019d0252-50ae-7110-935a-753841d46961
+```
+
 **flix_webapp** is a flexible, *frontend-first* application built on Vue 3 and Vite, designed to unify the management of [Radarr](https://radarr.video/) and [Sonarr](https://sonarr.tv/) into a single interface. Whether you opt for a purely frontend approach or integrate an optional backend, flix_webapp aims to simplify the process of monitoring and controlling your movie and TV series libraries.
 
 If you wish to enable the optional backend, you can retrieve it here: [flix_api](https://github.com/FlixLabs/flix_api).
