@@ -13,9 +13,39 @@ function setup() {
 afterEach(() => { scopes.splice(0).forEach(scope => scope.stop()); vi.unstubAllGlobals(); });
 
 describe('collection download requests', () => {
-  it('excludes available, future, unknown and invalid movies', () => {
-    expect(downloadableCollectionMovies([missing, { ...missing, state: 'Available' }, { ...missing, status: 'announced' },
-      { ...missing, state: 'Unknown' }, { ...missing, tmdbId: 0 }])).toEqual([missing]);
+  it('includes known upcoming films but excludes available, unknown and invalid movies', () => {
+    const future = { ...missing, tmdbId: 11, state: 'Upcoming', status: 'announced' };
+    expect(downloadableCollectionMovies([missing, future, { ...missing, state: 'Available' }, { ...missing, status: 'announced' },
+      { ...missing, state: 'Unknown' }, { ...missing, tmdbId: 0 }])).toEqual([missing, future]);
+  });
+  it.each(['announced', 'inCinemas'])('adds a %s film monitored without an immediate search', async status => {
+    const future = { ...missing, state: 'Upcoming', status };
+    const fetch = vi.fn().mockResolvedValueOnce(Response.json([])).mockResolvedValueOnce(Response.json(future)).mockResolvedValueOnce(Response.json({ id: 7 }));
+    vi.stubGlobal('fetch', fetch);
+    const { actions } = setup(); await actions.run([future], 3);
+    expect(JSON.parse(fetch.mock.calls[2]![1].body)).toMatchObject({ monitored: true, minimumAvailability: 'released', qualityProfileId: 3, addOptions: { searchForMovie: false } });
+    expect(actions.results.value[0]).toMatchObject({ state: 'requested', message: expect.stringContaining('No immediate search') });
+  });
+  it('does not add or search an upcoming movie that is already monitored', async () => {
+    const future = { ...missing, state: 'Upcoming', status: 'announced' };
+    const fetch = vi.fn().mockResolvedValue(Response.json([{ ...future, id: 7, hasFile: false, monitored: true }]));
+    vi.stubGlobal('fetch', fetch);
+    const { actions } = setup(); await actions.run([future], null);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(actions.results.value[0]!.state).toBe('requested');
+  });
+  it('enables monitoring on an existing upcoming movie without changing its other settings', async () => {
+    const future = { ...missing, state: 'Upcoming', status: 'announced' };
+    const local = { ...future, id: 7, hasFile: false, monitored: false, qualityProfileId: 9, minimumAvailability: 'released', tags: [2] };
+    const fetch = vi.fn().mockResolvedValueOnce(Response.json([local])).mockResolvedValueOnce(Response.json(local))
+      .mockResolvedValueOnce(Response.json({})).mockResolvedValueOnce(Response.json({ ...local, monitored: true }));
+    vi.stubGlobal('fetch', fetch);
+    const { actions } = setup(); await actions.run([future], null);
+    expect(fetch).toHaveBeenCalledTimes(4);
+    expect(fetch.mock.calls[2]![1].method).toBe('PUT');
+    expect(JSON.parse(fetch.mock.calls[2]![1].body)).toMatchObject({ id: 7, monitored: true, qualityProfileId: 9, minimumAvailability: 'released', tags: [2] });
+    expect(fetch.mock.calls.some(call => String(call[0]).includes('/command'))).toBe(false);
+    expect(actions.results.value[0]!.state).toBe('requested');
   });
   it('searches an existing missing film instead of adding it again', async () => {
     const fetch = vi.fn().mockResolvedValueOnce(Response.json([{ id: 7, ...missing, hasFile: false }])).mockResolvedValueOnce(Response.json({}));
