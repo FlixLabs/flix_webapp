@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch, defineAsyncComponent } from 'vue';
 import { downloadableCollectionMovies } from '@/composables/useCollectionDownloads';
+import { removableCollectionMovies } from '@/composables/useCollectionRemoval';
 import { libraryCollections, type LibraryMovie, type MovieCollection } from '@/composables/collections';
 import type { ReadState } from '@/composables/useReadRequest';
 import { useDialogActivator } from '@/composables/useDialogActivator';
@@ -8,6 +9,9 @@ import { useDisplay } from 'vuetify';
 import DialogSheet from './DialogSheet.vue';
 import MediaSummary from './MediaSummary.vue';
 import MediaCard from './MediaCard.vue';
+import MediaTag from './MediaTag.vue';
+import MediaBadges from './MediaBadges.vue';
+import { availabilityBadge, countedBadge } from '@/composables/mediaBadges';
 import MediaDialog from './MediaDialog.vue';
 import ReadFeedback from './ReadFeedback.vue';
 import Loading from './Loading.vue';
@@ -23,6 +27,11 @@ const downloadDialogReady = ref(false);
 const downloadActivator = useDialogActivator(() => downloadDialog.value);
 watch(downloadDialog, value => { if (value) downloadDialogReady.value = true; }, { flush: 'sync' });
 const CollectionDownloadDialog = defineAsyncComponent(() => import('./CollectionDownloadDialog.vue'));
+const removalDialog = ref(false);
+const removalDialogReady = ref(false);
+const removalActivator = useDialogActivator(() => removalDialog.value);
+watch(removalDialog, value => { if (value) removalDialogReady.value = true; }, { flush: 'sync' });
+const CollectionRemovalDialog = defineAsyncComponent(() => import('./CollectionRemovalDialog.vue'));
 const missingDialog = ref(false);
 const preview = ref<Record<string, unknown> | null>(null);
 const memberPage = ref(1);
@@ -37,15 +46,15 @@ const items = computed(() => filtered.value.slice((page.value - 1) * 12, page.va
 const selected = computed(() => collections.value.find(collection => collection.tmdbId === selectedId.value));
 const members = computed(() => selected.value?.members ?? []);
 const downloadable = computed(() => downloadableCollectionMovies(members.value));
+const removable = computed(() => removableCollectionMovies(members.value));
 const memberPages = computed(() => Math.ceil(members.value.length / memberPageSize.value));
 const displayedMembers = computed(() => members.value.slice((memberPage.value - 1) * memberPageSize.value, memberPage.value * memberPageSize.value));
 const disabled = computed(() => props.collectionState.loading || !!props.collectionState.error || !props.collectionState.hasData || props.libraryState.loading || !!props.libraryState.error || !props.libraryState.hasData);
 const collectionFacts = computed(() => selected.value ? [
   { label: 'Movies', value: members.value.length },
-  { label: 'Available', value: selected.value.available },
-  { label: 'Missing', value: selected.value.missing },
+  { label: availabilityBadge(true).label, value: selected.value.available },
+  { label: availabilityBadge(false).label, value: selected.value.missing },
 ] : []);
-const colors = { Available: 'success', Missing: 'error', Upcoming: 'info', Unknown: undefined };
 
 function openCollection(id: number) {
   if (disabled.value) return;
@@ -63,7 +72,7 @@ watch(search, () => { page.value = 1; });
 watch(pages, value => { page.value = Math.min(page.value, Math.max(1, value)); });
 watch(memberPages, value => { memberPage.value = Math.min(memberPage.value, Math.max(1, value)); });
 watch(() => props.context, (_value, previous) => {
-  dialog.value = false; missingDialog.value = false; downloadDialog.value = false; selectedId.value = null;
+  dialog.value = false; missingDialog.value = false; downloadDialog.value = false; removalDialog.value = false; selectedId.value = null;
   if (previous !== undefined) initialPending.value = undefined;
   page.value = 1;
 }, { immediate: true, flush: 'sync' });
@@ -84,8 +93,8 @@ watch(selected, value => { if (!value && props.collectionState.hasData) { dialog
   <v-row class="mt-2" density="compact">
     <v-col v-for="collection in items" :key="collection.tmdbId" cols="6" sm="4" md="3" lg="2" class="mb-4">
       <MediaCard :title="collection.title" :poster="collection.poster" :poster-height="250" :subtitle="`${collection.movies.length} films`" :label="`Open collection ${collection.title}`" :disabled="disabled" @open="openCollection(collection.tmdbId)">
-        <v-chip size="small" color="success" :title="`${collection.available} available`"><span class="text-truncate">{{ collection.available }} available</span></v-chip>
-        <v-chip v-if="collection.missing" size="small" color="error" :title="`${collection.missing} missing`"><span class="text-truncate">{{ collection.missing }} missing</span></v-chip>
+        <MediaTag :badge="countedBadge(availabilityBadge(true), collection.available)" />
+        <MediaTag v-if="collection.missing" :badge="countedBadge(availabilityBadge(false), collection.missing)" />
       </MediaCard>
     </v-col>
   </v-row>
@@ -102,15 +111,18 @@ watch(selected, value => { if (!value && props.collectionState.hasData) { dialog
       <v-row density="compact">
         <v-col v-for="movie in displayedMembers" :key="movie.tmdbId" cols="6" sm="4" md="3">
           <MediaCard :title="movie.title" :poster="movie.poster" :subtitle="movie.year || 'Unknown year'" :label="`View ${movie.title}`" :disabled="disabled" @open="openMember(movie)">
-            <v-chip size="small" :color="colors[movie.state]" :title="movie.state"><span class="text-truncate">{{ movie.state }}</span></v-chip>
-            <template #status-caption><span class="text-caption text-medium-emphasis w-100 text-center">{{ movie.inLibrary ? 'In library' : 'Not in library' }}</span></template>
+            <MediaBadges :has-file="movie.hasFile" :status="movie.status" />
           </MediaCard>
         </v-col>
       </v-row>
     </section>
     <template #navigation><v-pagination v-if="memberPages > 1" v-model="memberPage" :length="memberPages" :total-visible="$vuetify.display.xs ? 3 : 5" density="compact" aria-label="Collection film pages" /></template>
-    <template #actions><v-btn v-if="downloadable.length" color="primary" prepend-icon="mdi-download-outline" :disabled="disabled" @click="downloadDialog = true">Download missing ({{ downloadable.length }})</v-btn></template>
+    <template #actions>
+      <v-btn v-if="downloadable.length" color="primary" prepend-icon="mdi-download-outline" :disabled="disabled" @click="downloadDialog = true">Download missing ({{ downloadable.length }})</v-btn>
+      <v-btn v-if="removable.length" color="error" prepend-icon="mdi-trash-can-outline" :disabled="disabled" @click="removalDialog = true">Remove movies ({{ removable.length }})</v-btn>
+    </template>
   </DialogSheet>
   <CollectionDownloadDialog v-if="downloadDialogReady" v-model="downloadDialog" :activator="downloadActivator" :movies="members" :context="context" :disabled="disabled" @refresh="emit('retry-library'); emit('retry-collections')" />
+  <CollectionRemovalDialog v-if="removalDialogReady" v-model="removalDialog" :collection="selected ?? null" :activator="removalActivator" :movies="members" :context="context" :disabled="disabled" @refresh="emit('retry-library'); emit('retry-collections')" />
   <MediaDialog v-model="missingDialog" :item="preview" media-type="Movie" announcement-name="Release" :show-search="false" :show-add="false" :show-remove="false" :show-file-details="false" read-only />
 </template>

@@ -22,6 +22,7 @@ export interface LibraryMovie {
   tmdbId?: number;
   title: string;
   hasFile?: boolean;
+  status?: string;
   prependAvatar?: string;
   collection?: { tmdbId?: number; title?: string } | null;
 }
@@ -63,6 +64,7 @@ export function collectionMembers(collection: MovieCollection, library: LibraryM
       : local ? local.hasFile === false ? 'Missing' : 'Unknown'
       : movie.status === 'released' ? 'Missing' : 'Unknown';
     return { ...movie, localId: local?.id, state, inLibrary: !!local,
+      hasFile: local ? local.hasFile : false, status: local?.status ?? movie.status,
       poster: local?.prependAvatar || collectionPoster(movie.images) };
   }).sort((a, b) => {
     const year = (movie: CollectionMovie) => Number.isInteger(movie.year) && Number(movie.year) > 0 ? Number(movie.year) : Infinity;

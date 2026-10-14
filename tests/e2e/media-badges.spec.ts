@@ -39,7 +39,7 @@ test('movie, series and collection gallery badges stay side by side at every bre
     await page.getByRole('button', { name: 'Series (1)', exact: true }).click();
     await expectInlineBadges(page.getByRole('button', { name: `Open ${series.title}`, exact: true }), ['Continuing']);
     await page.getByRole('button', { name: 'Collections (1)', exact: true }).click();
-    await expectInlineBadges(page.getByRole('button', { name: 'Open collection Example saga', exact: true }), ['1 available', '1 missing']);
+    await expectInlineBadges(page.getByRole('button', { name: 'Open collection Example saga', exact: true }), ['1 Existing', '1 Missing']);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   expect(mutations).toEqual([]);

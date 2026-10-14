@@ -7,6 +7,15 @@ const saga: MovieCollection = { id: 1, tmdbId: 100, title: 'Example saga', movie
   { tmdbId: 11, title: 'Second', year: 2005, status: 'released' },
 ] };
 describe('automatic collections', () => {
+  it('shares native movie file availability and status with film cards', () => {
+    const members = collectionMembers(saga, [
+      { id: 1, tmdbId: 10, title: 'First', hasFile: true, status: 'inCinemas' },
+      { id: 2, tmdbId: 11, title: 'Second' },
+    ]);
+    expect(members[0]).toMatchObject({ hasFile: true, status: 'inCinemas', state: 'Available' });
+    expect(members[1]).toMatchObject({ hasFile: undefined, status: 'released', state: 'Unknown' });
+    expect(members[2]).toMatchObject({ hasFile: false, status: 'announced', state: 'Upcoming' });
+  });
   it('parses the Radarr schema without assuming optional metadata exists', () => {
     expect(parseCollections([saga])).toEqual([saga]);
     expect(parseCollections([])).toEqual([]);
