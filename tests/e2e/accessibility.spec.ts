@@ -1,5 +1,20 @@
 import { test, expect, movie, releaseTitle } from './fixtures';
 
+test('search uses the native field focus border without an overlapping input outline', async ({ page, mutations }) => {
+  await page.goto('/library');
+  const search = page.getByRole('textbox', { name: 'Search', exact: true });
+  await expect(search).toBeVisible();
+  await search.click();
+  await expect(search).toBeFocused();
+  await expect(page.locator('.v-field').filter({ has: search })).toHaveClass(/v-field--focused/);
+  expect(await search.evaluate(el => getComputedStyle(el).outlineStyle)).toBe('none');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await expect(search).toBeFocused();
+  expect(await search.evaluate(el => getComputedStyle(el).outlineStyle)).toBe('none');
+  expect(mutations).toEqual([]);
+});
+
 async function waitForDialog(page: import('@playwright/test').Page) {
   await expect.poll(() => page.locator('.v-overlay--active').evaluateAll(elements =>
     elements.flatMap(element => element.getAnimations({ subtree: true })).filter(animation =>
@@ -108,7 +123,7 @@ test('selection mode exposes checkboxes without a duplicate card tab stop', asyn
 });
 
 for (const theme of ['flixDark', 'flixLight']) {
-  test(`${theme} keeps field and dialog focus visible even with a low-contrast custom accent`, async ({ page, mutations }) => {
+  test(`${theme} preserves native field focus and contrasting dialog focus with a custom accent`, async ({ page, mutations }) => {
     await page.addInitScript(theme => localStorage.setItem('flix_theme', theme), theme);
     await page.route('**/color', route => route.fulfill({ json: { primary: theme === 'flixLight' ? '#FFFFFF' : '#000000' } }));
     await page.goto('/library');
@@ -129,8 +144,8 @@ for (const theme of ['flixDark', 'flixLight']) {
         return { style: style.outlineStyle, width: style.outlineWidth, ratio: (Math.max(foreground, base) + 0.05) / (Math.min(foreground, base) + 0.05) };
       }, surface);
     }
-    expect(await contrast(search, '.v-application')).toMatchObject({ style: 'solid', width: '2px', ratio: expect.any(Number) });
-    expect((await contrast(search, '.v-application')).ratio).toBeGreaterThanOrEqual(3);
+    await expect(page.locator('.v-field').filter({ has: search })).toHaveClass(/v-field--focused/);
+    expect(await search.evaluate(el => getComputedStyle(el).outlineStyle)).toBe('none');
     await page.getByRole('button', { name: 'Open Example movie', exact: true }).press('Enter');
     const dialog = page.getByRole('dialog', { name: 'Movie: Example movie', exact: true });
     await expect(dialog).toBeVisible();

@@ -28,6 +28,11 @@
   outline-offset: 3px;
 }
 
+/* Vuetify already highlights the field border when its internal input is focused. */
+:is(.flix-app, .v-overlay-container) .v-field :is(input, textarea):focus-visible {
+  outline: none;
+}
+
 .flix-brand {
   font-size: 1.5rem;
   font-weight: 800;
