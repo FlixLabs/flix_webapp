@@ -8,6 +8,16 @@ If you wish to enable the optional backend, you can retrieve it here: [flix_api]
 
 ## Features
 
+### Download Media Sheets
+
+Queue and history titles open the associated movie or series sheet in place,
+using the service's movie/series ID, never a queue ID or a parsed release name.
+The sheet is read-only and preserves Downloads filters, pagination and scroll.
+Closing returns keyboard focus to the title. Missing IDs remain plain text;
+unavailable media show an error and can be retried without reloading the page.
+This works with or without Flix API. The raw queue status is shown only when
+it differs from the interpreted badge; import warnings remain visible.
+
 ### Dashboard Media Search
 
 Search preserves Radarr/Sonarr results and supplements translated titles with

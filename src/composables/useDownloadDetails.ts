@@ -7,6 +7,9 @@ export interface QueueDetails {
   downloadId?: string;
 }
 function text(value: unknown) { return typeof value === 'string' ? value.trim() : ''; }
+export function showRawDownloadStatus(status: unknown, label: unknown) {
+  return !!text(status) && text(status).toLocaleLowerCase() !== text(label).toLocaleLowerCase();
+}
 export function downloadDetails(item: QueueDetails) {
   const size = Number.isFinite(item.size) && (item.size ?? 0) > 0 ? item.size! : 0;
   const rawLeft = item.sizeleft ?? item.sizeLeft;
