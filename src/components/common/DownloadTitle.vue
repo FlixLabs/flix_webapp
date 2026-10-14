@@ -30,7 +30,7 @@ function date(value?: string) {
 </template>
 
 <style scoped>
-.download-heading { min-width: 0; padding-block: 8px; }
+.download-heading { min-width: 0; }
 .download-title { white-space: normal; overflow-wrap: anywhere; }
 .download-media-link { height: auto; min-height: 28px; max-width: 100%; justify-content: flex-start; }
 .download-media-link :deep(.v-btn__content) { min-width: 0; text-align: left; overflow-wrap: anywhere; }
