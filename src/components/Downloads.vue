@@ -474,10 +474,11 @@ watch(serviceContext, () => {
 
 <style scoped>
 .download-warning { color: rgb(var(--v-theme-warning)); overflow-wrap: anywhere; }
-.download-progress { padding-block: 8px; }
+.download-actions { flex-direction: column; align-items: flex-end; }
 .downloads-table :deep(table) { table-layout: fixed; }
 .downloads-table :deep(.v-data-table__td) { padding-block: 12px; vertical-align: top; }
 @media (max-width: 599px) {
+  .download-actions { flex-direction: row; justify-content: flex-start !important; align-items: center; }
   .downloads-table :deep(table), .downloads-table :deep(tbody) { display: block; width: 100%; }
   .downloads-table :deep(thead), .downloads-table :deep(thead tr) { display: block; width: 100%; }
   .downloads-table :deep(thead th) { display: block; width: 100%; height: auto; padding: 0 0 12px; }
