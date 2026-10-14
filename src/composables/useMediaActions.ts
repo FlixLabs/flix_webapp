@@ -64,7 +64,7 @@ export function useMediaActions(options: MediaActionsOptions) {
     }
   }
 
-  function addItem(type: MediaType, item: MediaActionItem) {
+  function addItem(type: MediaType, item: MediaActionItem, settings: { searchForMovie?: boolean; minimumAvailability?: 'released' } = {}) {
     const { root_folder_path } = getConfig(type);
     return request(
       type,
@@ -79,9 +79,10 @@ export function useMediaActions(options: MediaActionsOptions) {
         qualityProfileId: item.qualityProfileId,
         rootFolderPath: root_folder_path,
         monitored: true,
+        ...(type === 'movies' && settings.minimumAvailability ? { minimumAvailability: settings.minimumAvailability } : {}),
         addOptions:
           type === "movies"
-            ? { searchForMovie: true }
+            ? { searchForMovie: settings.searchForMovie ?? true }
             : { searchForMissingEpisodes: true },
       },
       "Added successfully",
