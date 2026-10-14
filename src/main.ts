@@ -22,6 +22,7 @@ const vuetify = createVuetify({
     VBtnGroup: { VBtn: { rounded: 0 } },
     VTextField: { color: 'primary' },
     VSelect: { color: 'primary' },
+    VProgressLinear: { color: 'primary' },
   },
   components: {
     ...components,

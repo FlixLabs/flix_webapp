@@ -417,7 +417,7 @@ watch(serviceContext, () => {
           :headers="headers"
           :items="filteredRecords"
           :items-per-page="itemsPerPage"
-          :loading="activeLoading"
+          :loading="activeLoading ? 'primary' : false"
           :mobile-breakpoint="600"
           hide-default-footer
           class="downloads-table mt-4"
