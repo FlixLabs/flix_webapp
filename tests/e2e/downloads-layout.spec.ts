@@ -41,6 +41,12 @@ test('download cards keep warnings and actions visible without horizontal scroll
     const row = page.locator('.downloads-table tbody .v-data-table__tr');
     const geometry = await row.evaluate(el => ({ display: getComputedStyle(el).display, radius: getComputedStyle(el).borderRadius }));
     if (width < 600) { expect(geometry.display).toBe('grid'); expect(geometry.radius).toBe('12px'); }
+    else {
+      const tops = await row.evaluate(el => ['.download-heading', '.v-chip', '.download-progress', '.download-actions'].map(selector => el.querySelector(selector)!.getBoundingClientRect().top));
+      expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(1);
+      const actionButtons = await row.locator('.download-actions .v-btn').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().right));
+      expect(Math.max(...actionButtons) - Math.min(...actionButtons)).toBeLessThanOrEqual(1);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     expect(await page.locator('.downloads-table .v-table__wrapper').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
     if (width === 393 || width === 1440) await page.screenshot({ path: `/tmp/flix-downloads-layout-${test.info().project.name}-${width}.png`, fullPage: true });
