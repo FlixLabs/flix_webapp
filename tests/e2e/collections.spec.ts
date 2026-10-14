@@ -51,8 +51,8 @@ test('loads collection metadata once and keeps its counter when switching views'
   await page.getByRole('button', { name: 'Collections (1)', exact: true }).click();
   const card = page.getByRole('button', { name: 'Open collection Example saga', exact: true });
   await expect(card).toBeEnabled();
-  await expect(card).toContainText('1 available');
-  await expect(card).toContainText('1 missing');
+  await expect(card).toContainText('1 Existing');
+  await expect(card).toContainText('1 Missing');
   await card.press('Enter');
   const sheet = page.getByRole('dialog', { name: 'Collection: Example saga', exact: true });
   await expect(sheet).toBeVisible();
@@ -60,7 +60,7 @@ test('loads collection metadata once and keeps its counter when switching views'
   await expect(members).toHaveCount(3);
   await expect(members.nth(0)).toContainText(movie.title);
   await expect(members.nth(1)).toContainText('Missing');
-  await expect(members.nth(2)).toContainText('Upcoming');
+  await expect(members.nth(2).locator('.media-card-tags .v-chip')).toHaveText(['Missing', 'Announced']);
   await sheet.getByRole('button', { name: 'View Missing sequel', exact: true }).click();
   const preview = page.getByRole('dialog', { name: 'Movie: Missing sequel', exact: true });
   await expect(preview).toBeVisible();
@@ -190,6 +190,6 @@ test('keeps a movie without a local file missing even when Radarr has it in the 
   await page.getByRole('button', { name: 'Open collection Example saga', exact: true }).click();
   const member = page.getByRole('dialog', { name: 'Collection: Example saga', exact: true }).getByRole('button', { name: `View ${movie.title}`, exact: true });
   await expect(member).toContainText('Missing');
-  await expect(member).toContainText('In library');
+  await expect(member.locator('.media-card-tags .v-chip')).toHaveText(['Missing', 'Released']);
   expect(mutations).toEqual([]);
 });

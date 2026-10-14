@@ -8,6 +8,24 @@ If you wish to enable the optional backend, you can retrieve it here: [flix_api]
 
 ## Features
 
+### Removing Movies From a Collection
+
+The collection sheet's **Remove movies** action offers a checklist of library
+members, including films without a local file. Absent films are never selected.
+Files are kept by default; **Also delete movie files from disk** must be explicitly
+enabled before confirmation. Collection membership and each movie's Radarr/TMDB
+identity are read again before any sequential deletion. No collection, list or
+monitoring settings are changed, and those settings may add films again later.
+An uncertain delete stops the remaining requests and is never automatically
+retried. Results remain visible; library and collection counters are refreshed.
+This works with or without Flix API. Collection member cards use the same inline
+component as movie cards: file availability (**Existing** in green, **Missing**
+in red, or **Unknown** in neutral) and movie status (**Released**, **Announced**,
+etc. in blue, or **Unknown** in neutral). Library membership is used to
+determine eligible actions, not displayed as an extra badge. A film can be in
+the library yet have a missing file. Labels, colors and rendering are centralized
+for Library, Outings and Collections, including collection totals.
+
 ### Download Media Sheets
 
 Downloads use a compact desktop table and mobile cards backed by the same

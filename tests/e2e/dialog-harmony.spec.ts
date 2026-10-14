@@ -207,7 +207,7 @@ test('collection and movie sheets share the poster summary and Close button', as
   const collection = page.getByRole('dialog', { name: 'Collection: A movie saga', exact: true });
   await expect(collection.locator('.media-summary')).toBeVisible();
   expect(await measurements(collection, 'Close collection')).toEqual(before);
-  await expect(collection.locator('.media-summary').getByText('Available', { exact: true })).toBeVisible();
+  await expect(collection.locator('.media-summary').getByText('Existing', { exact: true })).toBeVisible();
   expect(mutations).toEqual([]);
 });
 
