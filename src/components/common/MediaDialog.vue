@@ -23,11 +23,13 @@ const props = withDefaults(defineProps<{
   readOnly?: boolean;
   addDisabled?: boolean;
   showFileDetails?: boolean;
+  summaryVisible?: boolean;
   activator?: HTMLElement | null;
   navigationItems?: Record<string, unknown>[];
   navigationPending?: boolean;
 }>(), {
   showFileDetails: true,
+  summaryVisible: true,
 });
 
 const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'release-grabbed', 'navigate']);
@@ -70,7 +72,7 @@ const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episode
     </template>
     <template #default="{ showScrollHint }">
       <slot name="status" />
-      <MediaSummary :item="item" :announcement-name="announcementName"><slot name="metadata" /></MediaSummary>
+      <MediaSummary v-if="summaryVisible" :item="item" :announcement-name="announcementName"><slot name="metadata" /></MediaSummary>
       <MediaMonitoring v-if="showRemove && renderDetails" :key="`${mediaType}-${item.id}`" :item="item" :type="mediaType === 'Movie' ? 'movies' : 'series'" :disabled="readOnly || actionPending || settingsPending" @busy="monitoringPending = $event" />
       <div v-if="hasSupplementalDetails" class="media-supplemental-details" :class="{ 'media-details-concealed': showFileDetails && showScrollHint }">
         <slot name="details" />

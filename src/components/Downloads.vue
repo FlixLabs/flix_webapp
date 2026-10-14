@@ -14,7 +14,11 @@ import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useDownloadActions } from '@/composables/useDownloadActions';
-import { downloadDetails } from '@/composables/useDownloadDetails';
+import { downloadDetails, showRawDownloadStatus } from '@/composables/useDownloadDetails';
+import { downloadMediaId, useDownloadMediaSheet } from '@/composables/useDownloadMediaSheet';
+import MediaDialog from '@/components/common/MediaDialog.vue';
+import Loading from '@/components/common/Loading.vue';
+import SeriesSizeField from '@/components/common/SeriesSizeField.vue';
 import DownloadDetails from '@/components/common/DownloadDetails.vue';
 import ManualImportDialog from '@/components/common/ManualImportDialog.vue';
 import { canManualImport } from '@/composables/useManualImport';
@@ -32,6 +36,16 @@ const { getConfig, serviceContext } = useMediaService({ useAPI, selectedInstance
 const importDialog = ref<InstanceType<typeof ManualImportDialog> | null>(null);
 const importType = ref<'movies' | 'series'>('movies');
 const importOptions = { useAPI, selectedInstanceData };
+const mediaSheet = useDownloadMediaSheet(importOptions);
+const { dialog: mediaDialog, type: detailType, item: detailItem, activator: detailActivator } = mediaSheet;
+const detailSeriesSize = computed(() => {
+  const stats = detailItem.value?.statistics;
+  const value = stats && typeof stats === 'object' && 'sizeOnDisk' in stats ? stats.sizeOnDisk : undefined;
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 0;
+});
+function openDownloadMedia(record: { mediaId?: unknown; title?: string }, event: Event) {
+  if (event.currentTarget instanceof HTMLElement) mediaSheet.open(mediaType.value, record, event.currentTarget);
+}
 function refreshImport() {
   getDownload(importType.value);
   getHistory(importType.value);
@@ -174,6 +188,7 @@ function getDownload(type: 'movies' | 'series') {
 
         items.push({
           id: item.id,
+          mediaId: downloadMediaId(type, item),
           downloadId: item.downloadId,
           outputPath: item.outputPath,
           trackedDownloadState: item.trackedDownloadState,
@@ -235,6 +250,7 @@ function getHistory(type: 'movies' | 'series') {
 
         items.push({
           id: item.id,
+          mediaId: downloadMediaId(type, item),
           title: item.sourceTitle,
           date: item.date,
           client: item.downloadClient,
@@ -330,6 +346,15 @@ watch(serviceContext, () => {
 
 <template>
   <Alert :alert="alert" @update:alert="alert = $event" />
+  <MediaDialog v-if="detailItem" v-model="mediaDialog" :item="detailItem" :media-type="detailType === 'movies' ? 'Movie' : 'Serie'" :announcement-name="detailType === 'movies' ? 'Release' : 'Premiere'" :activator="detailActivator" :summary-visible="mediaSheet.state.hasData" :show-search="false" :show-add="false" :show-remove="false" read-only>
+    <template #status>
+      <Loading :is-loading="mediaSheet.state.loading" sentence="Loading media..." />
+      <ReadFeedback :state="mediaSheet.state" label="Download media" @retry="mediaSheet.retry" />
+    </template>
+    <template v-if="detailType === 'series' && mediaSheet.state.hasData" #details>
+      <SeriesSizeField :size="detailSeriesSize" :is-loading="false" :is-open="mediaDialog" />
+    </template>
+  </MediaDialog>
   <ManualImportDialog ref="importDialog" :options="importOptions" @requested="refreshImport" @finished="refreshImport" />
   <DeleteConfirmationDialog
     v-model="deleteConfirmationDialog"
@@ -400,14 +425,15 @@ watch(serviceContext, () => {
           :no-data-text="activeRead.error ? 'Data unavailable. Retry to load this view.' : search || (view === 'queue' && queueFilter !== 'all') ? 'No matching items found' : view === 'queue' ? 'No download information found' : 'No history information found'"
         >
           <template #item.title="{ item }">
-            <div class="download-title">{{ item.title }}</div>
+            <v-btn v-if="item.mediaId" variant="text" color="primary" class="download-title download-media-link px-0" :aria-label="'Open media for ' + item.title" @click="openDownloadMedia(item, $event)">{{ item.title }}</v-btn>
+            <div v-else class="download-title">{{ item.title }}</div>
             <div class="text-caption text-medium-emphasis">{{ formatDate(item.date) }}</div>
             <div v-if="item.client" class="text-caption text-medium-emphasis">{{ item.client }}</div>
           </template>
           <template #item.status="{ item }">
             <template v-if="view === 'queue'">
               <v-chip size="small" :color="item.diagnosis?.color">{{ item.diagnosis?.label }}</v-chip>
-              <div class="text-caption text-medium-emphasis mt-1 text-capitalize">{{ item.status || 'Status unavailable' }}</div>
+              <div v-if="showRawDownloadStatus(item.status, item.diagnosis?.label)" class="text-caption text-medium-emphasis mt-1 text-capitalize">{{ item.status }}</div>
               <p v-if="item.diagnosis?.hint" class="text-caption mt-2">{{ item.diagnosis.hint }}</p>
             </template>
             <span v-else class="text-capitalize">{{ item.status || 'Unavailable' }}</span>
@@ -447,6 +473,8 @@ watch(serviceContext, () => {
 </template>
 
 <style scoped>
+.download-media-link { height: auto; min-height: 32px; max-width: 100%; white-space: normal; }
+.download-media-link :deep(.v-btn__content) { min-width: 0; text-align: left; overflow-wrap: anywhere; }
 .queue-filter {
   flex: 0 1 220px;
   min-width: 180px;
