@@ -12,12 +12,12 @@ function setup(useAPI = true) {
 const items = [1, 2, 3].map(id => ({ id, title: `Movie ${id}`, status: 'released', monitored: true }));
 
 it('deduplicates IDs, skips ineligible searches and reports partial failures', async () => {
-  const state = setup(); const fetchMock = vi.fn().mockResolvedValueOnce(new Response(null, { status: 500 })).mockResolvedValueOnce(Response.json({}));
+  const state = setup(); const fetchMock = vi.fn().mockResolvedValueOnce(new Response(null, { status: 500 })).mockResolvedValueOnce(Response.json({})).mockResolvedValueOnce(Response.json({}));
   vi.stubGlobal('fetch', fetchMock);
-  expect(await state.run('movies', [items[0]!, items[0]!, { ...items[1]!, status: 'announced' }, items[2]!, { ...items[0]!, id: 0 }], 'search'))
-    .toEqual({ succeeded: [3], failed: [1], skipped: [2], stopped: false, stale: false });
-  expect(fetchMock).toHaveBeenCalledTimes(2);
-  expect(JSON.parse(fetchMock.mock.calls[1]![1].body)).toEqual({ name: 'MoviesSearch', movieIds: [3] });
+  expect(await state.run('movies', [items[0]!, items[0]!, { ...items[1]!, status: 'announced' }, items[2]!, { ...items[0]!, id: 0 }, { ...items[0]!, id: 4, already_in_library: false }], 'search'))
+    .toEqual({ succeeded: [2, 3], failed: [1], skipped: [4], stopped: false, stale: false });
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+  expect(JSON.parse(fetchMock.mock.calls[1]![1].body)).toEqual({ name: 'MoviesSearch', movieIds: [2] });
 });
 
 it('processes sequentially and stops after the current item without accepting another run', async () => {

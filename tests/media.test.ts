@@ -4,10 +4,27 @@ import {
   useMediaService,
   type MediaInstance,
 } from "@/composables/useMediaService";
-import { useMediaActions, canSearchItem } from "@/composables/useMediaActions";
+import { useMediaActions, canSearchItem, seriesSearchBlockReason } from "@/composables/useMediaActions";
 import { useEpisodeSummary } from "@/composables/useEpisodeSummary";
 import { useQualityProfiles } from "@/composables/useQualityProfiles";
 import { useDeleteConfirmation } from "@/composables/useDeleteConfirmation";
+
+it.each(['movies', 'series'] as const)('allows both search actions for library %s regardless of status', type => {
+  const upcoming = { id: 168, title: 'Upcoming series', status: 'upcoming' };
+  for (const status of ['upcoming', 'announced', 'inCinemas', 'released', 'unknown', undefined]) {
+    expect(canSearchItem(type, { ...upcoming, status })).toBe(true);
+  }
+  for (const item of [null, { ...upcoming, id: 0 }, { ...upcoming, id: Number.MAX_SAFE_INTEGER + 1 }, { ...upcoming, already_in_library: false }]) {
+    expect(canSearchItem(type, item)).toBe(false);
+  }
+});
+
+it('blocks both series search actions until a nonempty episode list is confirmed', () => {
+  expect(seriesSearchBlockReason(true, true, 8)).toMatch(/Loading/);
+  expect(seriesSearchBlockReason(false, false, 8)).toMatch(/Load/);
+  expect(seriesSearchBlockReason(false, true, 0)).toMatch(/No episodes/);
+  expect(seriesSearchBlockReason(false, true, 8)).toBeUndefined();
+});
 
 function createOptions() {
   return {
@@ -57,7 +74,7 @@ describe("media actions", () => {
     expect(canSearchItem(type, { id: 7, title: "Not in library", status: "released", already_in_library: false })).toBe(false);
     expect(canSearchItem(type, null)).toBe(false);
     expect(canSearchItem(type, { title: "No service ID", status: "released" })).toBe(false);
-    expect(canSearchItem(type, { id: 7, title: "Upcoming", status: "upcoming" })).toBe(false);
+    expect(canSearchItem(type, { id: 7, title: "Upcoming", status: "upcoming" })).toBe(true);
   });
 
   it("does not send search commands without a valid service ID", async () => {
