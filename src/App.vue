@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { apiFetch, signOut } from '@/composables/apiSession';
+
 import { readApiJson, requireObject, requireList } from '@/composables/apiResponse';
 import { sharedRead } from '@/composables/sharedRead';
 import { useReadRequest } from '@/composables/useReadRequest';
@@ -7,7 +9,7 @@ import { useConnectivity } from '@/composables/useConnectivity';
 
 
 import { RouterView, useRouter } from 'vue-router'
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
@@ -57,9 +59,15 @@ const currentPage = computed(() => initialDrawerOptions.find(
   option => router.currentRoute.value.path === '/' + option.value
 ));
 
-const drawerSelectOption = (option: any) => {
+function sessionExpired() {
+  if (router.currentRoute.value.path !== '/login') void router.replace({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } });
+}
+window.addEventListener('flix-session-expired', sessionExpired);
+onUnmounted(() => window.removeEventListener('flix-session-expired', sessionExpired));
+
+const drawerSelectOption = async (option: any) => {
   if (option == 'signout') {
-    sessionStorage.removeItem('flix_webapp_is_authenticated');
+    try { await signOut(); } catch (error) { showErrorAlert(error); return; }
     router.push('/login');
     resetDrawer();
   } else {
@@ -73,7 +81,7 @@ function getData() {
   isLoadingInstances.value = true;
   let base_url = import.meta.env.VITE_FLIX_API_URL;
 
-  return fetch(base_url + '/instances', { signal: read.signal, cache: 'no-store' })
+  return apiFetch(base_url + '/instances', { signal: read.signal, cache: 'no-store' })
     .then(async (response) => {
       if (!response.ok) throw new Error('Unable to load instances');
       const json_data = await readApiJson(response);
@@ -94,17 +102,22 @@ function getAuthentication() {
     return sharedRead(import.meta.env.VITE_FLIX_API_URL + '/auth')
       .then(json => {
         if (!read.isCurrent()) return;
-        const data = requireObject<{ username?: string; password?: string }>(json, 'authentication');
-        store.authenticationEnabled = !!(data.username && data.password);
+        const data = requireObject<{ enabled?: boolean }>(json, 'authentication');
+        store.authenticationEnabled = data.enabled === true;
         read.success();
       })
       .catch(read.fail).finally(read.finish);
 }
-watch(() => router.currentRoute.value.path, () => {
+watch(() => router.currentRoute.value.path, (path, previous) => {
+  if (useAPI.value && previous === '/login' && path !== '/login') {
+    void getData(); void getAuthentication();
+    return;
+  }
   if (useAPI.value && router.currentRoute.value.path !== '/login' && authenticationRead.state.error && !authenticationRead.state.loading) getAuthentication();
 });
-onMounted(() => {
-  if (useAPI.value) {
+onMounted(async () => {
+  await router.isReady();
+  if (useAPI.value && router.currentRoute.value.path !== '/login') {
     getData();
     getAuthentication();
   }
