@@ -12,7 +12,7 @@ function date(value?: string) {
 
 <template>
   <div class="download-heading">
-    <v-btn v-if="record.mediaId" variant="text" color="primary" class="download-title download-media-link px-0" :aria-label="'Open media for ' + record.title" @click="$emit('open', $event)">{{ record.mediaTitle || record.title }}</v-btn>
+    <v-btn v-if="record.mediaId" variant="text" class="download-title download-media-link px-0" :aria-label="'Open media for ' + record.title" @click="$emit('open', $event)">{{ record.mediaTitle || record.title }}</v-btn>
     <div v-else class="download-title font-weight-medium">{{ record.mediaTitle || record.title }}</div>
     <p v-if="record.mediaTitle && record.mediaTitle !== record.title" class="download-release text-caption text-medium-emphasis" :title="record.title">{{ record.title }}</p>
     <details class="download-metadata text-caption text-medium-emphasis mt-2">

@@ -41,7 +41,6 @@ const emit = defineEmits(['add', 'remove', 'details']);
         </v-list-item-title>
         <v-btn
           variant="text"
-          color="primary"
           size="small"
           prepend-icon="mdi-information-outline"
           :aria-label="`Details for ${item.title}`"

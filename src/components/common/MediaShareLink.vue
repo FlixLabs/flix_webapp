@@ -32,7 +32,7 @@ async function copy() {
       </v-card-text>
       <v-card-actions>
         <v-btn color="primary" @click="copy">Copy link</v-btn>
-        <v-spacer /><v-btn @click="dialog = false">Close</v-btn>
+        <v-spacer /><v-btn color="on-surface" @click="dialog = false">Close</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

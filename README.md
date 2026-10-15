@@ -9,6 +9,14 @@ If you wish to enable the optional backend, you can retrieve it here: [flix_api]
 
 ## Features
 
+### Button Colors
+
+Buttons use the same semantic colors in light and dark themes: the custom primary
+color for constructive actions (Add, Save, Search, Download), error for removal
+and its confirmation, and warning for potentially destructive import replacement.
+Close, Cancel, refresh actions and navigation tools are neutral. Navigation
+selectors use the primary color only for the active choice.
+
 ### Download Clients
 
 With Flix API 1.2.0+, configured instances expose **Download clients** in Downloads.

@@ -47,7 +47,7 @@ function refresh() { void attention.refresh(); void agent.refresh(); }
           <v-list v-if="blocked.length" lines="two">
             <v-list-item v-for="record in blocked.slice(0, 5)" :key="`${record.type}-${record.item.id}`" :value="`${record.type}-${record.item.id}`" :title="record.item.title" :subtitle="record.item.errorMessage || record.item.trackedDownloadStatus || record.item.status" to="/downloads" append-icon="mdi-chevron-right" />
           </v-list>
-          <v-btn class="mt-3" variant="tonal" color="primary" to="/downloads">View downloads</v-btn>
+          <v-btn class="mt-3" variant="tonal" to="/downloads">View downloads</v-btn>
         </v-col>
         <v-col cols="12" md="4">
           <h3>Missing monitored episodes</h3>
@@ -55,7 +55,7 @@ function refresh() { void attention.refresh(); void agent.refresh(); }
           <v-list v-if="episodes.length" lines="two">
             <v-list-item v-for="episode in episodes" :key="episode.id" :value="episode.id" :title="episode.series?.title || episode.title" :subtitle="`S${episode.seasonNumber} E${episode.episodeNumber} - ${episode.title}`" :to="{ path: '/library', query: { media: 'series', id: episode.seriesId } }" append-icon="mdi-chevron-right" />
           </v-list>
-          <v-btn class="mt-3" variant="tonal" color="primary" :to="{ path: '/library', query: { media: 'series' } }">View series</v-btn>
+          <v-btn class="mt-3" variant="tonal" :to="{ path: '/library', query: { media: 'series' } }">View series</v-btn>
         </v-col>
         <v-col cols="12" md="4">
           <h3>Storage needing attention</h3>
@@ -63,7 +63,7 @@ function refresh() { void attention.refresh(); void agent.refresh(); }
             <v-list-item v-for="location in critical" :key="`${location.kind}:${location.path}`" :value="`${location.kind}:${location.path}`" :title="`${location.kind}: ${location.path || 'Not reported'}`" :subtitle="location.diagnostic.message" to="/system" append-icon="mdi-chevron-right" />
           </v-list>
           <p v-else class="text-caption mt-1">No critical location among available measurements.</p>
-          <v-btn class="mt-3" variant="tonal" color="primary" to="/system">View storage</v-btn>
+          <v-btn class="mt-3" variant="tonal" to="/system">View storage</v-btn>
         </v-col>
       </v-row>
     </v-card-text>
