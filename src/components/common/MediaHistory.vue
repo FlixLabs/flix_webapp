@@ -23,6 +23,7 @@ watch(expanded, value => {
 function date(value: string) {
   return value && Number.isFinite(Date.parse(value)) ? new Date(value).toLocaleString() : 'Date not provided';
 }
+defineExpose({ refresh: () => { if (expanded.value && !loading.value) void load(props.type, props.mediaId, page.value, true); } });
 </script>
 
 <template>
@@ -34,10 +35,10 @@ function date(value: string) {
           <span class="text-body-2">{{ error ? 'History unavailable' : loading ? 'Loading history...' : `${total} events` }}</span>
           <v-btn variant="text" prepend-icon="mdi-refresh" :disabled="loading" @click="load(type, mediaId, page)">{{ error ? 'Retry history' : 'Refresh history' }}</v-btn>
         </div>
-        <v-progress-linear v-if="loading" indeterminate color="primary" aria-label="Loading media history" />
-        <v-alert v-else-if="error" type="error" variant="tonal">{{ error }}</v-alert>
-        <v-alert v-else-if="!records.length" type="info" variant="tonal">No history reported for this media.</v-alert>
-        <v-list v-else class="pa-0" aria-label="History events">
+        <div class="history-progress"><v-progress-linear :active="loading" indeterminate color="primary" aria-label="Loading media history" /></div>
+        <v-alert v-if="error" type="error" variant="tonal">{{ error }}</v-alert>
+        <v-alert v-if="!loading && !error && !records.length" type="info" variant="tonal">No history reported for this media.</v-alert>
+        <v-list v-if="records.length" class="pa-0" aria-label="History events">
           <v-list-item v-for="(event, index) in records" :key="`${event.id}-${index}`" class="px-0 py-3">
             <v-chip size="small" :color="event.failed ? 'error' : 'primary'" variant="tonal">{{ event.label }}</v-chip>
             <div class="text-caption text-medium-emphasis mt-1">{{ date(event.date) }}</div>
@@ -58,3 +59,7 @@ function date(value: string) {
     </v-expansion-panel>
   </v-expansion-panels>
 </template>
+
+<style scoped>
+.history-progress { height: 4px; }
+</style>

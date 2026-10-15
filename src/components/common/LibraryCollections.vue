@@ -5,6 +5,8 @@ import { removableCollectionMovies } from '@/composables/useCollectionRemoval';
 import { libraryCollections, type LibraryMovie, type MovieCollection } from '@/composables/collections';
 import type { ReadState } from '@/composables/useReadRequest';
 import { useDialogActivator } from '@/composables/useDialogActivator';
+import { useCollectionSheetRefresh, type CollectionSheetUpdate } from '@/composables/useCollectionSheetRefresh';
+import { useFlixStore } from '@/stores/flixStore';
 import { useDisplay } from 'vuetify';
 import DialogSheet from './DialogSheet.vue';
 import MediaSummary from './MediaSummary.vue';
@@ -17,7 +19,7 @@ import ReadFeedback from './ReadFeedback.vue';
 import Loading from './Loading.vue';
 
 const props = defineProps<{ search: string | null; movies: LibraryMovie[]; source: MovieCollection[]; collectionState: ReadState; context: string; libraryState: ReadState; initialCollection?: { tmdbId: number } }>();
-const emit = defineEmits<{ 'open-movie': [id: number]; 'retry-library': []; 'retry-collections': [] }>();
+const emit = defineEmits<{ 'open-movie': [id: number]; 'retry-library': []; 'retry-collections': []; refreshed: [update: CollectionSheetUpdate] }>();
 const search = computed(() => props.search ?? '');
 const page = defineModel<number>('page', { required: true });
 const selectedId = ref<number | null>(null);
@@ -49,7 +51,16 @@ const downloadable = computed(() => downloadableCollectionMovies(members.value))
 const removable = computed(() => removableCollectionMovies(members.value));
 const memberPages = computed(() => Math.ceil(members.value.length / memberPageSize.value));
 const displayedMembers = computed(() => members.value.slice((memberPage.value - 1) * memberPageSize.value, memberPage.value * memberPageSize.value));
-const disabled = computed(() => props.collectionState.loading || !!props.collectionState.error || !props.collectionState.hasData || props.libraryState.loading || !!props.libraryState.error || !props.libraryState.hasData);
+const sourceUnavailable = computed(() => props.collectionState.loading || !!props.collectionState.error || !props.collectionState.hasData || props.libraryState.loading || !!props.libraryState.error || !props.libraryState.hasData);
+const store = useFlixStore();
+const updates = useCollectionSheetRefresh({
+  useAPI: ref(import.meta.env.VITE_FLIX_API_USE === 'true'), selectedInstanceData: computed(() => store.selectedInstanceData),
+  open: () => dialog.value, collection: () => selected.value,
+  blocked: () => sourceUnavailable.value || downloadDialog.value || removalDialog.value || missingDialog.value
+    || document.querySelectorAll('.v-dialog.v-overlay--active').length > 1,
+  refreshed: update => emit('refreshed', update),
+});
+const disabled = computed(() => sourceUnavailable.value || !!updates.state.error);
 const collectionFacts = computed(() => selected.value ? [
   { label: 'Movies', value: members.value.length },
   { label: availabilityBadge(true).label, value: selected.value.available },
@@ -101,6 +112,7 @@ watch(selected, value => { if (!value && props.collectionState.hasData) { dialog
   <v-alert v-if="!filtered.length && !disabled" type="info" class="mt-4">{{ search.trim() ? 'No collections match your search' : 'No automatic movie collections in this library' }}</v-alert>
   <v-alert v-if="initialPending && !disabled && !collections.some(collection => collection.tmdbId === initialPending)" type="info" class="mt-4">This collection is not available in the selected instance.</v-alert>
   <DialogSheet v-if="selected" v-model="dialog" title="Collection" :label="`Collection: ${selected.title}`" :context="`${selectedId}:${memberPage}:${memberPageSize}`" :activator="activator" close-label="Close collection">
+    <ReadFeedback :state="updates.state" label="Collection updates" @retry="updates.refresh" />
     <ReadFeedback :state="collectionState" label="Collections" @retry="emit('retry-collections')" />
     <ReadFeedback :state="libraryState" label="Movie library" @retry="emit('retry-library')" />
     <MediaSummary :item="selected" :facts="collectionFacts">

@@ -10,6 +10,9 @@ import ReleaseSelectionDialog from './ReleaseSelectionDialog.vue';
 import { computed, ref, watch, useSlots } from 'vue';
 import { mediaNeighbors } from '@/composables/mediaNeighbors';
 import { useDialogActivator } from '@/composables/useDialogActivator';
+import { useFlixStore } from '@/stores/flixStore';
+import { useMediaSheetRefresh } from '@/composables/useMediaSheetRefresh';
+import ReadFeedback from './ReadFeedback.vue';
 
 const props = withDefaults(defineProps<{
   modelValue: boolean;
@@ -28,17 +31,29 @@ const props = withDefaults(defineProps<{
   activator?: HTMLElement | null;
   navigationItems?: Record<string, unknown>[];
   navigationPending?: boolean;
+  libraryItem?: boolean;
 }>(), {
   showFileDetails: true,
   summaryVisible: true,
 });
 
-const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'release-grabbed', 'navigate']);
+const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'release-grabbed', 'navigate', 'refreshed']);
 const releaseDialog = ref(false);
 const dialogActivator = useDialogActivator(() => props.modelValue);
 const monitoringPending = ref(false);
 const settingsPending = ref(false);
-const mediaBusy = computed(() => props.readOnly || monitoringPending.value || settingsPending.value);
+const settingsEditing = ref(false);
+const history = ref<InstanceType<typeof MediaHistory> | null>(null);
+const store = useFlixStore();
+const updates = useMediaSheetRefresh({
+  useAPI: ref(import.meta.env.VITE_FLIX_API_USE === 'true'), selectedInstanceData: computed(() => store.selectedInstanceData),
+  open: () => props.modelValue, type: () => props.mediaType === 'Movie' ? 'movies' : 'series', item: () => props.item,
+  native: () => !!(props.showRemove || props.libraryItem),
+  blocked: () => !!((props.readOnly && !props.libraryItem) || props.actionPending || monitoringPending.value || settingsPending.value || settingsEditing.value || releaseDialog.value)
+    || document.querySelectorAll('.v-dialog.v-overlay--active').length > 1,
+  refreshed: () => { emit('refreshed'); history.value?.refresh(); },
+});
+const mediaBusy = computed(() => props.readOnly || monitoringPending.value || settingsPending.value || !!updates.state.error);
 const neighbors = computed(() => mediaNeighbors(props.navigationItems ?? [], props.item));
 const navigationDisabled = computed(() => props.actionPending || props.navigationPending || mediaBusy.value || releaseDialog.value);
 function navigate(direction: 'previous' | 'next') {
@@ -73,15 +88,16 @@ const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episode
     </template>
     <template #default="{ showScrollHint }">
       <slot name="status" />
+      <ReadFeedback :state="updates.state" label="Media updates" @retry="updates.refresh" />
       <MediaSummary v-if="summaryVisible" :item="item" :announcement-name="announcementName"><slot name="metadata" /></MediaSummary>
       <p v-if="showSearch && searchDisabledReason" role="status" class="text-caption text-medium-emphasis my-3">{{ searchDisabledReason }}</p>
-      <MediaMonitoring v-if="showRemove && renderDetails" :key="`${mediaType}-${item.id}`" :item="item" :type="mediaType === 'Movie' ? 'movies' : 'series'" :disabled="readOnly || actionPending || settingsPending" @busy="monitoringPending = $event" />
+      <MediaMonitoring v-if="showRemove && renderDetails" :key="`${mediaType}-${item.id}`" :item="item" :type="mediaType === 'Movie' ? 'movies' : 'series'" :disabled="mediaBusy || actionPending || settingsPending" @busy="monitoringPending = $event" />
       <div v-if="hasSupplementalDetails" class="media-supplemental-details" :class="{ 'media-details-concealed': showFileDetails && showScrollHint }">
         <slot name="details" />
         <MediaFileDetails v-if="showFileDetails && item.relativePath" :item="item" />
         <slot name="episodes" />
-        <MediaSettings v-if="showRemove && renderDetails && Number.isInteger(item.id) && item.id > 0" :key="`${mediaType}-settings-${item.id}`" :item="item" :type="mediaType === 'Movie' ? 'movies' : 'series'" :disabled="readOnly || actionPending || monitoringPending || releaseDialog" @busy="settingsPending = $event" />
-        <MediaHistory v-if="showRemove && renderDetails && Number.isInteger(item.id) && item.id > 0" :key="`${mediaType}-history-${item.id}`" :media-id="item.id" :type="mediaType === 'Movie' ? 'movies' : 'series'" />
+        <MediaSettings v-if="showRemove && renderDetails && Number.isInteger(item.id) && item.id > 0" :key="`${mediaType}-settings-${item.id}`" :item="item" :type="mediaType === 'Movie' ? 'movies' : 'series'" :disabled="readOnly || !!updates.state.error || actionPending || monitoringPending || releaseDialog" @busy="settingsPending = $event" @editing="settingsEditing = $event" />
+        <MediaHistory v-if="showRemove && renderDetails && Number.isInteger(item.id) && item.id > 0" ref="history" :key="`${mediaType}-history-${item.id}`" :media-id="item.id" :type="mediaType === 'Movie' ? 'movies' : 'series'" />
       </div>
     </template>
     <template #actions>
