@@ -56,13 +56,13 @@ function confirm() {
         <v-btn
           ref="cancelButton"
           @click="cancel"
-          color="secondary"
+          color="on-surface"
           >
           Cancel
         </v-btn>
         <v-btn
           @click="confirm"
-          color="primary"
+          color="error"
           >
           Confirm
         </v-btn>

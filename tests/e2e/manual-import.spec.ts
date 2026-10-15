@@ -40,6 +40,8 @@ test('manual import reviews rejected files and requires explicit confirmation be
   await page.getByRole('checkbox', { name: `Select ${filename}`, exact: true }).check();
   await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Confirm Import', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Confirm Import', exact: true })).toHaveClass(/text-warning/);
+  await expect(page.getByRole('button', { name: 'Cancel', exact: true })).toHaveClass(/text-on-surface/);
   expect(mutations.map(item => item.path)).toEqual(['/api/v3/manualimport']);
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   expect(mutations.some(item => item.path === '/api/v3/command')).toBe(false);

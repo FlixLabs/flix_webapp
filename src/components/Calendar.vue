@@ -129,7 +129,7 @@ watch([rangeKey, () => store.selectedInstance, () => getConfig('movies').base_ur
         <v-divider />
         <CalendarEventList :events="day.events.slice(0, 4)" />
         <v-card-actions v-if="day.events.length > 4">
-          <v-btn variant="text" color="primary" @click="selectedDay = day.date; dayEventsDialog = true">Show all {{ day.events.length }} events</v-btn>
+          <v-btn variant="text" @click="selectedDay = day.date; dayEventsDialog = true">Show all {{ day.events.length }} events</v-btn>
         </v-card-actions>
       </v-card>
       <v-pagination v-if="agendaPages > 1" v-model="agendaPage" :length="agendaPages" :total-visible="3" aria-label="Agenda pages" />
@@ -142,7 +142,7 @@ watch([rangeKey, () => store.selectedInstance, () => getConfig('movies').base_ur
       <v-card-text>
         <CalendarEventList :events="selectedDayEvents" />
       </v-card-text>
-      <v-card-actions><v-spacer /><v-btn color="primary" @click="dayEventsDialog = false">Close</v-btn></v-card-actions>
+      <v-card-actions><v-spacer /><v-btn color="on-surface" @click="dayEventsDialog = false">Close</v-btn></v-card-actions>
     </v-card>
   </v-dialog>
 </template>

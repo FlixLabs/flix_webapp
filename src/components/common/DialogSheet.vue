@@ -24,7 +24,7 @@ function entered() { refresh(); preserveNestedDialogFocus(element.value); }
       <v-card-actions class="dialog-actions flex-wrap">
         <div v-if="$slots.navigation" class="dialog-navigation"><slot name="navigation" /></div>
         <slot name="actions" />
-        <v-btn color="secondary" :aria-label="closeLabel" :disabled="closeDisabled" @click="emit('update:modelValue', false)">Close</v-btn>
+        <v-btn color="on-surface" :aria-label="closeLabel" :disabled="closeDisabled" @click="emit('update:modelValue', false)">Close</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

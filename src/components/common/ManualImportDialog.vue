@@ -83,8 +83,8 @@ defineExpose({ open: actions.open, close: actions.close });
       </v-card-text>
       <v-card-actions class="flex-wrap">
         <v-spacer />
-        <v-btn :disabled="busy" @click="actions.close">Close</v-btn>
-        <v-btn v-if="commandId !== null" color="primary" :loading="busy" @click="check">Check status</v-btn>
+        <v-btn color="on-surface" :disabled="busy" @click="actions.close">Close</v-btn>
+        <v-btn v-if="commandId !== null" color="on-surface" :loading="busy" @click="check">Check status</v-btn>
         <v-btn v-else color="primary" :loading="busy" :disabled="loading || !canReview" @click="actions.review">Review Import ({{ selected.length }})</v-btn>
       </v-card-actions>
     </v-card>
@@ -102,7 +102,7 @@ defineExpose({ open: actions.open, close: actions.close });
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn ref="cancelButton" :disabled="busy" @click="confirming = false">Cancel</v-btn>
+        <v-btn color="on-surface" ref="cancelButton" :disabled="busy" @click="confirming = false">Cancel</v-btn>
         <v-btn color="warning" :loading="busy" :disabled="!canReview" @click="confirm">Confirm Import</v-btn>
       </v-card-actions>
     </v-card>

@@ -63,7 +63,7 @@ async function confirm() {
       </v-list>
       <v-pagination v-if="pageCount > 1" v-model="page" :length="pageCount" :total-visible="3" density="compact" aria-label="Completed torrent pages" />
     </template>
-    <template #actions><v-btn color="primary" :loading="loading" :disabled="token.length < 32 || removing || confirming" @click="actions.load">{{ clients.length || uncertain ? 'Refresh clients' : 'Connect' }}</v-btn></template>
+    <template #actions><v-btn :color="clients.length || uncertain ? 'on-surface' : 'primary'" :loading="loading" :disabled="token.length < 32 || removing || confirming" @click="actions.load">{{ clients.length || uncertain ? 'Refresh clients' : 'Connect' }}</v-btn></template>
   </DialogSheet>
   <DialogSheet :model-value="confirming" :activator="activator" title="Remove torrent?" label="Remove torrent?" :context="instance" close-label="Cancel" :close-disabled="removing" @update:model-value="confirming = $event">
     <p class="text-break mb-3">{{ target?.item.name }}</p>
