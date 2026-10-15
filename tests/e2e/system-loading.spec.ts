@@ -6,6 +6,41 @@ function gate() {
   return { pending, release };
 }
 
+test('fast agent does not reveal storage before the later Radarr/Sonarr disk block', async ({ page, mutations }) => {
+  await page.route('**/instances', route => route.fulfill({ json: [{ name: 'Storage test', has_storage_agent: true,
+    radarr: { base_url: 'http://radarr.test', api_key: 'test-only', root_folder_path: '/movies' },
+    sonarr: { base_url: 'http://sonarr.test', api_key: 'test-only', root_folder_path: '/tv' } }] }));
+  let agentFinished = false;
+  await page.route('**/storage/**', async route => {
+    await route.fulfill({ json: { collectedAt: '2026-10-15T10:00:00Z', locations: ['movies', 'series', 'downloads'].map(id => ({
+      id, path: `/storage/${id}`, available: true, totalBytes: 100e9, availableBytes: 50e9, usagePercent: 50,
+    })) } });
+    agentFinished = true;
+  });
+  const movies = gate(); const series = gate();
+  await page.route('**/api/v3/diskspace?*', async route => {
+    await (new URL(route.request().url()).hostname === 'radarr.test' ? movies.pending : series.pending);
+    await route.fulfill({ json: [{ path: '/', freeSpace: 5e9, totalSpace: 100e9 }] });
+  });
+  try {
+    await page.goto('/system');
+    await expect.poll(() => agentFinished).toBe(true);
+    await expect(page.getByRole('status', { name: 'Loading system information', exact: true })).toBeVisible();
+    await expect(page.getByTestId('system-content')).toHaveCount(0);
+    movies.release();
+    await expect(page.getByText('Movie Storage', { exact: true })).toBeVisible();
+    await expect(page.getByText('Disks visible to Radarr', { exact: true })).toBeVisible();
+    // Sonarr's slower response must not delay Movies, but Series must wait for it.
+    await page.getByRole('button', { name: 'Series', exact: true }).click();
+    await expect(page.getByRole('status', { name: 'Loading system information', exact: true })).toBeVisible();
+    await expect(page.getByText('Series Storage', { exact: true })).toHaveCount(0);
+    series.release();
+    await expect(page.getByText('Series Storage', { exact: true })).toBeVisible();
+    await expect(page.getByText('Disks visible to Sonarr', { exact: true })).toBeVisible();
+    expect(mutations).toEqual([]);
+  } finally { movies.release(); series.release(); }
+});
+
 test('native storage is revealed once root folders and disks have both settled', async ({ page, mutations }) => {
   const roots = gate();
   let disksRead = 0;
