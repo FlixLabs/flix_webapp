@@ -113,7 +113,7 @@ async function download() {
           </template>
         </v-data-table>
       </v-card-text>
-      <v-card-actions><v-spacer /><v-btn :disabled="isGrabbing" @click="model = false">Close</v-btn></v-card-actions>
+      <v-card-actions><v-spacer /><v-btn color="on-surface" :disabled="isGrabbing" @click="model = false">Close</v-btn></v-card-actions>
     </v-card>
   </v-dialog>
   <v-dialog v-model="confirming" :activator="confirmationActivator" :open-on-click="false" aria-label="Download this release?" max-width="600" :persistent="isGrabbing" @after-enter="cancelButton?.$el.focus({ preventScroll: true })">
@@ -129,7 +129,7 @@ async function download() {
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn ref="cancelButton" :disabled="isGrabbing" @click="selectedRelease = null">Cancel</v-btn>
+        <v-btn color="on-surface" ref="cancelButton" :disabled="isGrabbing" @click="selectedRelease = null">Cancel</v-btn>
         <v-btn color="primary" :loading="isGrabbing" @click="download">Download</v-btn>
       </v-card-actions>
     </v-card>

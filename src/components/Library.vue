@@ -474,12 +474,12 @@ watch(serviceContext, () => {
         v-if="selectionMode || (selected_view == 'movies' && filtered_movies.length > 0) || (selected_view == 'series' && filtered_series.length > 0)"
         class="library-tools d-flex justify-end align-center flex-nowrap ga-2"
         >
-        <v-btn variant="outlined" color="primary" :active="selectionMode" :aria-pressed="selectionMode" :disabled="bulkPending || (!selectionMode && selectionLoading)" @click="selectionMode = !selectionMode">
+        <v-btn variant="outlined" :color="selectionMode ? 'primary' : undefined" :active="selectionMode" :aria-pressed="selectionMode" :disabled="bulkPending || (!selectionMode && selectionLoading)" @click="selectionMode = !selectionMode">
           Select media
         </v-btn>
         <v-menu>
           <template #activator="{ props: menuProps }">
-            <v-btn v-bind="menuProps" color="primary" variant="outlined" append-icon="mdi-chevron-down" :disabled="bulkPending">Library tools</v-btn>
+            <v-btn v-bind="menuProps" variant="outlined" append-icon="mdi-chevron-down" :disabled="bulkPending">Library tools</v-btn>
           </template>
           <v-list role="menu" density="compact">
             <v-list-item role="menuitem" title="Export" prepend-icon="mdi-file-export-outline" :disabled="!visibleSelectionItems.length" @click="exportLibrary()" />
@@ -559,7 +559,7 @@ watch(serviceContext, () => {
       >
         <template #metadata>
           <div v-if="Number.isSafeInteger(selectedMovie?.collection?.tmdbId) && selectedMovie.collection.tmdbId > 0" class="d-flex justify-center mt-3">
-            <v-btn class="collection-link" max-width="100%" variant="tonal" color="primary" prepend-icon="mdi-filmstrip-box-multiple" :title="`Collection: ${selectedMovie.collection.title || 'View saga'}`" :disabled="!contentLoaded.movies" @click="browseCollections(selectedMovie.collection.tmdbId)">
+            <v-btn class="collection-link" max-width="100%" variant="tonal" prepend-icon="mdi-filmstrip-box-multiple" :title="`Collection: ${selectedMovie.collection.title || 'View saga'}`" :disabled="!contentLoaded.movies" @click="browseCollections(selectedMovie.collection.tmdbId)">
               <span class="text-truncate">Collection: {{ selectedMovie.collection.title || 'View saga' }}</span>
             </v-btn>
           </div>
