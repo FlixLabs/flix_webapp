@@ -16,8 +16,14 @@ export interface MediaActionItem {
 }
 
 export function canSearchItem(type: MediaType, item: MediaActionItem | null): boolean {
-  if (!item || typeof item.id !== "number" || !Number.isInteger(item.id) || item.id <= 0 || item.already_in_library === false) return false;
-  return type === "movies" ? item.status === "released" : !!item.status && item.status !== "upcoming";
+  return (type === 'movies' || type === 'series') && !!item && Number.isSafeInteger(item.id)
+    && Number(item.id) > 0 && item.already_in_library !== false;
+}
+
+export function seriesSearchBlockReason(loading: boolean, hasData: boolean, episodeCount: number): string | undefined {
+  if (loading) return 'Loading series episodes before searching...';
+  if (!hasData) return 'Load the series episodes before searching.';
+  if (!episodeCount) return 'No episodes available for this series. Refresh its metadata in Sonarr before searching.';
 }
 
 interface MediaActionsOptions extends MediaServiceOptions {

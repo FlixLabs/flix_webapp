@@ -14,7 +14,7 @@ import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
-import { useMediaActions, canSearchItem } from '@/composables/useMediaActions';
+import { useMediaActions, canSearchItem, seriesSearchBlockReason } from '@/composables/useMediaActions';
 import { useDialog } from '@/composables/useDialog';
 import { useLibraryChecker } from '@/composables/useLibraryChecker';
 import { useQualitySelection } from '@/composables/useQualitySelection';
@@ -521,6 +521,7 @@ watch(serviceContext, () => {
         @navigate="handleSerieClick($event.tmdbId)"
         announcementName="Premiere"
         :showSearch="!!selectedSerie?.already_in_library && canSearchItem('series', selectedSerie)"
+        :search-disabled-reason="seriesSearchBlockReason(episodeRead.state.loading, episodeRead.state.hasData, serieEpisodes.length)"
         :showAdd="!!selectedSerie && !selectedSerie.already_in_library && qualitySerieItems.length > 0"
         :add-disabled="!Number.isSafeInteger(selectedSerie?.tvdbId) || (selectedSerie?.tvdbId ?? 0) <= 0 || identityRead.state.loading || !!identityRead.state.error"
         :showRemove="!!selectedSerie?.already_in_library"

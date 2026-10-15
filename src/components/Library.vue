@@ -19,7 +19,7 @@ import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { usePagination } from '@/composables/usePagination';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
-import { useMediaActions, canSearchItem } from '@/composables/useMediaActions';
+import { useMediaActions, canSearchItem, seriesSearchBlockReason } from '@/composables/useMediaActions';
 import { useDialog } from '@/composables/useDialog';
 import { useMediaSheetRoute } from '@/composables/useMediaSheetRoute';
 import Alert from '@/components/common/Alert.vue';
@@ -595,6 +595,7 @@ watch(serviceContext, () => {
         @navigate="handleSerieClick($event.id)"
         announcementName="Premiere"
         :showSearch="canSearchItem('series', selectedSerie)"
+        :search-disabled-reason="seriesSearchBlockReason(episodeRead.state.loading, episodeRead.state.hasData, serieEpisodes.length)"
         :showAdd="false"
         :showRemove="!!selectedSerie"
         @search="searchContent('series', $event)"

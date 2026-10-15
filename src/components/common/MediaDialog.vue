@@ -17,6 +17,7 @@ const props = withDefaults(defineProps<{
   item: any | null;
   announcementName: 'Release' | 'Premiere';
   showSearch: boolean;
+  searchDisabledReason?: string;
   showAdd: boolean;
   showRemove: boolean;
   actionPending?: boolean;
@@ -73,6 +74,7 @@ const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episode
     <template #default="{ showScrollHint }">
       <slot name="status" />
       <MediaSummary v-if="summaryVisible" :item="item" :announcement-name="announcementName"><slot name="metadata" /></MediaSummary>
+      <p v-if="showSearch && searchDisabledReason" role="status" class="text-caption text-medium-emphasis my-3">{{ searchDisabledReason }}</p>
       <MediaMonitoring v-if="showRemove && renderDetails" :key="`${mediaType}-${item.id}`" :item="item" :type="mediaType === 'Movie' ? 'movies' : 'series'" :disabled="readOnly || actionPending || settingsPending" @busy="monitoringPending = $event" />
       <div v-if="hasSupplementalDetails" class="media-supplemental-details" :class="{ 'media-details-concealed': showFileDetails && showScrollHint }">
         <slot name="details" />
@@ -83,8 +85,8 @@ const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episode
       </div>
     </template>
     <template #actions>
-      <v-btn v-if="showSearch" :disabled="mediaBusy" color="primary" @click="releaseDialog = true">Choose Release</v-btn>
-      <v-btn v-if="showSearch" :disabled="mediaBusy" color="primary" @click="emit('search', item)">{{ item.hasFile || item.statistics?.sizeOnDisk > 0 ? 'Search Again' : 'Search' }}</v-btn>
+      <v-btn v-if="showSearch" :disabled="mediaBusy || actionPending || !!searchDisabledReason" color="primary" @click="releaseDialog = true">Choose Release</v-btn>
+      <v-btn v-if="showSearch" :disabled="mediaBusy || actionPending || !!searchDisabledReason" color="primary" @click="emit('search', item)">{{ item.hasFile || item.statistics?.sizeOnDisk > 0 ? 'Search Again' : 'Search' }}</v-btn>
       <v-btn v-if="showAdd" :loading="actionPending" :disabled="actionPending || mediaBusy || addDisabled" color="primary" @click="emit('add', item)">Add</v-btn>
       <v-btn v-if="showRemove" :loading="actionPending" :disabled="actionPending || mediaBusy" color="error" @click="emit('remove', item)">Remove</v-btn>
     </template>
