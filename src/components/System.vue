@@ -13,7 +13,6 @@ import Alert from '@/components/common/Alert.vue';
 import { useDiskAndLogAndHealthList } from '@/composables/useDiskAndLogAndHealthList';
 import SectionNavigation from '@/components/common/SectionNavigation.vue';
 import MediaTypeToggle from '@/components/common/MediaTypeToggle.vue';
-import Loading from '@/components/common/Loading.vue';
 import StorageLocations from '@/components/common/StorageLocations.vue';
 import { useStorageLocations, type RootFolder } from '@/composables/useStorageLocations';
 import { useAgentStorage } from '@/composables/useAgentStorage';
@@ -88,6 +87,18 @@ const activeEndpoints = computed<Endpoint[]>(() => section.value === 'storage'
   ? storageAgent.enabled.value ? [] : ['diskspace', 'rootfolder']
   : section.value === 'status' ? ['config/host', 'system/status']
     : section.value === 'logs' ? ['log'] : section.value === 'health' ? ['health'] : []);
+const initialLoading = computed(() => {
+  if (section.value === 'storage' && storageAgent.enabled.value) {
+    return !storageAgent.collectedAt.value && !storageAgent.error.value;
+  }
+  return activeEndpoints.value.some(endpoint => {
+    const state = reads[selectedMedia.value][endpoint].state;
+    return !state.hasData && !state.error;
+  });
+});
+const refreshing = computed(() => section.value === 'storage' && storageAgent.enabled.value
+  ? storageAgent.loading.value
+  : activeEndpoints.value.some(endpoint => reads[selectedMedia.value][endpoint].state.loading));
 for (const type of ['movies', 'series'] as const) watch(() => activeEndpoints.value.some(endpoint => reads[type][endpoint].state.loading), value => {
   (type === 'movies' ? isLoadingMovie : isLoadingSerie).value = value;
 }, { flush: 'sync' });
@@ -340,12 +351,20 @@ onUnmounted(() => {
       <v-btn v-else prepend-icon="mdi-refresh" :loading="integrations.services.value.some(service => service.state === 'checking')"
         @click="integrations.refresh">Check All</v-btn>
     </SectionNavigation>
+    <div v-if="section !== 'integrations'" class="system-progress">
+      <v-progress-linear :active="refreshing" indeterminate aria-label="Loading system information" />
+    </div>
+    <div v-if="initialLoading" role="status" aria-live="polite" aria-label="Loading system information" class="mt-4">
+      <span class="text-body-2 text-medium-emphasis">Loading system information...</span>
+      <v-skeleton-loader class="mt-3" type="heading, table-heading, table-row-divider@3" />
+    </div>
+    <div v-if="!initialLoading" :aria-busy="refreshing" data-testid="system-content">
     <ReadFeedback v-for="endpoint in activeEndpoints" :key="`${selectedMedia}:${endpoint}`" :state="reads[selectedMedia][endpoint].state" :label="`${selectedMedia === 'movies' ? 'Radarr' : 'Sonarr'} ${endpoint}`" @retry="getData(selectedMedia, endpoint)" />
     <IntegrationStatusPanel v-if="section === 'integrations'" :services="integrations.services.value"
       @retry="integrations.check" />
-    <v-row v-show="section !== 'integrations'" class="mt-4">
+    <v-row v-if="section !== 'integrations'" class="mt-4">
       <v-col
-        v-show="selectedMedia === 'movies'" cols="12"
+        v-if="selectedMedia === 'movies'" cols="12"
         >
         <h3>Radarr</h3>
         <v-row
@@ -534,12 +553,12 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
-        <v-row v-show="section === 'storage'">
+        <v-row v-if="section === 'storage'">
           <v-col>
             <StorageLocations title="Movie Storage" :locations="displayedMovieStorage"
               :interval="storageAgent.enabled.value ? storageAgentInterval : undefined"
               @update:interval="storageAgentInterval = $event"
-              :loading="storageAgent.loading.value" :error="storageAgent.error.value" :last-success-at="storageAgent.lastSuccessAt.value" />
+              :loading="storageAgent.enabled.value ? storageAgent.loading.value : isLoadingMovie" :error="storageAgent.error.value" :last-success-at="storageAgent.lastSuccessAt.value" />
           </v-col>
         </v-row>
         <v-row
@@ -639,13 +658,9 @@ onUnmounted(() => {
         </v-alert>
         <v-alert v-if="section === 'logs' && !isLoadingMovie && reads.movies.log.state.hasData && !reads.movies.log.state.error && !logListMovie.length" type="info" class="mt-4">No logs found</v-alert>
         <v-alert v-if="section === 'health' && !isLoadingMovie && reads.movies.health.state.hasData && !reads.movies.health.state.error && !healthListMovie.length" type="info" class="mt-4">No health issues reported</v-alert>
-        <Loading
-          :isLoading="isLoadingMovie"
-          sentence="Loading data..."
-          />
       </v-col>
       <v-col
-        v-show="selectedMedia === 'series'" cols="12"
+        v-if="selectedMedia === 'series'" cols="12"
         >
         <h3>Sonarr</h3>
         <v-row
@@ -834,12 +849,12 @@ onUnmounted(() => {
             </v-card>
           </v-col>
         </v-row>
-        <v-row v-show="section === 'storage'">
+        <v-row v-if="section === 'storage'">
           <v-col>
             <StorageLocations title="Series Storage" :locations="displayedSerieStorage"
               :interval="storageAgent.enabled.value ? storageAgentInterval : undefined"
               @update:interval="storageAgentInterval = $event"
-              :loading="storageAgent.loading.value" :error="storageAgent.error.value" :last-success-at="storageAgent.lastSuccessAt.value" />
+              :loading="storageAgent.enabled.value ? storageAgent.loading.value : isLoadingSerie" :error="storageAgent.error.value" :last-success-at="storageAgent.lastSuccessAt.value" />
           </v-col>
         </v-row>
         <v-row
@@ -929,13 +944,9 @@ onUnmounted(() => {
         </v-alert>
         <v-alert v-if="section === 'logs' && !isLoadingSerie && reads.series.log.state.hasData && !reads.series.log.state.error && !logListSerie.length" type="info" class="mt-4">No logs found</v-alert>
         <v-alert v-if="section === 'health' && !isLoadingSerie && reads.series.health.state.hasData && !reads.series.health.state.error && !healthListSerie.length" type="info" class="mt-4">No health issues reported</v-alert>
-        <Loading
-          :isLoading="isLoadingSerie"
-          sentence="Loading data..."
-          />
       </v-col>
     </v-row>
-    <v-row v-show="section === 'storage'">
+    <v-row v-if="section === 'storage'">
       <v-col>
         <StorageLocations v-if="storageAgent.enabled.value" title="Download Storage"
           v-model:interval="storageAgentInterval"
@@ -956,5 +967,10 @@ onUnmounted(() => {
         </div>
       </v-col>
     </v-row>
+    </div>
   </v-container>
 </template>
+
+<style scoped>
+.system-progress { height: 4px; margin-top: 12px; }
+</style>
