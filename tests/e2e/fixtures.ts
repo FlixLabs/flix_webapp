@@ -28,10 +28,12 @@ export const test = base.extend<{ mutations: { method: string; path: string; bod
       if (request.method() === 'OPTIONS') return route.fulfill({ headers: { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*' } });
       if (request.method() !== 'GET') {
         mutations.push({ method: request.method(), path, body: request.postDataJSON() });
+        if (path === '/auth' && request.method() === 'POST') return route.fulfill({ json: { enabled: true, authenticated: true, token: 'a'.repeat(64), expiresIn: 2592000 } });
         return route.fulfill({ json: {} });
       }
       let json: unknown = [];
       if (path === '/instances') json = [{ name: 'Test instance', radarr: { base_url: 'http://radarr.test', api_key: 'test-only', root_folder_path: '/movies' }, sonarr: { base_url: 'http://sonarr.test', api_key: 'test-only', root_folder_path: '/tv' } }];
+      else if (path === '/session') json = { enabled: false, authenticated: true };
       else if (path === '/auth' || path === '/color') json = {};
       else if (path === '/search/movie' || path === '/search/tv') json = { results: [] };
       else if (path === '/api/v3/config/host' || path === '/api/v3/system/status') json = {};

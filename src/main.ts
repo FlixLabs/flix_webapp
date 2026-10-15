@@ -1,3 +1,4 @@
+import { apiFetch } from '@/composables/apiSession';
 //import './assets/main.css'
 import 'vuetify/styles'
 import '@mdi/font/css/materialdesignicons.css'
@@ -76,7 +77,7 @@ app.use(pinia)
     if (import.meta.env.VITE_FLIX_API_USE === 'true') {
       const base_url = import.meta.env.VITE_FLIX_API_URL;
 
-      const response = await fetch(base_url + '/color', { signal: AbortSignal.timeout(15000) });
+      const response = await apiFetch(base_url + '/color', { signal: AbortSignal.timeout(15000) });
       if (!response.ok) return;
       const { primary } = await response.json();
       if (isCustomPrimary(primary)) applyPrimary(vuetify.theme.themes.value, primary);

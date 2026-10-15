@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { apiFetch, saveApiSession, clearApiSession } from '@/composables/apiSession';
+
 import { readApiJson, requireObject } from '@/composables/apiResponse';
 import { useReadRequest } from '@/composables/useReadRequest';
 import ReadFeedback from '@/components/common/ReadFeedback.vue';
 
 
 import { computed, onMounted, watch, ref } from 'vue';
-import CryptoJS from 'crypto-js';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
 import { useTheme } from 'vuetify'
@@ -63,7 +64,7 @@ const { state: colorData, reset: resetColorData } = useResettable(initialColorDa
 function getData(key: 'auth' | 'color') {
   const read = reads[key].begin();
   const base_url = import.meta.env.VITE_FLIX_API_URL;
-  return fetch(base_url + '/' + key, { signal: read.signal, cache: 'no-store' })
+  return apiFetch(base_url + '/' + key, { signal: read.signal, cache: 'no-store' })
     .then(async (response) => {
       const json_data: any = requireObject(await readApiJson(response), key);
       if (!read.isCurrent()) return;
@@ -71,9 +72,9 @@ function getData(key: 'auth' | 'color') {
       try {
 
       if (key == 'auth') {
-        store.authenticationEnabled = !!(json_data.username && json_data.password);
-        authData.value = json_data.username && json_data.password ? json_data : { ...initialAuthData };
-        auth.value = !!(json_data.username && json_data.password);
+        store.authenticationEnabled = json_data.enabled === true;
+        authData.value = json_data.enabled === true ? { username: json_data.username ?? null, password: null } : { ...initialAuthData };
+        auth.value = json_data.enabled === true;
       }
 
       if (key == 'color') {
@@ -101,7 +102,6 @@ function setData(key: 'auth' | 'color') {
 
   if (key == 'auth') {
     if (authData.value.username && authData.value.password) {
-      authData.value.password = CryptoJS.AES.encrypt(authData.value.password, import.meta.env.VITE_CRYPT_KEY).toString();
       data = authData.value;
     } else {
       showErrorAlert('Username and password cannot be empty');
@@ -120,7 +120,7 @@ function setData(key: 'auth' | 'color') {
     }
   }
 
-  fetch(base_url + '/' + key, {
+  apiFetch(base_url + '/' + key, {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -134,7 +134,11 @@ function setData(key: 'auth' | 'color') {
       if (response.ok) {
         showSuccessAlert();
 
-        if (key == 'auth') store.authenticationEnabled = true;
+        if (key == 'auth') {
+          saveApiSession(await response.json());
+          authData.value.password = null;
+          store.authenticationEnabled = true;
+        }
 
         if (key == 'color') {
           applyPrimaryNow(colorData.value.primary || DEFAULT_PRIMARY);
@@ -156,7 +160,7 @@ function deleteData(key: 'auth' | 'color') {
 
   isSaving.value = true;
 
-  fetch(base_url + '/' + key, {
+  apiFetch(base_url + '/' + key, {
       method: 'DELETE',
       signal: AbortSignal.timeout(15000),
       headers: {
@@ -168,7 +172,7 @@ function deleteData(key: 'auth' | 'color') {
       if (!response.ok) throw new Error('Unable to confirm the settings change.');
       if (response.ok) {
         showSuccessAlert();
-        if (key == 'auth') store.authenticationEnabled = false;
+        if (key == 'auth') { clearApiSession(); store.authenticationEnabled = false; }
       }
     })
     .catch((error) => {

@@ -41,7 +41,7 @@ test('sign out follows saved authentication settings, not the API mode', async (
 });
 
 test('sign out is available when authentication is already configured', async ({ page, mutations }) => {
-  await page.route('**/auth', route => route.fulfill({ json: { username: 'test', password: 'test-only' } }));
+  await page.route('**/auth', route => route.fulfill({ json: { enabled: true, username: 'test' } }));
   await page.goto('/dashboard');
   await page.getByRole('button', { name: 'Open navigation', exact: true }).click();
   await expect(page.getByText('Sign Out', { exact: true })).toBeVisible();

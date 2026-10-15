@@ -1,3 +1,4 @@
+import { apiFetch } from '@/composables/apiSession';
 import { readApiJson, requireList, requireObject } from '@/composables/apiResponse';
 import { computed, onScopeDispose, ref, watch, type Ref } from "vue";
 import type { MediaInstance } from "./useMediaService";
@@ -40,7 +41,7 @@ export function useAgentStorage(options: {
     error.value = "";
     try {
       const name = encodeURIComponent(options.selectedInstanceData.value.name);
-      const response = await fetch(`${import.meta.env.VITE_FLIX_API_URL}/storage/${name}`, {
+      const response = await apiFetch(`${import.meta.env.VITE_FLIX_API_URL}/storage/${name}`, {
         signal: AbortSignal.any([request.signal, AbortSignal.timeout(8000)]),
         cache: "no-store",
       });
