@@ -84,21 +84,21 @@ function createReads(type: 'movies' | 'series') {
 }
 const reads = { movies: createReads('movies'), series: createReads('series') };
 const activeEndpoints = computed<Endpoint[]>(() => section.value === 'storage'
-  ? storageAgent.enabled.value ? [] : ['diskspace', 'rootfolder']
+  ? storageAgent.enabled.value ? ['diskspace'] : ['diskspace', 'rootfolder']
   : section.value === 'status' ? ['config/host', 'system/status']
     : section.value === 'logs' ? ['log'] : section.value === 'health' ? ['health'] : []);
 const initialLoading = computed(() => {
-  if (section.value === 'storage' && storageAgent.enabled.value) {
-    return !storageAgent.collectedAt.value && !storageAgent.error.value;
-  }
-  return activeEndpoints.value.some(endpoint => {
+  // Disk Space still comes from Radarr/Sonarr, even when the agent supplies capacities.
+  const agentPending = section.value === 'storage' && storageAgent.enabled.value
+    && !storageAgent.collectedAt.value && !storageAgent.error.value;
+  return agentPending || activeEndpoints.value.some(endpoint => {
     const state = reads[selectedMedia.value][endpoint].state;
     return !state.hasData && !state.error;
   });
 });
-const refreshing = computed(() => section.value === 'storage' && storageAgent.enabled.value
-  ? storageAgent.loading.value
-  : activeEndpoints.value.some(endpoint => reads[selectedMedia.value][endpoint].state.loading));
+const refreshing = computed(() =>
+  (section.value === 'storage' && storageAgent.enabled.value && storageAgent.loading.value)
+  || activeEndpoints.value.some(endpoint => reads[selectedMedia.value][endpoint].state.loading));
 for (const type of ['movies', 'series'] as const) watch(() => activeEndpoints.value.some(endpoint => reads[type][endpoint].state.loading), value => {
   (type === 'movies' ? isLoadingMovie : isLoadingSerie).value = value;
 }, { flush: 'sync' });
