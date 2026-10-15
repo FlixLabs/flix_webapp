@@ -27,9 +27,9 @@ test('batch search sends one command per selected eligible media', async ({ page
   await page.goto('/library'); await page.getByRole('button', { name: 'Select media', exact: true }).click();
   await page.getByRole('button', { name: 'Select page', exact: true }).click();
   await chooseAction(page, 'Search selected');
-  await expect(page.getByText('2 succeeded, 0 failed, 1 skipped.')).toBeVisible();
-  expect(mutations.map(item => item.body)).toEqual([{ name: 'MoviesSearch', movieIds: [1] }, { name: 'MoviesSearch', movieIds: [3] }]);
-  await expect(page.getByRole('checkbox', { name: 'Select Movie 02', exact: true })).toBeChecked();
+  await expect(page.getByText('3 succeeded, 0 failed, 0 skipped.')).toBeVisible();
+  expect(mutations.map(item => item.body)).toEqual([{ name: 'MoviesSearch', movieIds: [1] }, { name: 'MoviesSearch', movieIds: [2] }, { name: 'MoviesSearch', movieIds: [3] }]);
+  await expect(page.getByRole('checkbox', { name: 'Select Movie 02', exact: true })).not.toBeChecked();
   await expect(page.getByRole('checkbox', { name: 'Select Movie 01', exact: true })).not.toBeChecked();
 });
 

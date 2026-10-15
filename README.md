@@ -204,7 +204,9 @@ Removal requires confirmation and deletes the media files too.
 
 Batches run sequentially with progress and **Stop after current item**. Failed
 and ineligible media remain selected; successful media are deselected. Search
-skips media that cannot yet be searched, and monitoring skips unknown states.
+requires a valid library ID regardless of the movie/series release status, and
+monitoring skips unknown states. Individual series sheets disable both search
+actions until episodes are loaded, with an explanation if none are available.
 An instance/context change stops further writes. No batch runs automatically.
 These actions also work without Flix API.
 
