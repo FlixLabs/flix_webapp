@@ -122,8 +122,28 @@ const headers = computed(() => [
   ] : []),
 ]);
 function refreshActive() {
+  if (isRemoving.value || activeRead.value.loading) return;
   if (view.value === 'queue') getDownload(mediaType.value);
   else getHistory(mediaType.value);
+}
+let away = document.visibilityState === 'hidden';
+let returnRefresh: ReturnType<typeof setTimeout> | undefined;
+function refreshOnReturn() {
+  if (!away || document.visibilityState === 'hidden') return;
+  away = false;
+  if (activeRead.value.loading || isRemoving.value || deleteConfirmationDialog.value) return;
+  clearTimeout(returnRefresh);
+  returnRefresh = setTimeout(() => {
+    if (!away && document.visibilityState !== 'hidden' && !deleteConfirmationDialog.value) refreshActive();
+  }, 100);
+}
+function markAway() { away = true; }
+function visibilityChanged() {
+  if (document.visibilityState === 'hidden') markAway();
+  else refreshOnReturn();
+}
+function pageRestored(event: PageTransitionEvent) {
+  if (event.persisted) { markAway(); refreshOnReturn(); }
 }
 watch([mediaType, view, search, selectedInstance], () => { page.value = 1; });
 watch(pageCount, value => { page.value = Math.min(page.value, value); });
@@ -314,6 +334,10 @@ tasks.forEach(({ key, refVar, callback }) => {
 });
 
 onMounted(() => {
+  window.addEventListener('blur', markAway);
+  window.addEventListener('focus', refreshOnReturn);
+  window.addEventListener('pageshow', pageRestored);
+  document.addEventListener('visibilitychange', visibilityChanged);
   getDownload('movies');
   getDownload('series');
   getHistory('movies');
@@ -328,6 +352,11 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  clearTimeout(returnRefresh);
+  window.removeEventListener('blur', markAway);
+  window.removeEventListener('focus', refreshOnReturn);
+  window.removeEventListener('pageshow', pageRestored);
+  document.removeEventListener('visibilitychange', visibilityChanged);
   Object.values(intervalIds).forEach(id => clearInterval(id));
 });
 
