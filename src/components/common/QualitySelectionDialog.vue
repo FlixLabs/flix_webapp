@@ -71,7 +71,7 @@ function confirm() {
       <v-card-actions>
         <v-btn
           @click="cancel"
-          color="secondary"
+          color="on-surface"
           >
           Cancel
         </v-btn>

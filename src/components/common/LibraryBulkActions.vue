@@ -53,7 +53,7 @@ async function execute(action: BulkAction) {
       <v-col cols="12" sm="6" class="d-flex justify-end ga-2">
         <v-menu>
           <template #activator="{ props: menuProps }">
-            <v-btn v-bind="menuProps" size="small" variant="tonal" color="primary" append-icon="mdi-chevron-down" :disabled="pending || !selection.length">Selection actions</v-btn>
+            <v-btn v-bind="menuProps" size="small" variant="tonal" append-icon="mdi-chevron-down" :disabled="pending || !selection.length">Selection actions</v-btn>
           </template>
           <v-list role="menu" density="compact" :disabled="pending || !selection.length">
             <v-list-item role="menuitem" title="Monitor selected" @click="execute('monitor')" />
