@@ -10,7 +10,6 @@ function setup() {
   const scope = effectScope(); scopes.push(scope);
   const instance = ref<string | null>('Test');
   const actions = scope.run(() => useDownloadClients(instance))!;
-  actions.token.value = 'x'.repeat(64);
   return { actions, instance };
 }
 afterEach(() => { scopes.splice(0).forEach(scope => scope.stop()); vi.unstubAllGlobals(); });
@@ -20,13 +19,13 @@ describe('download clients', () => {
     for (const data of [null, {}, { clients: [client, client] }, { clients: [{ ...client, torrents: [{ ...item, tracked: true }] }] },
       { clients: [{ ...client, torrents: [{ ...item, sizeBytes: -1 }] }] }]) expect(() => parseDownloadClients(data)).toThrow();
   });
-  it('never sends credentials until explicitly connected and resets them with the instance', async () => {
+  it('loads clients explicitly and resets results with the instance', async () => {
     const fetch = vi.fn().mockResolvedValue(Response.json({ clients: [client] })); vi.stubGlobal('fetch', fetch);
     const { actions, instance } = setup();
     expect(fetch).not.toHaveBeenCalled(); await actions.load();
-    expect(fetch.mock.calls[0]![1].headers.Authorization).toBe(`Bearer ${'x'.repeat(64)}`);
+    expect(fetch.mock.calls[0]![0]).toContain('/download-clients/Test');
     instance.value = 'Second';
-    expect(actions.token.value).toBe(''); expect(actions.clients.value).toEqual([]);
+    expect(actions.clients.value).toEqual([]);
   });
   it('blocks tracked torrents and data removal without server permission', async () => {
     const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
@@ -42,11 +41,21 @@ describe('download clients', () => {
     expect(fetch).toHaveBeenCalledTimes(1); expect(actions.uncertain.value).toBe(true);
     expect(JSON.parse(fetch.mock.calls[0]![1].body)).toEqual({ name: item.name, deleteData: false });
   });
+  it('forces only completed tracked torrents when the API supports it', async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 })); vi.stubGlobal('fetch', fetch);
+    const { actions } = setup();
+    const tracked = { ...item, tracked: true, removable: false };
+    expect(await actions.remove(client, tracked, false, true)).toBe(false);
+    expect(await actions.remove({ ...client, allowForceRemoval: true }, { ...tracked, completed: false }, false, true)).toBe(false);
+    expect(fetch).not.toHaveBeenCalled();
+    expect(await actions.remove({ ...client, allowForceRemoval: true }, tracked, false, true)).toBe(true);
+    expect(JSON.parse(fetch.mock.calls[0]![1].body)).toEqual({ name: item.name, deleteData: false, force: true });
+  });
   it('ignores a late response from a previously selected instance', async () => {
     let finish!: (response: Response) => void;
     vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => { finish = resolve; })));
     const { actions, instance } = setup(); const pending = actions.load();
     instance.value = 'Second'; finish(Response.json({ clients: [client] })); await pending;
-    expect(actions.clients.value).toEqual([]); expect(actions.token.value).toBe('');
+    expect(actions.clients.value).toEqual([]);
   });
 });
