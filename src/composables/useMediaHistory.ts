@@ -55,12 +55,13 @@ export function useMediaHistory(options: MediaServiceOptions) {
   watch(() => [options.useAPI.value, options.selectedInstanceData.value], reset, { deep: true, flush: 'sync' });
   onScopeDispose(reset);
 
-  async function load(type: MediaType, id: number, targetPage = 1) {
+  async function load(type: MediaType, id: number, targetPage = 1, keepExisting = false) {
     if (!Number.isInteger(id) || id <= 0 || !Number.isInteger(targetPage) || targetPage <= 0) return false;
     controller?.abort();
     const current = ++request;
     const abort = new AbortController(); controller = abort;
-    records.value = []; loading.value = true; error.value = '';
+    if (!keepExisting || targetPage !== page.value) records.value = [];
+    loading.value = true; error.value = '';
     const timer = setTimeout(() => abort.abort(), 15000);
     try {
       const config = getConfig(type);

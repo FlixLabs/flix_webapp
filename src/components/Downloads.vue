@@ -377,7 +377,7 @@ watch(serviceContext, () => {
 <template>
   <Alert :alert="alert" @update:alert="alert = $event" />
   <DownloadClientsDialog v-if="useAPI && selectedInstanceData?.has_download_clients" v-model="clientsDialog" :instance="selectedInstance" />
-  <MediaDialog v-if="detailItem" v-model="mediaDialog" :item="detailItem" :media-type="detailType === 'movies' ? 'Movie' : 'Serie'" :announcement-name="detailType === 'movies' ? 'Release' : 'Premiere'" :activator="detailActivator" :summary-visible="mediaSheet.state.hasData" :show-search="false" :show-add="false" :show-remove="false" read-only>
+  <MediaDialog v-if="detailItem" v-model="mediaDialog" :item="detailItem" :media-type="detailType === 'movies' ? 'Movie' : 'Serie'" :announcement-name="detailType === 'movies' ? 'Release' : 'Premiere'" :activator="detailActivator" :summary-visible="mediaSheet.state.hasData" :show-search="false" :show-add="false" :show-remove="false" :library-item="mediaSheet.state.hasData && !mediaSheet.state.error" read-only>
     <template #status>
       <Loading :is-loading="mediaSheet.state.loading" sentence="Loading media..." />
       <ReadFeedback :state="mediaSheet.state" label="Download media" @retry="mediaSheet.retry" />

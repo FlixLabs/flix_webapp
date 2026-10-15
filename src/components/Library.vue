@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { mediaFileFields } from '@/composables/mediaFileDetails';
-import { monitoringFields } from '@/composables/useMediaMonitoring';
-import { readApiJson, requireList, optionalList } from '@/composables/apiResponse';
+import { readApiJson, requireList } from '@/composables/apiResponse';
 import { useReadRequest } from '@/composables/useReadRequest';
+import { parseLibraryMedia } from '@/composables/libraryMedia';
+import type { CollectionSheetUpdate } from '@/composables/useCollectionSheetRefresh';
 import { libraryCollections, parseCollections, type MovieCollection } from '@/composables/collections';
 import ReadFeedback from '@/components/common/ReadFeedback.vue';
 
@@ -130,6 +131,10 @@ async function loadCollections() {
   } catch (error) { request.fail(error); }
   finally { request.finish(); }
 }
+function applyCollectionUpdate(update: CollectionSheetUpdate) {
+  collectionSource.value = collectionSource.value.map(collection => collection.id === update.collection.id ? update.collection : collection);
+  movieItems.value = update.movies;
+}
 for (const type of ['movies', 'series'] as const) {
   watch(() => libraryReads[type].state.hasData, valid => {
     if (!valid) contentLoaded.value = { ...contentLoaded.value, [type]: false };
@@ -196,70 +201,9 @@ function getContent(type: 'movies' | 'series') {
 
   return fetch(base_url + '/api/v3/' + url_type + '?apikey=' + api_key, { signal: read.signal, cache: 'no-store' })
     .then(async (response) => {
-      const json_data: any = requireList(await readApiJson(response), 'library', ['title']);
-      if (json_data.some((item: any) => !Number.isSafeInteger(item.id) || item.id <= 0)) throw new Error('Invalid library response. Please try again.');
+      const items = parseLibraryMedia(await readApiJson(response), type);
       const currentConfig = getConfig(type);
       if (!read.isCurrent() || request !== contentRequests[type] || currentConfig.base_url !== base_url || currentConfig.api_key !== api_key) return;
-
-      let items = [];
-      for (let item of json_data) {
-        let tmdbId = null;
-        let tvdbId = null;
-        let runTime = null;
-        let quality = null;
-        let relativePath = null;
-
-        if (type == 'movies') {
-          tmdbId = item.tmdbId;
-          if (item.movieFile) {
-            relativePath = item.movieFile.relativePath;
-
-            if (item.movieFile.mediaInfo) {
-              runTime = item.movieFile.mediaInfo.runTime;
-            }
-
-            if (item.movieFile.quality) {
-              quality = item.movieFile.quality.quality?.name;
-            }
-          }
-        }
-        if (type == 'series') {
-          tvdbId = item.tvdbId;
-          runTime = item.runtime;
-        }
-
-        let title = item.title;
-        const year_str = '(' + item.year + ')';
-
-        if (title.includes(year_str)) {
-          title = title.replace(year_str, '').trim();
-        }
-
-        items.push({
-          id: item.id,
-          tmdbId: tmdbId,
-          collection: type === 'movies' ? item.collection : undefined,
-          tvdbId: tvdbId,
-          prependAvatar: optionalList(item.images, 'images').find((img: any) => img.coverType === "poster")?.remoteUrl || "https://placehold.co/100x150?text=No+Image&font=roboto",
-          title: title,
-          certification: item.certification,
-          year: item.year,
-          added: item.added,
-          sizeOnDisk: item.sizeOnDisk ?? item.movieFile?.size,
-          runTime: runTime,
-          overview: item.overview,
-          hasFile: item.hasFile,
-          status: item.status,
-          qualityProfileId: item.qualityProfileId,
-          quality: quality,
-          relativePath: relativePath,
-          ...(type === 'movies' && item.movieFile ? mediaFileFields(item.movieFile) : {}),
-          statistics: item.statistics,
-          ...monitoringFields(item)
-        });
-      }
-
-      items.sort((a, b) => a.title.localeCompare(b.title));
 
       if (type == 'movies') {
         movieItems.value = items;
@@ -489,7 +433,7 @@ watch(serviceContext, () => {
       </div>
       </template>
     </MediaBrowserToolbar>
-    <LibraryCollections v-if="showCollections" v-model:page="collectionPage" :search="collectionSearch" :movies="movieItems" :source="collectionSource" :collection-state="collectionRead.state" :context="serviceContext()" :library-state="libraryReads.movies.state" :initial-collection="requestedCollection" @retry-collections="loadCollections" @open-movie="handleMovieClick" @retry-library="getContent('movies')" />
+    <LibraryCollections v-if="showCollections" v-model:page="collectionPage" :search="collectionSearch" :movies="movieItems" :source="collectionSource" :collection-state="collectionRead.state" :context="serviceContext()" :library-state="libraryReads.movies.state" :initial-collection="requestedCollection" @retry-collections="loadCollections" @open-movie="handleMovieClick" @retry-library="getContent('movies')" @refreshed="applyCollectionUpdate" />
     <ReadFeedback v-if="!showCollections" :state="libraryReads[selected_view].state" :label="selected_view === 'movies' ? 'Movie library' : 'Series library'" :disabled="bulkPending" @retry="getContent(selected_view)" />
     <LibraryFilters v-show="!showCollections" v-model="filters" :statuses="statuses" :qualities="qualities" :years="years" />
     <LibraryBulkActions
@@ -596,6 +540,7 @@ watch(serviceContext, () => {
         announcementName="Premiere"
         :showSearch="canSearchItem('series', selectedSerie)"
         :search-disabled-reason="seriesSearchBlockReason(episodeRead.state.loading, episodeRead.state.hasData, serieEpisodes.length)"
+        @refreshed="getSerieEpisodes(selectedSerie.id)"
         :showAdd="false"
         :showRemove="!!selectedSerie"
         @search="searchContent('series', $event)"
@@ -611,7 +556,7 @@ watch(serviceContext, () => {
           >
           <SeriesSizeField
             :size="totalSerieSizeOnDisk"
-            :is-loading="isLoadingSerieEpisodes"
+            :is-loading="isLoadingSerieEpisodes && !episodeRead.state.hasData"
             :is-open="serieDialog"
           />
         </template>
@@ -620,14 +565,14 @@ watch(serviceContext, () => {
           >
           <EpisodePanel
             :grouped_episodes="grouped_episodes"
-            :isLoading="isLoadingSerieEpisodes"
+            :isLoading="isLoadingSerieEpisodes && !episodeRead.state.hasData"
             :hasTotalSize="totalSerieSizeOnDisk > 0"
             >
             <template
               #loading
               >
               <Loading
-                :isLoading="isLoadingSerieEpisodes"
+                :isLoading="isLoadingSerieEpisodes && !episodeRead.state.hasData"
                 sentence="Research in progress..."
                 />
             </template>
