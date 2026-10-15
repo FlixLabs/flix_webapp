@@ -28,7 +28,7 @@ const capacityAlerts = computed(() => diagnosed.value.filter(location => ['full'
         </v-col>
       </v-row>
     </v-card-title>
-    <v-progress-linear v-if="loading" indeterminate color="primary" />
+    <div class="storage-progress"><v-progress-linear :active="!!loading" indeterminate color="primary" /></div>
     <v-card-text v-if="error">
       <v-alert type="warning" variant="tonal">{{ error }}</v-alert>
       <p v-if="lastSuccessAt" class="text-caption mt-2">Last valid measurements: {{ new Date(lastSuccessAt).toLocaleString() }}. Current capacity is unknown.</p>
@@ -83,6 +83,7 @@ const capacityAlerts = computed(() => diagnosed.value.filter(location => ['full'
 </template>
 
 <style scoped>
+.storage-progress { height: 4px; }
 .storage-diagnostic {
   min-width: 160px;
   max-width: 340px;
