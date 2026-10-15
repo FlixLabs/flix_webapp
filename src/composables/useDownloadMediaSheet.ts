@@ -25,7 +25,7 @@ export function useDownloadMediaSheet(options: MediaServiceOptions) {
   const dialog = ref(false);
   const type = ref<MediaType>('movies');
   const mediaId = ref(0);
-  const item = shallowRef<Record<string, unknown> | null>(null);
+  const item = ref<Record<string, unknown> | null>(null);
   const activator = shallowRef<HTMLElement | null>(null);
   const read = useReadRequest(() => [serviceContext(), type.value, mediaId.value]);
   watch(dialog, open => { if (!open) read.cancel(); }, { flush: 'sync' });

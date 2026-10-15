@@ -346,6 +346,28 @@ function getSerieEpisodes(serie_id: number) {
     });
 }
 
+async function refreshSerieFiles() {
+  if (!serieDialog.value || !selectedSerie.value?.id || !episodeRead.state.hasData || episodeRead.state.loading) return;
+  const selected = selectedSerie.value;
+  const { base_url, api_key } = getConfig('series');
+  const read = episodeRead.begin();
+  try {
+    const response = await fetch(`${base_url}/api/v3/episode?includeEpisodeFile=true&seriesId=${selected.id}`, {
+      headers: { 'X-Api-Key': api_key }, signal: read.signal, cache: 'no-store',
+    });
+    const records = requireList<{ seasonNumber: number; episodeNumber: number; hasFile: boolean; episodeFile?: unknown }>(await readApiJson(response), 'episodes');
+    if (records.some(item => !Number.isInteger(item.seasonNumber) || !Number.isInteger(item.episodeNumber) || typeof item.hasFile !== 'boolean')) throw new Error('Invalid episode response.');
+    if (!read.isCurrent() || !serieDialog.value || selectedSerie.value !== selected) return;
+    const byEpisode = new Map(records.map(item => [`${item.seasonNumber}:${item.episodeNumber}`, item]));
+    for (const episode of serieEpisodes.value) {
+      const record = byEpisode.get(`${episode.season}:${episode.episode}`);
+      Object.assign(episode, { hasFile: record?.hasFile === true }, mediaFileFields(record?.episodeFile));
+    }
+    read.success();
+  } catch (error) { read.fail(error); }
+  finally { read.finish(); }
+}
+
 function handleMovieClick(movie_id: number) {
   const movie = movieItems.value.find(movie => movie.tmdbId === movie_id);
   if (movie) {
@@ -522,6 +544,7 @@ watch(serviceContext, () => {
         announcementName="Premiere"
         :showSearch="!!selectedSerie?.already_in_library && canSearchItem('series', selectedSerie)"
         :search-disabled-reason="seriesSearchBlockReason(episodeRead.state.loading, episodeRead.state.hasData, serieEpisodes.length)"
+        @refreshed="refreshSerieFiles"
         :showAdd="!!selectedSerie && !selectedSerie.already_in_library && qualitySerieItems.length > 0"
         :add-disabled="!Number.isSafeInteger(selectedSerie?.tvdbId) || (selectedSerie?.tvdbId ?? 0) <= 0 || identityRead.state.loading || !!identityRead.state.error"
         :showRemove="!!selectedSerie?.already_in_library"
@@ -539,7 +562,7 @@ watch(serviceContext, () => {
           >
           <SeriesSizeField
             :size="totalSerieSizeOnDisk"
-            :is-loading="isLoadingSerieEpisodes"
+            :is-loading="isLoadingSerieEpisodes && !episodeRead.state.hasData"
             :is-open="serieDialog"
           />
         </template>
@@ -548,14 +571,14 @@ watch(serviceContext, () => {
           >
           <EpisodePanel
             :grouped_episodes="grouped_episodes"
-            :isLoading="isLoadingSerieEpisodes"
+            :isLoading="isLoadingSerieEpisodes && !episodeRead.state.hasData"
             :hasTotalSize="totalSerieSizeOnDisk > 0"
             >
             <template
               #loading
               >
               <Loading
-                :isLoading="isLoadingSerieEpisodes"
+                :isLoading="isLoadingSerieEpisodes && !episodeRead.state.hasData"
                 sentence="Research in progress..."
                 />
             </template>

@@ -16,6 +16,22 @@ If you wish to enable the optional backend, you can retrieve it here: [flix_api]
 
 ## Features
 
+### Media Sheet Updates
+
+Open library movie and series sheets refresh their status, files, storage and
+monitoring every 30 seconds and when returning to the browser tab. This applies
+to Library, Dashboard, Outings and Downloads, with or without Flix API. Closing
+the sheet stops refreshes. Non-library search results are not polled.
+The current sheet, scroll position and unsaved quality/tag selections are kept.
+Updates pause during edits, actions and nested confirmations; failures keep the
+last snapshot with a retry message. Series episode details refresh with the sheet,
+and history refreshes only if its section is already expanded.
+Collection sheets use the same schedule. Collection membership and the Radarr
+movie library are refreshed together, updating badges, counts and missing-film
+actions without resetting the member page or scroll. Updates pause while a member
+preview, download request or removal confirmation is open. No search or download
+is started by an automatic refresh.
+
 ### Button Colors
 
 Buttons use the same semantic colors in light and dark themes: the custom primary
