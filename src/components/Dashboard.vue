@@ -72,7 +72,12 @@ const { paginatedItems: paginated_series } = usePagination(serieItems, serie_pag
 const { total: total_series } = useCount(serieItems);
 const activeItems = computed(() => mediaType.value === 'movies' ? paginated_movies.value : paginated_series.value);
 const activeTotal = computed(() => mediaType.value === 'movies' ? total_movies.value : total_series.value);
-const activeLoading = computed(() => mediaType.value === 'movies' ? isLoadingMovie.value : isLoadingSerie.value);
+const hasSearchTerm = computed(() => (search.value ?? '').trim().length >= 3);
+// The debounce interval is pending too, not an empty search result.
+const activeLoading = computed(() => {
+  const state = requests[mediaType.value].state;
+  return state.loading || (hasSearchTerm.value && !state.hasData && !state.error);
+});
 watch(mediaType, value => localStorage.setItem('dashboard_media_type', value));
 watch([mediaType, activePage], async () => {
   await nextTick();
@@ -346,7 +351,7 @@ onBeforeUnmount(cancelSearch);
         @details="openDetails"
       />
       <Loading :isLoading="activeLoading" sentence="Research in progress..." />
-      <v-alert v-if="!activeItems.length && !activeLoading && !requests[mediaType].state.error" type="info" class="mt-4">
+      <v-alert v-if="!activeItems.length && !activeLoading && !requests[mediaType].state.error && (!hasSearchTerm || requests[mediaType].state.hasData)" type="info" class="mt-4">
         {{ !search || search.trim().length < 3 ? 'Enter at least 3 characters to search for movies and series.' : mediaType === 'movies' ? 'No movies found' : 'No series found' }}
       </v-alert>
     </section>
