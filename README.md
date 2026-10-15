@@ -9,6 +9,23 @@ If you wish to enable the optional backend, you can retrieve it here: [flix_api]
 
 ## Features
 
+### Download Clients
+
+With Flix API 1.2.0+, configured instances expose **Download clients** in Downloads.
+The first connector is Deluge. Enter the dedicated access token configured on the
+API to inspect completed torrents. Client passwords stay on the API; the entered
+token is cleared when the dialog closes or the instance changes.
+
+Flix blocks removal of active torrents and torrents still tracked by any configured
+Radarr/Sonarr instance. An untracked torrent is not automatically an orphan: inspect
+its name, location and seeding needs before removal. Files are kept by default.
+Deleting data requires both a server opt-in and an explicit checkbox; it may affect
+library files if paths are shared. Uncertain writes disable further removal until
+an explicit refresh. No automatic deletion or write retry is performed.
+
+Without Flix API or configured clients, existing Downloads features are unchanged.
+See the API README for instance configuration and supported connectors.
+
 ### Removing Movies From a Collection
 
 The collection sheet's **Remove movies** action offers a checklist of library

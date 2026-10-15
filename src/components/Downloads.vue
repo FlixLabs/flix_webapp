@@ -21,12 +21,14 @@ import Loading from '@/components/common/Loading.vue';
 import SeriesSizeField from '@/components/common/SeriesSizeField.vue';
 import DownloadTitle from '@/components/common/DownloadTitle.vue';
 import ManualImportDialog from '@/components/common/ManualImportDialog.vue';
+import DownloadClientsDialog from '@/components/common/DownloadClientsDialog.vue';
 import { canManualImport } from '@/composables/useManualImport';
 import MediaTypeToggle from '@/components/common/MediaTypeToggle.vue';
 import PageNavigation from '@/components/common/PageNavigation.vue';
 import { usePersistentPreference, isMediaType } from '@/composables/usePersistentPreference';
 
 const store = useFlixStore();
+const clientsDialog = ref(false);
 
 const selectedInstance = computed(() => store.selectedInstance);
 const selectedInstanceData = computed(() => store.selectedInstanceData);
@@ -345,6 +347,7 @@ watch(serviceContext, () => {
 
 <template>
   <Alert :alert="alert" @update:alert="alert = $event" />
+  <DownloadClientsDialog v-if="useAPI && selectedInstanceData?.has_download_clients" v-model="clientsDialog" :instance="selectedInstance" />
   <MediaDialog v-if="detailItem" v-model="mediaDialog" :item="detailItem" :media-type="detailType === 'movies' ? 'Movie' : 'Serie'" :announcement-name="detailType === 'movies' ? 'Release' : 'Premiere'" :activator="detailActivator" :summary-visible="mediaSheet.state.hasData" :show-search="false" :show-add="false" :show-remove="false" read-only>
     <template #status>
       <Loading :is-loading="mediaSheet.state.loading" sentence="Loading media..." />
@@ -401,6 +404,7 @@ watch(serviceContext, () => {
     <v-card class="mt-4">
       <v-card-title class="d-flex flex-wrap align-center justify-space-between ga-3">
         <span>{{ mediaType === 'movies' ? 'Movie' : 'Series' }} {{ view === 'queue' ? 'downloads' : 'history' }}</span>
+        <v-btn v-if="useAPI && selectedInstanceData?.has_download_clients" variant="text" prepend-icon="mdi-download-network-outline" @click="clientsDialog = true">Download clients</v-btn>
         <v-btn variant="text" prepend-icon="mdi-refresh" :loading="activeLoading" @click="refreshActive">Refresh</v-btn>
       </v-card-title>
       <v-card-text>
