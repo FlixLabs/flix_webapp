@@ -19,24 +19,20 @@ test('loads route modules only when visited and reuses them on return', async ({
   expect(mutations).toEqual([]);
 });
 
-test('shares authentication bootstrap without reusing it for sign in', async ({ page, mutations }) => {
+test('sign-in verifies the session on the API without fetching encrypted credentials', async ({ page, mutations }) => {
   await page.addInitScript(() => sessionStorage.removeItem('flix_webapp_is_authenticated'));
-  let requests = 0;
-  let release!: () => void;
-  const bootstrap = new Promise<void>(resolve => { release = resolve; });
-  await page.route('**/auth', async route => {
-    requests++;
-    await bootstrap;
-    await route.fulfill({ json: { username: 'test-user', password: 'encrypted-test-only' } });
+  const methods: string[] = [];
+  await page.route('**/session', route => {
+    methods.push(route.request().method());
+    return route.fulfill(route.request().method() === 'POST'
+      ? { status: 401, json: { error: 'Wrong username or password.' } }
+      : { json: { enabled: true, authenticated: false } });
   });
   await page.goto('/login');
-  await expect(page.getByRole('textbox', { name: 'Username', exact: true })).toBeVisible();
-  expect(requests).toBe(1);
-  release();
   await page.getByRole('textbox', { name: 'Username', exact: true }).fill('wrong-user');
-  await page.getByRole('textbox', { name: 'Password', exact: true }).fill('wrong-password');
+  await page.getByLabel('Password', { exact: true }).fill('wrong-password');
   await page.getByRole('button', { name: 'Sign In', exact: true }).click();
-  await expect(page.getByText('Wrong Username or Password', { exact: true })).toBeVisible();
-  expect(requests).toBe(2);
+  await expect(page.getByText('Wrong username or password.', { exact: true })).toBeVisible();
+  expect(methods).toEqual(['GET', 'POST']);
   expect(mutations).toEqual([]);
 });

@@ -1,3 +1,4 @@
+import { apiFetch } from '@/composables/apiSession';
 import { readApiJson } from './apiResponse';
 
 const pending = new Map<string, Promise<unknown>>();
@@ -8,7 +9,7 @@ export async function sharedRead(url: string): Promise<unknown> {
   if (!request) {
     request = Promise.resolve().then(async () => {
       try {
-        return await readApiJson(await fetch(url, {
+        return await readApiJson(await apiFetch(url, {
           cache: 'no-store', signal: AbortSignal.timeout(15000),
         }));
       } finally {

@@ -1,5 +1,4 @@
 import { test, expect, movie } from './fixtures';
-import CryptoJS from 'crypto-js';
 
 test('Library sheets support Back and Forward without losing search or page', async ({ page, mutations }) => {
   await page.route(/\/api\/v3\/movie\?/, route => route.fulfill({ json: Array.from({ length: 15 }, (_, i) => ({ ...movie, id: i + 1, title: `Example ${String(i + 1).padStart(2, '0')}` })) }));
@@ -100,7 +99,9 @@ test('successful copying writes the canonical link to the clipboard', async ({ p
 
 test('signing in returns to the requested media sheet', async ({ page, mutations }) => {
   await page.addInitScript(() => sessionStorage.removeItem('flix_webapp_is_authenticated'));
-  await page.route('**/auth', route => route.fulfill({ json: { username: 'test-user', password: CryptoJS.AES.encrypt('test-password', 'test-only').toString() } }));
+  await page.route('**/session', route => route.fulfill({ json: route.request().method() === 'POST'
+    ? { enabled: true, authenticated: true, token: 'a'.repeat(64), expiresIn: 2592000 }
+    : { enabled: true, authenticated: false } }));
   await page.goto('/library?media=movies&id=1&instance=Test%20instance');
   await expect(page).toHaveURL(/\/login\?redirect=/);
   await page.getByRole('textbox', { name: 'Username', exact: true }).fill('test-user');

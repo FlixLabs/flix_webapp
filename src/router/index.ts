@@ -1,3 +1,4 @@
+import { apiSessionToken } from '@/composables/apiSession';
 import { createRouter, createWebHistory } from 'vue-router'
 import { useResettable } from '@/composables/useResettable'
 
@@ -84,7 +85,7 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   if (useAPI.value) {
-    const is_authenticated = sessionStorage.getItem('flix_webapp_is_authenticated') === 'true';
+    const is_authenticated = sessionStorage.getItem('flix_webapp_is_authenticated') === 'true' || !!apiSessionToken();
 
     if (to.meta.requiresAuth && !is_authenticated) {
       return { path: '/login', query: { redirect: to.fullPath } };

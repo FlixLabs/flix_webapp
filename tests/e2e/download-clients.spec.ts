@@ -1,18 +1,16 @@
 import { test, expect } from './fixtures';
 
-const token = 'test-only-download-client-token-123456789';
 const hash = 'a'.repeat(40);
 async function open(page: import('@playwright/test').Page, writes: unknown[], allowDeleteData = false, fail = false) {
   await page.route('**/instances', route => route.fulfill({ json: [{ name: 'Test instance', has_download_clients: true,
     radarr: { base_url: 'http://radarr.test', api_key: 'test-only', root_folder_path: '/movies' },
     sonarr: { base_url: 'http://sonarr.test', api_key: 'test-only', root_folder_path: '/tv' } }] }));
   await page.route('**/download-clients/**', route => {
-    expect(route.request().headers().authorization).toBe(`Bearer ${token}`);
     if (route.request().method() === 'DELETE') {
       writes.push(route.request().postDataJSON());
       return route.fulfill(fail ? { status: 502, json: { error: 'Removal outcome is uncertain.' } } : { status: 204 });
     }
-    return route.fulfill({ json: { clients: [{ id: 'main', name: 'My Deluge', type: 'deluge', allowDeleteData, torrents: [
+    return route.fulfill({ json: { clients: [{ id: 'main', name: 'My Deluge', type: 'deluge', allowForceRemoval: true, allowDeleteData, torrents: [
       { id: hash, name: 'A completed torrent with a long name to check mobile layout', state: 'Seeding', progress: 100, completed: true, sizeBytes: 1e9, path: '/downloads/movie', ratio: 2, tracked: false, removable: true },
       { id: 'b'.repeat(40), name: 'Tracked film', state: 'Paused', progress: 100, completed: true, sizeBytes: 1e9, path: '/downloads/tracked', ratio: 0, tracked: true, removable: false },
       { id: 'c'.repeat(40), name: 'Active film', state: 'Downloading', progress: 10, completed: false, sizeBytes: 1e9, path: '/downloads/active', ratio: 0, tracked: false, removable: false },
@@ -21,14 +19,12 @@ async function open(page: import('@playwright/test').Page, writes: unknown[], al
   await page.goto('/downloads');
   await page.getByRole('button', { name: 'Download clients', exact: true }).click();
   const dialog = page.getByRole('dialog', { name: 'Download clients', exact: true });
-  await dialog.getByLabel('Download clients access token', { exact: true }).fill(token);
-  await dialog.getByRole('button', { name: 'Connect', exact: true }).click();
-  await expect(dialog.getByRole('button', { name: 'Remove torrent Tracked film', exact: true })).toBeDisabled();
+  await expect(dialog.getByRole('button', { name: 'Remove torrent Tracked film', exact: true })).toBeEnabled();
   await expect(dialog.getByText('Active film', { exact: true })).toHaveCount(0);
   return dialog;
 }
 
-test('client cleanup requires confirmation, protects tracked torrents and keeps data by default', async ({ page, mutations }) => {
+test('client cleanup requires confirmation, keeps tracked removal explicit and keeps data by default', async ({ page, mutations }) => {
   const writes: unknown[] = [];
   const dialog = await open(page, writes);
   await dialog.getByRole('button', { name: /^Remove torrent A completed/ }).click();
@@ -45,7 +41,8 @@ test('client cleanup requires confirmation, protects tracked torrents and keeps 
   await expect(dialog.getByRole('button', { name: /^Remove torrent A completed/ })).toHaveCount(0);
   await dialog.getByRole('button', { name: 'Close', exact: true }).click();
   await page.getByRole('button', { name: 'Download clients', exact: true }).click();
-  await expect(page.getByLabel('Download clients access token', { exact: true })).toHaveValue('');
+  await expect(page.getByLabel('Download clients access token', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Remove torrent Tracked film', exact: true })).toBeEnabled();
   expect(mutations).toEqual([]);
 });
 
@@ -68,5 +65,23 @@ test('legacy and standalone downloads do not expose unconfigured client actions'
   await page.goto('/downloads');
   await expect(page.getByText('Download example', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Download clients', exact: true })).toHaveCount(0);
+  expect(mutations).toEqual([]);
+});
+
+test('forcing tracked removal requires explicit consent and keeps files by default', async ({ page, mutations }) => {
+  const writes: unknown[] = [];
+  const dialog = await open(page, writes);
+  await dialog.getByRole('button', { name: 'Remove torrent Tracked film', exact: true }).click();
+  const confirm = page.getByRole('dialog', { name: 'Remove torrent?', exact: true });
+  const remove = confirm.getByRole('button', { name: 'Remove torrent only', exact: true });
+  await expect(remove).toBeDisabled();
+  expect(writes).toEqual([]);
+  await confirm.getByRole('checkbox', { name: 'Force removal despite Radarr/Sonarr tracking', exact: true }).check();
+  await confirm.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Remove torrent Tracked film', exact: true }).click();
+  await expect(remove).toBeDisabled();
+  await confirm.getByRole('checkbox', { name: 'Force removal despite Radarr/Sonarr tracking', exact: true }).check();
+  await remove.click();
+  expect(writes).toEqual([{ name: 'Tracked film', deleteData: false, force: true }]);
   expect(mutations).toEqual([]);
 });

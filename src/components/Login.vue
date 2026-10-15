@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { readApiJson, requireObject } from '@/composables/apiResponse';
-import { sharedRead } from '@/composables/sharedRead';
 import { useReadRequest } from '@/composables/useReadRequest';
 import ReadFeedback from '@/components/common/ReadFeedback.vue';
 
@@ -8,8 +7,7 @@ import ReadFeedback from '@/components/common/ReadFeedback.vue';
 import { ref, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { loginDestination } from '@/composables/mediaLinks';
-import CryptoJS from 'crypto-js';
-import { useResettable } from '@/composables/useResettable';
+import { apiFetch, saveApiSession } from '@/composables/apiSession';
 import { useAlert } from '@/composables/useAlert';
 import Alert from '@/components/common/Alert.vue';
 import Loading from '@/components/common/Loading.vue';
@@ -17,94 +15,55 @@ import Loading from '@/components/common/Loading.vue';
 const router = useRouter();
 const route = useRoute();
 
-const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
+const useAPI = ref(import.meta.env.VITE_FLIX_API_USE === 'true');
 
-const { alert, showSuccessAlert, showErrorAlert } = useAlert();
+const { alert, showErrorAlert } = useAlert();
 
-const { state: isLoading, reset: resetIsLoading } = useResettable(false);
+const isLoading = ref(false);
 const authenticationRead = useReadRequest(() => useAPI.value);
 
-const initial_auth_data = {
+const auth_data = ref<{ username: string | null; password: string | null }>({
   username: null,
   password: null
-};
-const auth_data = ref(initial_auth_data);
-const reset_auth_data = () => {
-  auth_data.value = structuredClone(initial_auth_data);
-};
+});
 
-function getData() {
-  let base_url = import.meta.env.VITE_FLIX_API_URL;
-
-  isLoading.value = true;
-
-  if (auth_data.value.username && auth_data.value.password) {
-    fetch(base_url + '/auth', { signal: AbortSignal.timeout(15000), cache: 'no-store' })
-      .then(async (response) => {
-        const json_data: any = requireObject(await readApiJson(response), 'authentication');
-
-        if (json_data.username && json_data.password) {
-          const decrypted_password = CryptoJS.AES.decrypt(json_data.password, import.meta.env.VITE_CRYPT_KEY);
-
-          if (auth_data.value.username == json_data.username &&
-              auth_data.value.password == decrypted_password.toString(CryptoJS.enc.Utf8)) {
-            sessionStorage.setItem('flix_webapp_is_authenticated', 'true');
-            router.replace(loginDestination(route.query.redirect));
-          } else {
-            showErrorAlert('Wrong Username or Password');
-          }
-        }
-      })
-      .catch((error) => {
-        showErrorAlert(error);
-      })
-      .finally(() => {
-        //resetIsLoading(); Not working
-        isLoading.value = false;
-      });
-  } else {
-    isLoading.value = false;
-    showErrorAlert('Username and password cannot be empty');
+async function getData() {
+  if (!auth_data.value.username || !auth_data.value.password) {
+    showErrorAlert('Username and password cannot be empty'); return;
   }
+  isLoading.value = true;
+  try {
+    const response = await apiFetch(import.meta.env.VITE_FLIX_API_URL + '/session', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(auth_data.value), signal: AbortSignal.timeout(15000),
+    });
+    const data = await response.json();
+    if (!response.ok || data.authenticated !== true) throw new Error(data.error || 'Unable to sign in.');
+    saveApiSession(data);
+    sessionStorage.setItem('flix_webapp_is_authenticated', 'true');
+    await router.replace(loginDestination(route.query.redirect));
+  } catch (error) { showErrorAlert(error); }
+  finally { isLoading.value = false; }
 }
 
-function checkData() {
-  let base_url = import.meta.env.VITE_FLIX_API_URL;
+async function checkData() {
   const read = authenticationRead.begin();
-
-  sharedRead(base_url + '/auth')
-    .then((response) => {
-      if (!read.isCurrent()) return;
-      const json_data: any = requireObject(response, 'authentication');
-      read.success();
-
-      if (json_data.username && json_data.password) {
-        // resetIsLoading(); Not working
-        isLoading.value = false;
-      } else {
-        sessionStorage.setItem('flix_webapp_is_authenticated', 'true');
-        router.replace(loginDestination(route.query.redirect));
-      }
-    })
-    .catch((error) => {
-      read.fail(error);
-    })
-    .finally(() => {
-      read.finish();
-    });
+  try {
+    const response = await apiFetch(import.meta.env.VITE_FLIX_API_URL + '/session', { signal: read.signal, cache: 'no-store' });
+    const data = requireObject<{ authenticated?: boolean }>(await readApiJson(response), 'session');
+    if (!read.isCurrent()) return;
+    read.success();
+    if (data.authenticated === true) {
+      sessionStorage.setItem('flix_webapp_is_authenticated', 'true');
+      await router.replace(loginDestination(route.query.redirect));
+    }
+  } catch (error) { read.fail(error); }
+  finally { read.finish(); }
 }
 
 onMounted(() => {
-  if (!useAPI.value) {
-    router.replace(loginDestination(route.query.redirect));
-  } else {
-    const is_authenticated = sessionStorage.getItem('flix_webapp_is_authenticated') === 'true';
-    if (is_authenticated) {
-      router.replace(loginDestination(route.query.redirect));
-    } else {
-      checkData();
-    }
-  }
+  if (!useAPI.value) router.replace(loginDestination(route.query.redirect));
+  else checkData();
 });
 </script>
 

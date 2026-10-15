@@ -26,20 +26,22 @@ selectors use the primary color only for the active choice.
 
 ### Download Clients
 
-With Flix API 1.2.0+, configured instances expose **Download clients** in Downloads.
-The first connector is Deluge. Enter the dedicated access token configured on the
-API to inspect completed torrents. Client passwords stay on the API; the entered
-token is cleared when the dialog closes or the instance changes.
+With Flix API 2.0.0+, configured instances expose **Download clients** in Downloads.
+The panel loads automatically using your Flix session; no separate client token is
+required. Sign in once in this browser: the session persists across reloads and
+browser restarts for up to 30 days. Sign out revokes it on the API. Its browser
+storage is scoped to the configured API URL. Use HTTPS and a trusted browser profile.
 
-Flix blocks removal of active torrents and torrents still tracked by any configured
-Radarr/Sonarr instance. An untracked torrent is not automatically an orphan: inspect
-its name, location and seeding needs before removal. Files are kept by default.
-Deleting data requires both a server opt-in and an explicit checkbox; it may affect
-library files if paths are shared. Uncertain writes disable further removal until
-an explicit refresh. No automatic deletion or write retry is performed.
+Completed torrents still tracked by Radarr/Sonarr require explicit **Force removal**
+consent. Forcing can interrupt import and does not clear the Radarr/Sonarr queue or
+remove media from the library. Files are kept by default; deleting data remains a
+separate opt-in allowed by server configuration. Incomplete torrents, unavailable
+queue verification and uncertain writes remain protected. No automatic cleanup occurs.
 
-Without Flix API or configured clients, existing Downloads features are unchanged.
-See the API README for instance configuration and supported connectors.
+Deploy API and webapp together. Existing Flix accounts require the one-time server
+migration documented in the API README (AUTH_LEGACY_CRYPT_KEY). Without Flix
+authentication, the API intentionally stays public: restrict it to a trusted network.
+Standalone mode without Flix API is unchanged and does not expose client cleanup.
 
 ### Removing Movies From a Collection
 
