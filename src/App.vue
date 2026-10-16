@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { t, interfaceLanguage } from '@/i18n';
-import { apiFetch, signOut } from '@/composables/apiSession';
+import { apiFetch, signOut, sessionRole } from '@/composables/apiSession';
 
 import { readApiJson, requireObject, requireList } from '@/composables/apiResponse';
 import { sharedRead } from '@/composables/sharedRead';
@@ -33,7 +33,7 @@ const store = useFlixStore();
 const isLoadingInstances = ref(false);
 const instanceRead = useReadRequest(() => useAPI.value);
 const authenticationRead = useReadRequest(() => useAPI.value);
-const showAuthenticationError = computed(() => router.currentRoute.value.path !== '/login' && !!authenticationRead.state.error);
+const showAuthenticationError = computed(() => !!router.currentRoute.value.meta.requiresAuth && !!authenticationRead.state.error);
 watch(() => instanceRead.state.loading, value => { isLoadingInstances.value = value; }, { flush: 'sync' });
 
 const initialDrawerOptions = [
@@ -44,12 +44,17 @@ const initialDrawerOptions = [
   { title: 'Downloads', icon: 'mdi-download-box-outline', value: 'downloads' },
   { title: 'Settings', icon: 'mdi-cog-outline', value: 'settings' },
   { title: 'System', icon: 'mdi-server-outline', value: 'system' },
+  { title: 'Users', icon: 'mdi-account-group-outline', value: 'users' },
+  { title: 'My account', icon: 'mdi-account-circle-outline', value: 'account' },
   { title: 'Sign Out', icon: 'mdi-logout', value: 'signout' }
 ];
 const { state: drawerOptions, reset: resetDrawerOptions } = useResettable(initialDrawerOptions);
 
 const filteredDrawerOptions = computed(() => {
   return drawerOptions.value.filter(option => {
+    if (sessionRole.value === 'user') return ['account', 'signout'].includes(option.value);
+    if (option.value === 'account') return false;
+    if (option.value === 'users') return useAPI.value;
     return option.value === 'signout'
       ? useAPI.value && store.authenticationEnabled
       : true;
@@ -80,6 +85,7 @@ const drawerSelectOption = async (option: any) => {
 };
 
 function getData() {
+  if (sessionRole.value === 'user') { store.instances = []; return Promise.resolve(); }
   const read = instanceRead.begin();
   isLoadingInstances.value = true;
   let base_url = import.meta.env.VITE_FLIX_API_URL;
@@ -112,15 +118,15 @@ function getAuthentication() {
       .catch(read.fail).finally(read.finish);
 }
 watch(() => router.currentRoute.value.path, (path, previous) => {
-  if (useAPI.value && previous === '/login' && path !== '/login') {
+  if (useAPI.value && ['/login', '/join'].includes(previous) && router.currentRoute.value.meta.requiresAuth) {
     void getData(); void getAuthentication();
     return;
   }
-  if (useAPI.value && router.currentRoute.value.path !== '/login' && authenticationRead.state.error && !authenticationRead.state.loading) getAuthentication();
+  if (useAPI.value && router.currentRoute.value.meta.requiresAuth && authenticationRead.state.error && !authenticationRead.state.loading) getAuthentication();
 });
 onMounted(async () => {
   await router.isReady();
-  if (useAPI.value && router.currentRoute.value.path !== '/login') {
+  if (useAPI.value && router.currentRoute.value.meta.requiresAuth) {
     getData();
     getAuthentication();
   }
@@ -155,7 +161,7 @@ onMounted(async () => {
         v-slot:append
         >
         <v-select
-          v-if="useAPI"
+          v-if="useAPI && sessionRole !== 'user' && $route.meta.requiresAuth"
           class="mr-3"
           :width="xs ? 160 : undefined"
           :max-width="xs ? '45vw' : undefined"

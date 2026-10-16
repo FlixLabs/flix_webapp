@@ -80,6 +80,9 @@ onMounted(() => {
       >
       <v-text-field
         :label="t('Username')"
+        :hint="t('Invited users sign in with their email.')"
+        persistent-hint
+        autocomplete="username"
         variant="outlined"
         v-model="auth_data.username"
         prepend-icon="mdi-form-textbox"
@@ -88,6 +91,7 @@ onMounted(() => {
       <v-text-field
         :label="t('Password')"
         type="password"
+        autocomplete="current-password"
         variant="outlined"
         v-model="auth_data.password"
         prepend-icon="mdi-form-textbox-password"

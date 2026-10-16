@@ -1,5 +1,24 @@
 # flix_webapp
 
+## Invited Accounts
+
+With Flix API 2.1.0 or newer, administrators can manage **Users** from the main
+menu: invite by email, choose the invitation language, revoke invitations and
+disable/re-enable guest access. Enable administrator authentication first and
+configure Mailjet and `FLIX_PUBLIC_URL` on the API, following the API README.
+No Mailjet secret belongs in the webapp build or its `VITE_*` variables.
+In API mode, Vite also removes standalone `VITE_RADARR_*` and `VITE_SONARR_*`
+configuration from the client bundle, even if old CI variables remain configured.
+
+Invitations are single-use, expire after seven days and open `/join`. Invited
+users create a name and password (at least twelve characters), then sign in with
+their email as username. They receive a restricted account page, without access
+to instances, administration, downloads or service credentials. Routes verify
+the role server-side before mounting administrator pages. Films/series requests
+and their notifications will arrive in the next implementation stages.
+
+Standalone mode remains unchanged and does not expose these account pages.
+
 ## Codex Session
 
 Resume the development session:

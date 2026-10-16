@@ -1,14 +1,30 @@
+import { ref } from 'vue';
+
+export const sessionRole = ref<'admin' | 'user' | null>(null);
+
 const api = () => String(import.meta.env.VITE_FLIX_API_URL ?? '').replace(/\/$/, '');
 const storageKey = () => `flix-session:${api()}`;
 
 export function clearApiSession() {
+  sessionRole.value = null;
   try { localStorage.removeItem(storageKey()); sessionStorage.removeItem('flix_webapp_is_authenticated'); } catch { /* Storage may be blocked. */ }
 }
 
-export function saveApiSession(data: { enabled?: boolean; token?: string; expiresIn?: number }) {
+export function saveApiSession(data: { enabled?: boolean; token?: string; expiresIn?: number; role?: string }) {
   if (data.enabled === false) { clearApiSession(); return; }
   if (!/^[a-f0-9]{64}$/.test(data.token ?? '') || !Number.isFinite(data.expiresIn) || Number(data.expiresIn) <= 0) throw new Error('Invalid sign-in session.');
   localStorage.setItem(storageKey(), JSON.stringify({ token: data.token, expiresAt: Date.now() + Number(data.expiresIn) * 1000 }));
+  sessionRole.value = data.role === 'user' ? 'user' : 'admin';
+}
+
+export async function verifySessionRole(): Promise<'admin' | 'user'> {
+  const token = apiSessionToken();
+  const response = await apiFetch(`${api()}/session`, { cache: 'no-store', signal: AbortSignal.timeout(15000) });
+  const data = await response.json();
+  if (token !== apiSessionToken()) return verifySessionRole();
+  if (!response.ok || data.authenticated !== true) { clearApiSession(); throw new Error('Sign in to Flix to continue.'); }
+  sessionRole.value = data.role === 'user' ? 'user' : 'admin';
+  return sessionRole.value;
 }
 
 export function apiSessionToken() {

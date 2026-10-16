@@ -8,13 +8,20 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 export default ({ mode, command, isPreview }: ConfigEnv) => {
 
   process.env = {...process.env, ...loadEnv(mode, process.cwd())};
+  // API-mode bundles are also served to guests: never embed standalone service credentials.
+  const privateServiceVariables = process.env.VITE_FLIX_API_USE === 'true'
+    ? ['VITE_RADARR_BASE_URL', 'VITE_RADARR_API_KEY', 'VITE_RADARR_ROOT_FOLDER_PATH',
+       'VITE_SONARR_BASE_URL', 'VITE_SONARR_API_KEY', 'VITE_SONARR_ROOT_FOLDER_PATH']
+    : [];
+  for (const key of privateServiceVariables) process.env[key] = '';
   const proxyFlixAPI = command === 'serve' && !isPreview
     && process.env.VITE_FLIX_API_USE === 'true' && !!process.env.VITE_FLIX_API_URL;
 
   return defineConfig({
-    define: proxyFlixAPI ? {
-      'import.meta.env.VITE_FLIX_API_URL': JSON.stringify('/flix-api'),
-    } : {},
+    define: {
+      ...Object.fromEntries(privateServiceVariables.map(key => [`import.meta.env.${key}`, JSON.stringify('')])),
+      ...(proxyFlixAPI ? { 'import.meta.env.VITE_FLIX_API_URL': JSON.stringify('/flix-api') } : {}),
+    },
     plugins: [
       vue(),
       vueDevTools(),
