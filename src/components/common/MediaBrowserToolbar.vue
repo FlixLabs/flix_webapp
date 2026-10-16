@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import type { MediaType } from "@/composables/useMediaService";
 import MediaTypeToggle from './MediaTypeToggle.vue';
 import PageNavigation from './PageNavigation.vue';
@@ -27,7 +28,7 @@ watch(() => props.totalPages, value => { page.value = Math.min(page.value, Math.
     <div class="browser-toolbar">
     <v-text-field
       v-model="search"
-      label="Search"
+      :label="t('Search')"
       variant="outlined"
       prepend-inner-icon="mdi-magnify"
       clearable
@@ -35,7 +36,7 @@ watch(() => props.totalPages, value => { page.value = Math.min(page.value, Math.
     />
     <div class="browser-controls mt-3">
       <MediaTypeToggle class="browser-types" v-model="selectedView" :total-movies="totalMovies" :total-series="totalSeries" :movies-pending="totalMovies === undefined" :series-pending="totalSeries === undefined" :total-collections="totalCollections" :show-collections="showCollections" :collections="collections" :collections-disabled="collectionsDisabled" @collections="selectCollections" @media="selectMedia" />
-      <v-pagination v-if="totalPages > 1" class="browser-pages" v-model="page" :length="totalPages" :total-visible="$vuetify.display.xs ? 3 : 5" density="compact" rounded aria-label="Media results pages" />
+      <v-pagination v-if="totalPages > 1" class="browser-pages" v-model="page" :length="totalPages" :total-visible="$vuetify.display.xs ? 3 : 5" density="compact" rounded :aria-label="t('Media results pages')" />
       <div v-if="slots.actions" class="browser-actions"><slot name="actions" /></div>
     </div>
     </div>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t, weekStart, weekdays, formatLocale, interfaceLanguage, translatedChoices, formatDate } from '@/i18n';
+import LocalizedCalendarEvent from '@/components/common/LocalizedCalendarEvent.vue';
 import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFlixStore } from '@/stores/flixStore';
@@ -45,18 +47,18 @@ const agendaDays = computed(() => {
 const agendaPages = computed(() => Math.max(1, Math.ceil(agendaDays.value.length / 7)));
 const agendaSlice = computed(() => agendaDays.value.slice((agendaPage.value - 1) * 7, agendaPage.value * 7));
 watch([visibleEvents, displayLayout], () => { agendaPage.value = 1; });
-function dayTitle(value: string) { return calendarDate(value)?.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' }); }
+function dayTitle(value: string) { return formatDate(calendarDate(value), { weekday: 'long', day: 'numeric', month: 'long' }); }
 const count = (type: MediaType) => filteredEvents.value.filter(event => event.type === type).length;
 const title = computed(() => {
   const date = calendarDate(calendarValue.value)!;
-  if (calendarType.value === 'month') return date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-  if (calendarType.value === 'day') return date.toLocaleDateString(undefined, { dateStyle: 'long' });
-  const range = calendarRange(calendarValue.value, 'week');
-  return `${range.start.toLocaleDateString()} - ${range.end.toLocaleDateString()}`;
+  if (calendarType.value === 'month') return formatDate(date, { month: 'long', year: 'numeric' });
+  if (calendarType.value === 'day') return formatDate(date, { dateStyle: 'long' });
+  const range = calendarRange(calendarValue.value, 'week', weekStart.value);
+  return `${formatDate(range.start, { dateStyle: 'short' })} - ${formatDate(range.end, { dateStyle: 'short' })}`;
 });
 const dayEventsDialog = ref(false); const selectedDay = ref('');
 const dialogActivator = useDialogActivator(() => dayEventsDialog.value);
-const selectedDayTitle = computed(() => selectedDay.value ? calendarDate(selectedDay.value)?.toLocaleDateString(undefined, { dateStyle: 'long' }) : '');
+const selectedDayTitle = computed(() => selectedDay.value ? formatDate(calendarDate(selectedDay.value), { dateStyle: 'long' }) : '');
 const selectedDayEvents = computed(() => visibleEvents.value.filter(event => calendarDay(event.start) === selectedDay.value));
 function openDayEvents(_event: Event, day: { date: string }) { selectedDay.value = day.date; dayEventsDialog.value = true; }
 function mediaLink(event: CalendarEvent) { return { path: '/library', query: { media: event.type, id: String(event.mediaId) } }; }
@@ -67,7 +69,7 @@ function openMedia(_event: Event, scope: { event: unknown }) {
 function setDate(value: unknown) { const date = calendarDate(value); if (date) calendarValue.value = calendarDay(date); }
 function refresh() { return load(calendarValue.value, calendarType.value); }
 const rangeKey = computed(() => {
-  const range = calendarRange(calendarValue.value, calendarType.value);
+  const range = calendarRange(calendarValue.value, calendarType.value, weekStart.value);
   return `${calendarType.value}-${range.start.getTime()}-${range.end.getTime()}`;
 });
 watch([rangeKey, () => store.selectedInstance, () => getConfig('movies').base_url, () => getConfig('movies').api_key, () => getConfig('series').base_url, () => getConfig('series').api_key], () => {
@@ -80,69 +82,71 @@ watch([rangeKey, () => store.selectedInstance, () => getConfig('movies').base_ur
     <PageNavigation>
       <v-row align="center" density="compact">
         <v-col cols="12" md="6" class="d-flex align-center flex-wrap ga-2">
-          <v-btn icon="mdi-chevron-left" variant="text" size="small" aria-label="Previous period" @click="calendarValue = moveCalendar(calendarValue, calendarType, -1)" />
-          <v-btn variant="tonal" @click="setDate(new Date())">Today</v-btn>
-          <v-btn icon="mdi-chevron-right" variant="text" size="small" aria-label="Next period" @click="calendarValue = moveCalendar(calendarValue, calendarType, 1)" />
+          <v-btn icon="mdi-chevron-left" variant="text" size="small" :aria-label="t('Previous period')" @click="calendarValue = moveCalendar(calendarValue, calendarType, -1)" />
+          <v-btn variant="tonal" @click="setDate(new Date())">{{ t("Today") }}</v-btn>
+          <v-btn icon="mdi-chevron-right" variant="text" size="small" :aria-label="t('Next period')" @click="calendarValue = moveCalendar(calendarValue, calendarType, 1)" />
           <span class="text-body-1" aria-live="polite">{{ title }}</span>
         </v-col>
-        <v-col cols="6" md="3"><v-select v-model="calendarType" :items="views" label="Calendar view" variant="outlined" density="compact" hide-details /></v-col>
-        <v-col cols="6" md="3"><v-select v-model="filter" :items="filterOptions" label="Event filter" variant="outlined" density="compact" hide-details /></v-col>
+        <v-col cols="6" md="3"><v-select v-model="calendarType" :items="translatedChoices(views)" :label="t('Calendar view')" variant="outlined" density="compact" hide-details /></v-col>
+        <v-col cols="6" md="3"><v-select v-model="filter" :items="translatedChoices(filterOptions)" :label="t('Event filter')" variant="outlined" density="compact" hide-details /></v-col>
         <v-col cols="12" class="d-flex align-center justify-space-between flex-wrap ga-2">
-          <v-btn-toggle v-model="mediaTypes" multiple color="primary" variant="outlined" density="comfortable" aria-label="Calendar media types">
-            <v-btn value="movies" prepend-icon="mdi-movie-open-outline">Movies<MediaCount class="text-medium-emphasis" :total="count('movies')" :pending="loading" /></v-btn>
-            <v-btn value="series" prepend-icon="mdi-television-classic">Series<MediaCount class="text-medium-emphasis" :total="count('series')" :pending="loading" /></v-btn>
+          <v-btn-toggle v-model="mediaTypes" multiple color="primary" variant="outlined" density="comfortable" :aria-label="t('Calendar media types')">
+            <v-btn value="movies" prepend-icon="mdi-movie-open-outline">{{ t("Movies") }}<MediaCount class="text-medium-emphasis" :total="count('movies')" :pending="loading" /></v-btn>
+            <v-btn value="series" prepend-icon="mdi-television-classic">{{ t("Series") }}<MediaCount class="text-medium-emphasis" :total="count('series')" :pending="loading" /></v-btn>
           </v-btn-toggle>
-          <v-btn-toggle v-model="displayLayout" mandatory color="primary" variant="outlined" density="comfortable" aria-label="Calendar layout">
-            <v-btn value="calendar" prepend-icon="mdi-calendar-month-outline">Calendar</v-btn>
-            <v-btn value="agenda" prepend-icon="mdi-format-list-bulleted">Agenda</v-btn>
+          <v-btn-toggle v-model="displayLayout" mandatory color="primary" variant="outlined" density="comfortable" :aria-label="t('Calendar layout')">
+            <v-btn value="calendar" prepend-icon="mdi-calendar-month-outline">{{ t("Calendar") }}</v-btn>
+            <v-btn value="agenda" prepend-icon="mdi-format-list-bulleted">{{ t("Agenda") }}</v-btn>
           </v-btn-toggle>
-          <v-btn variant="text" prepend-icon="mdi-refresh" :loading="loading" @click="refresh">Refresh calendar</v-btn>
+          <v-btn variant="text" prepend-icon="mdi-refresh" :loading="loading" @click="refresh">{{ t("Refresh calendar") }}</v-btn>
         </v-col>
       </v-row>
     </PageNavigation>
-    <v-progress-linear v-if="loading" indeterminate color="primary" class="mt-3" aria-label="Loading calendar" />
-    <v-alert v-for="error in errors" :key="error" type="error" variant="tonal" class="mt-3">{{ error }}</v-alert>
-    <v-alert v-if="!loading && !visibleEvents.length" type="info" variant="tonal" class="mt-3">{{ errors.length ? 'No events available from the loaded services.' : 'No events match this period and filters.' }}</v-alert>
+    <v-progress-linear v-if="loading" indeterminate color="primary" class="mt-3" :aria-label="t('Loading calendar')" />
+    <v-alert v-for="error in errors" :key="error" type="error" variant="tonal" class="mt-3">{{ t(error) }}</v-alert>
+    <v-alert v-if="!loading && !visibleEvents.length" type="info" variant="tonal" class="mt-3">{{ errors.length ? t("No events available from the loaded services.") : t("No events match this period and filters.") }}</v-alert>
     <v-sheet v-if="displayLayout === 'calendar'" height="clamp(420px, 68vh, 680px)" rounded="lg" border class="mt-3 calendar-surface overflow-hidden">
-      <v-calendar :model-value="calendarValue" @update:model-value="setDate" :events="visibleEvents" event-name="title" :type="calendarType" :event-height="40" :event-margin-bottom="4" :event-color="event => event.type === 'movies' ? 'rgba(var(--v-theme-primary), 0.16)' : 'rgba(var(--v-theme-secondary), 0.16)'" event-text-color="rgb(var(--v-theme-on-surface))" :weekdays="[0, 1, 2, 3, 4, 5, 6]" @click:more="openDayEvents" @click:event="openMedia">
+      <v-calendar :model-value="calendarValue" @update:model-value="setDate" :events="visibleEvents" event-name="title" :type="calendarType" :event-height="40" :event-margin-bottom="4" :event-color="event => event.type === 'movies' ? 'rgba(var(--v-theme-primary), 0.16)' : 'rgba(var(--v-theme-secondary), 0.16)'" event-text-color="rgb(var(--v-theme-on-surface))" :weekdays="weekdays" :locale="interfaceLanguage" :key="formatLocale" @click:more="openDayEvents" @click:event="openMedia">
         <template #event="{ event }">
-          <v-tooltip :text="event.title" location="top">
+          <LocalizedCalendarEvent :event="event as unknown as CalendarEvent" v-slot="{ title: eventTitle }">
+          <v-tooltip :text="eventTitle" location="top">
             <template #activator="{ props }">
               <span v-bind="props" class="calendar-event-content" :class="event.type === 'movies' ? 'calendar-movie' : 'calendar-series'">
                 <v-icon :icon="event.type === 'movies' ? 'mdi-movie-open-outline' : 'mdi-television-classic'" size="14" />
-                <span class="calendar-event-title">{{ event.title }}</span>
+                <span class="calendar-event-title">{{ eventTitle }}</span>
                 <v-icon v-if="event.hasFile === true" icon="mdi-check-circle-outline" size="13" color="success" />
               </span>
             </template>
           </v-tooltip>
+          </LocalizedCalendarEvent>
         </template>
       </v-calendar>
     </v-sheet>
-    <div v-else class="calendar-agenda mt-3" aria-label="Calendar agenda">
+    <div v-else class="calendar-agenda mt-3" :aria-label="t('Calendar agenda')">
       <v-card v-for="day in agendaSlice" :key="day.date" variant="flat" border class="mb-3">
         <v-card-title class="d-flex align-center flex-wrap ga-2 text-body-1 py-3">
           <span class="font-weight-medium">{{ dayTitle(day.date) }}</span>
-          <v-chip v-if="day.date === calendarDay(new Date())" color="primary" variant="tonal" size="small">Today</v-chip>
+          <v-chip v-if="day.date === calendarDay(new Date())" color="primary" variant="tonal" size="small">{{ t("Today") }}</v-chip>
           <v-spacer />
-          <span class="text-caption text-medium-emphasis">{{ day.events.length }} {{ day.events.length === 1 ? 'event' : 'events' }}</span>
+          <span class="text-caption text-medium-emphasis">{{ day.events.length }} {{ day.events.length === 1 ? t("event") : t("events") }}</span>
         </v-card-title>
         <v-divider />
         <CalendarEventList :events="day.events.slice(0, 4)" />
         <v-card-actions v-if="day.events.length > 4">
-          <v-btn variant="text" @click="selectedDay = day.date; dayEventsDialog = true">Show all {{ day.events.length }} events</v-btn>
+          <v-btn variant="text" @click="selectedDay = day.date; dayEventsDialog = true">{{ t("Show all {p0} events", { p0: day.events.length }) }}</v-btn>
         </v-card-actions>
       </v-card>
-      <v-pagination v-if="agendaPages > 1" v-model="agendaPage" :length="agendaPages" :total-visible="3" aria-label="Agenda pages" />
+      <v-pagination v-if="agendaPages > 1" v-model="agendaPage" :length="agendaPages" :total-visible="3" :aria-label="t('Agenda pages')" />
     </div>
   </v-container>
-  <v-dialog v-model="dayEventsDialog" :activator="dialogActivator" :open-on-click="false" :aria-label="`Events - ${selectedDayTitle}`" max-width="600" scrollable>
+  <v-dialog v-model="dayEventsDialog" :activator="dialogActivator" :open-on-click="false" :aria-label="t('Events - {p0}', { p0: selectedDayTitle })" max-width="600" scrollable>
     <v-card>
       <v-card-title class="text-wrap">{{ selectedDayTitle }}</v-card-title>
-      <v-card-subtitle>{{ selectedDayEvents.length }} {{ selectedDayEvents.length === 1 ? 'event' : 'events' }}</v-card-subtitle>
+      <v-card-subtitle>{{ selectedDayEvents.length }} {{ selectedDayEvents.length === 1 ? t("event") : t("events") }}</v-card-subtitle>
       <v-card-text>
         <CalendarEventList :events="selectedDayEvents" />
       </v-card-text>
-      <v-card-actions><v-spacer /><v-btn color="on-surface" @click="dayEventsDialog = false">Close</v-btn></v-card-actions>
+      <v-card-actions><v-spacer /><v-btn color="on-surface" @click="dayEventsDialog = false">{{ t("Close") }}</v-btn></v-card-actions>
     </v-card>
   </v-dialog>
 </template>

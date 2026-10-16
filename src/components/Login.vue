@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { readApiJson, requireObject } from '@/composables/apiResponse';
 import { useReadRequest } from '@/composables/useReadRequest';
 import ReadFeedback from '@/components/common/ReadFeedback.vue';
@@ -73,19 +74,19 @@ onMounted(() => {
     @update:alert="alert = $event"
     />
   <v-container>
-    <ReadFeedback :state="authenticationRead.state" label="Login configuration" @retry="checkData" />
+    <ReadFeedback :state="authenticationRead.state" :label="t('Login configuration')" @retry="checkData" />
     <div
       v-if="!isLoading"
       >
       <v-text-field
-        label="Username"
+        :label="t('Username')"
         variant="outlined"
         v-model="auth_data.username"
         prepend-icon="mdi-form-textbox"
         clearable
         />
       <v-text-field
-        label="Password"
+        :label="t('Password')"
         type="password"
         variant="outlined"
         v-model="auth_data.password"
@@ -99,14 +100,12 @@ onMounted(() => {
           color="primary"
           variant="outlined"
           @click="getData()"
-          >
-          Sign In
-        </v-btn>
+          >{{ t("Sign In") }}</v-btn>
       </div>
     </div>
     <Loading
       :isLoading="isLoading"
-      sentence="Loading data..."
+      :sentence="t('Loading data...')"
       />
   </v-container>
 </template>

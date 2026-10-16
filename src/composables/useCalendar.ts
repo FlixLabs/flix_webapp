@@ -1,6 +1,7 @@
 import { onScopeDispose, ref, watch } from 'vue';
 import { readApiJson, requireList, requireObject } from './apiResponse';
 import { useMediaService, type MediaServiceOptions, type MediaType } from './useMediaService';
+import { weekStart } from '@/i18n/preferences';
 
 export type CalendarView = 'month' | 'week' | 'day';
 export type CalendarFilter = 'all' | 'monitored' | 'missing' | 'available';
@@ -8,6 +9,7 @@ export interface CalendarEvent {
   key: string; title: string; start: Date; end: Date; color: string; timed: false;
   type: MediaType; mediaId: number | null; hasFile: boolean | null; monitored: boolean | null;
   release: 'cinemas' | 'digital' | 'physical' | 'episode';
+  metadata?: { title: string; tmdbId?: unknown; tvdbId?: unknown; season?: number; episode?: number; episodeTitle?: string };
 }
 export function calendarDate(value: unknown): Date | null {
   if (typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date)) return null;
@@ -20,14 +22,14 @@ export function calendarDate(value: unknown): Date | null {
 export function calendarDay(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
-export function calendarRange(value: string, view: CalendarView) {
+export function calendarRange(value: string, view: CalendarView, firstDay = 0) {
   const anchor = calendarDate(value);
   if (!anchor) throw new Error('Invalid calendar date');
   const start = new Date(anchor); const end = new Date(anchor);
   if (view === 'month') { start.setDate(1); end.setMonth(end.getMonth() + 1, 0); }
   if (view !== 'day') {
-    start.setDate(start.getDate() - start.getDay());
-    end.setDate(end.getDate() + 6 - end.getDay());
+    start.setDate(start.getDate() - (start.getDay() - firstDay + 7) % 7);
+    end.setDate(end.getDate() + (firstDay + 6 - end.getDay() + 7) % 7);
   }
   end.setHours(23, 59, 59, 999);
   return { start, end };
@@ -51,6 +53,9 @@ export function calendarEvents(payload: unknown, type: MediaType, range: ReturnT
         key: `${type}-${item.id ?? index}-${release}-${calendarDay(date)}`, title,
         start: date, end: date, timed: false, type, mediaId: id, monitored, hasFile: bool(item.hasFile), release,
         color: release === 'cinemas' ? 'blue' : 'green',
+        metadata: type === 'movies' ? { title: String(item.title), tmdbId: item.tmdbId }
+          : { title: String(requireObject(item.series, 'series').title), tmdbId: requireObject(item.series, 'series').tmdbId,
+            tvdbId: requireObject(item.series, 'series').tvdbId, season: Number(item.seasonNumber), episode: Number(item.episodeNumber), episodeTitle: String(item.title) },
       });
     };
     if (type === 'movies') {
@@ -87,7 +92,7 @@ export function useCalendar(options: MediaServiceOptions) {
     reset(); const current = request; const abort = new AbortController(); controller = abort;
     const timer = setTimeout(() => abort.abort(), 15000); loading.value = true;
     try {
-      const range = calendarRange(value, view);
+      const range = calendarRange(value, view, weekStart.value);
       await Promise.all((['movies', 'series'] as const).map(async type => {
         try {
           const config = getConfig(type);

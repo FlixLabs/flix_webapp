@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { useDialogActivator, preserveNestedDialogFocus } from '@/composables/useDialogActivator';
 import { useDialogScroll } from '@/composables/useDialogScroll';
 import DialogScrollHint from './DialogScrollHint.vue';
@@ -14,7 +15,7 @@ function entered() { refresh(); preserveNestedDialogFocus(element.value); }
 <template>
   <v-dialog :model-value="modelValue" :persistent="closeDisabled" :activator="activator ?? fallbackActivator" :open-on-click="false" :aria-label="label" max-width="980" max-height="min(815px, calc(100% - 48px))" scrollable class="blur-dialog" transition="fade-transition" @update:model-value="emit('update:modelValue', $event)" @after-enter="entered" @after-leave="emit('closed')">
     <v-card class="dialog-flex">
-      <v-card-title class="d-flex align-center ga-2"><span>{{ title }}</span><v-spacer /><slot name="header-actions" /></v-card-title>
+      <v-card-title class="d-flex align-center ga-2"><span>{{ t(title) }}</span><v-spacer /><slot name="header-actions" /></v-card-title>
       <div class="dialog-body">
         <v-card-text :ref="setElement" class="dialog-flex-text" :class="{ 'dialog-no-overflow': !canScroll }" @scroll.passive="update">
           <slot :showScrollHint="showScrollHint" :canScroll="canScroll" />
@@ -24,7 +25,7 @@ function entered() { refresh(); preserveNestedDialogFocus(element.value); }
       <v-card-actions class="dialog-actions flex-wrap">
         <div v-if="$slots.navigation" class="dialog-navigation"><slot name="navigation" /></div>
         <slot name="actions" />
-        <v-btn color="on-surface" :aria-label="closeLabel" :disabled="closeDisabled" @click="emit('update:modelValue', false)">Close</v-btn>
+        <v-btn color="on-surface" :aria-label="closeLabel" :disabled="closeDisabled" @click="emit('update:modelValue', false)">{{ t("Close") }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

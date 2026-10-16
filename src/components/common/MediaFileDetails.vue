@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, formatDate } from '@/i18n';
 import { computed } from 'vue';
 import { fileSizeGb, type MediaFileDetails } from '@/composables/mediaFileDetails';
 
@@ -19,7 +20,7 @@ const fields = computed(() => {
     { label: 'Audio codec', value: info?.audioCodec },
     { label: 'Audio languages', value: info?.audioLanguages },
     { label: 'Subtitles', value: info?.subtitles },
-    { label: 'File added', value: info?.dateAdded ? new Date(info.dateAdded).toLocaleString() : null },
+    { label: 'File added', value: info?.dateAdded ? formatDate(new Date(info.dateAdded)) : null },
   ];
 });
 </script>
@@ -30,14 +31,14 @@ const fields = computed(() => {
       <v-tooltip :text="item.relativePath || ''">
         <template #activator="{ props: tooltipProps }">
           <span v-bind="tooltipProps">
-            <v-text-field label="File" variant="outlined" :model-value="item.relativePath" disabled />
+            <v-text-field :label="t('File')" variant="outlined" :model-value="item.relativePath" disabled />
           </span>
         </template>
       </v-tooltip>
       <v-row tag="dl" class="mt-0">
         <v-col v-for="field in fields" :key="field.label" cols="12" sm="6">
-          <dt class="text-caption text-medium-emphasis">{{ field.label }}</dt>
-          <dd class="text-body-2 text-break ma-0">{{ field.value || 'Not provided' }}</dd>
+          <dt class="text-caption text-medium-emphasis">{{ t(field.label) }}</dt>
+          <dd class="text-body-2 text-break ma-0">{{ field.value || t("Not provided") }}</dd>
         </v-col>
       </v-row>
     </v-col>
