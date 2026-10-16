@@ -43,7 +43,7 @@ test('library series navigation loads the next series episodes', async ({ page, 
   await expect(dialog.locator('.title-line')).toHaveText('Other series');
   await expect(dialog.getByRole('button', { name: 'Previous media' })).toBeEnabled();
   await dialog.locator('.dialog-flex-text').evaluate(el => { el.scrollTop = el.scrollHeight; });
-  await dialog.getByRole('button', { name: 'Season 1', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Season 1 1 episode', exact: true }).click();
   await expect(dialog).toContainText('Other pilot');
   expect(mutations).toEqual([]);
 });
