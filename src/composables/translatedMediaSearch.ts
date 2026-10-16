@@ -21,6 +21,7 @@ interface SearchOptions {
   tmdbUrl: string;
   tmdbKey: string;
   language: string;
+  region?: string;
   signal: AbortSignal;
 }
 const positiveId = (value: unknown): value is number => Number.isSafeInteger(value) && Number(value) > 0;
@@ -38,6 +39,7 @@ export async function supplementMediaSearch(native: MediaSearchResult[], options
     const tmdbUrl = options.tmdbUrl.replace(/\/$/, '');
     const serviceUrl = options.serviceUrl.replace(/\/$/, '');
     const params = new URLSearchParams({ query: options.query, api_key: options.tmdbKey, language: options.language, include_adult: 'false' });
+    if (options.region) params.set('region', options.region);
     const titleField = isMovie ? 'title' : 'name';
     const originalField = isMovie ? 'original_title' : 'original_name';
     const json = requireObject(await readApiJson(await fetch(`${tmdbUrl}/search/${isMovie ? 'movie' : 'tv'}?${params}`, { signal: controller.signal, cache: 'no-store' })), 'translated search');

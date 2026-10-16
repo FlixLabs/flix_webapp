@@ -98,7 +98,7 @@ it differs from the interpreted badge; import warnings remain visible.
 ### Dashboard Media Search
 
 Search preserves Radarr/Sonarr results and supplements translated titles with
-TMDB search in the browser's language. At most three missing candidates per media
+TMDB search in the selected content language. At most three missing candidates per media
 type and query are resolved through the service. Movies use TMDB IDs; series use
 TMDB external IDs to obtain a confirmed TVDB ID, then a Sonarr lookup. Series
 without a confirmed TVDB mapping are skipped. TMDB results are never added directly.
@@ -346,7 +346,7 @@ requesting Flix API configuration.
 
 ### Keyboard Accessibility
 
-The interface declares English as its language. **Skip to content** bypasses
+The interface declares its selected language in `html[lang]`. **Skip to content** bypasses
 the header when navigating with a keyboard. Library and Outings cards open with
 Enter or Space; selection mode uses the individual checkboxes instead of adding
 a second card tab stop.
@@ -411,3 +411,37 @@ No tags need to be pushed manually. Test release scripts locally with:
 ```sh
 yarn test:ci
 ```
+
+### Languages And Regional Preferences
+
+Settings > Language and region provides independent, browser-persisted choices:
+English/French interface, English/French/original media content, and release region.
+First use detects the browser language and region. Changes apply without a page
+reload, including navigation, confirmations, accessibility labels, errors, dates,
+numbers, calendar labels and the first day of the week. No new CI variable or API
+migration is required. Settings remain available without Flix API.
+
+TMDB localizes displayed titles, synopses, collections and episode names where
+available; missing translations retain original/native metadata. Library search
+also accepts translated titles using a debounced, bounded TMDB supplement. Native
+identities and action payloads remain unchanged. Release names, file paths, custom
+profiles/tags, and unrecognized messages supplied by external services remain as
+reported. Language choices never change Radarr/Sonarr download preferences.
+
+Metadata requests are shared, cached for 30 minutes, limited to four concurrent
+requests and cancelled when their views close. Episode translations share one
+request per displayed season. Translations do not reorder library cards as they
+arrive. Upcoming movie queries use the selected TMDB language and release region;
+TV episode air dates remain those reported by Sonarr/TMDB, not fabricated local
+release dates.
+
+Translation catalogs live in `src/i18n/en.json` and `src/i18n/fr.json`.
+`t()` uses readable English source messages as literal keys. Interpolation uses
+named parameters, with Vue I18n handling plurals. `yarn test:i18n` checks matching
+catalogs, interpolation parameters, referenced keys and untranslated static UI
+text. It runs automatically as part of `yarn test`, including the quality job.
+To add a language, add its catalog, register it in `src/i18n`, provide the matching
+Vuetify locale and include it in the supported preference choices.
+
+References: [Vue I18n](https://vue-i18n.intlify.dev/guide/essentials/started)
+and [TMDB language support](https://developer.themoviedb.org/docs/languages).

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 
 import { ref, watch } from 'vue';
 import { useDialogActivator } from '@/composables/useDialogActivator';
@@ -40,32 +41,26 @@ function confirm() {
     v-model="internalVisible"
     :activator="dialogActivator"
     :open-on-click="false"
-    aria-label="Confirm deletion"
+    :aria-label="t('Confirm deletion')"
     @after-enter="cancelButton?.$el.focus({ preventScroll: true })"
     max-width="600px"
     class="blur-dialog"
     >
     <v-card>
-      <v-card-title>
-        Confirm deletion
-      </v-card-title>
+      <v-card-title>{{ t("Confirm deletion") }}</v-card-title>
       <v-card-text>
-        {{ message }}
+        {{ t(message) }}
       </v-card-text>
       <v-card-actions>
         <v-btn
           ref="cancelButton"
           @click="cancel"
           color="on-surface"
-          >
-          Cancel
-        </v-btn>
+          >{{ t("Cancel") }}</v-btn>
         <v-btn
           @click="confirm"
           color="error"
-          >
-          Confirm
-        </v-btn>
+          >{{ t("Confirm") }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

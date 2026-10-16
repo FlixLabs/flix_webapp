@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, translatedChoices, interfaceLanguage, contentLanguage, region, regionCodes } from '@/i18n';
 import { apiFetch, saveApiSession, clearApiSession } from '@/composables/apiSession';
 
 import { readApiJson, requireObject } from '@/composables/apiResponse';
@@ -20,6 +21,7 @@ const store = useFlixStore();
 const useAPI = import.meta.env.VITE_FLIX_API_USE === 'true';
 const section = ref('appearance');
 const sections = [
+  { title: 'Language and region', value: 'language', icon: 'mdi-translate' },
   { title: 'Appearance', value: 'appearance', icon: 'mdi-palette-outline' },
   ...(useAPI ? [{ title: 'Security', value: 'security', icon: 'mdi-shield-lock-outline' }] : []),
 ];
@@ -29,6 +31,12 @@ const themeMode = computed({
     theme.change(name);
     saveTheme(name);
   },
+});
+const interfaceLanguages = [{ title: 'English', value: 'en' }, { title: 'French', value: 'fr' }];
+const contentLanguages = [...interfaceLanguages, { title: 'Original language', value: 'original' }];
+const regions = computed(() => {
+  const names = new Intl.DisplayNames([interfaceLanguage.value], { type: 'region' });
+  return regionCodes.map(value => ({ title: names.of(value) || value, value })).sort((a, b) => a.title.localeCompare(b.title, interfaceLanguage.value));
 });
 const themeModes = [
   { title: 'Dark', value: DEFAULT_THEME_NAME },
@@ -215,27 +223,38 @@ watch(color, (newValue) => {
 <template>
   <Alert :alert="alert" @update:alert="alert = $event" />
   <v-container>
-    <SectionNavigation v-if="useAPI" v-model="section" :sections="sections" />
-    <ReadFeedback v-if="useAPI" :state="section === 'security' ? reads.auth.state : reads.color.state" :label="section === 'security' ? 'Authentication settings' : 'Color settings'" :disabled="isSaving" @retry="getData(section === 'security' ? 'auth' : 'color')" />
+    <SectionNavigation v-model="section" :sections="sections" />
+    <ReadFeedback v-if="useAPI && section !== 'language'" :state="section === 'security' ? reads.auth.state : reads.color.state" :label="section === 'security' ? t('Authentication settings') : t('Color settings')" :disabled="isSaving" @retry="getData(section === 'security' ? 'auth' : 'color')" />
     <v-row :class="{ 'mt-4': useAPI }">
+      <v-col v-show="section === 'language'" cols="12">
+        <h3>{{ t('Language and region') }}</h3>
+        <v-card class="mt-4"><v-card-text>
+          <v-row>
+            <v-col cols="12" md="6"><v-select v-model="interfaceLanguage" :items="translatedChoices(interfaceLanguages)" :label="t('Interface language')" variant="outlined" hide-details /></v-col>
+            <v-col cols="12" md="6"><v-select v-model="contentLanguage" :items="translatedChoices(contentLanguages)" :label="t('Content language')" variant="outlined" hide-details /></v-col>
+            <v-col cols="12"><v-autocomplete v-model="region" :items="regions" :label="t('Release region')" variant="outlined" hide-details /></v-col>
+          </v-row>
+          <p class="text-caption text-medium-emphasis mt-3">{{ t('Languages and region are saved in this browser. Media profiles and download preferences are never changed.') }}</p>
+        </v-card-text></v-card>
+      </v-col>
       <v-col v-show="section === 'appearance'" cols="12">
-        <h3>Appearance</h3>
+        <h3>{{ t("Appearance") }}</h3>
         <v-card class="mt-4">
           <v-card-text>
             <v-select
               v-model="themeMode"
-              :items="themeModes"
-              label="Theme"
+              :items="translatedChoices(themeModes)"
+              :label="t('Theme')"
               prepend-icon="mdi-theme-light-dark"
               variant="outlined"
               hide-details
             />
-            <p class="text-caption text-medium-emphasis mt-3">Saved in this browser and applied immediately.</p>
+            <p class="text-caption text-medium-emphasis mt-3">{{ t("Saved in this browser and applied immediately.") }}</p>
             <template v-if="useAPI">
               <v-divider class="my-4" />
               <v-switch
                 v-model="color"
-                label="Custom primary color"
+                :label="t('Custom primary color')"
                 :disabled="readOnly('color')"
                 inset
                 color="primary"
@@ -246,8 +265,8 @@ watch(color, (newValue) => {
                   <v-color-picker v-model="colorData.primary" show-swatches />
                 </div>
                 <div class="d-flex justify-end ga-2 mt-4">
-                  <v-btn variant="text" :disabled="readOnly('color')" @click="color = false">Reset</v-btn>
-                  <v-btn color="primary" variant="outlined" :disabled="readOnly('color')" @click="setData('color')">Save</v-btn>
+                  <v-btn variant="text" :disabled="readOnly('color')" @click="color = false">{{ t("Reset") }}</v-btn>
+                  <v-btn color="primary" variant="outlined" :disabled="readOnly('color')" @click="setData('color')">{{ t("Save") }}</v-btn>
                 </div>
               </template>
             </template>
@@ -255,12 +274,12 @@ watch(color, (newValue) => {
         </v-card>
       </v-col>
       <v-col v-if="useAPI" v-show="section === 'security'" cols="12">
-        <h3>Security</h3>
+        <h3>{{ t("Security") }}</h3>
         <v-card class="mt-4">
           <v-card-text>
             <v-switch
               v-model="auth"
-              label="Basic authentication"
+              :label="t('Basic authentication')"
               :disabled="readOnly('auth')"
               inset
               color="primary"
@@ -269,7 +288,7 @@ watch(color, (newValue) => {
             <template v-if="auth">
               <v-text-field
                 v-model="authData.username"
-                label="Username"
+                :label="t('Username')"
                 variant="outlined"
                 prepend-icon="mdi-form-textbox"
                 clearable
@@ -277,14 +296,14 @@ watch(color, (newValue) => {
               />
               <v-text-field
                 v-model="authData.password"
-                label="Password"
+                :label="t('Password')"
                 type="password"
                 variant="outlined"
                 prepend-icon="mdi-form-textbox-password"
                 clearable
               />
               <div class="d-flex justify-end">
-                <v-btn color="primary" variant="outlined" :disabled="readOnly('auth')" @click="setData('auth')">Save</v-btn>
+                <v-btn color="primary" variant="outlined" :disabled="readOnly('auth')" @click="setData('auth')">{{ t("Save") }}</v-btn>
               </div>
             </template>
           </v-card-text>

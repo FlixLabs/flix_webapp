@@ -30,5 +30,6 @@ export type MediaFileDetails = ReturnType<typeof mediaFileFields>['fileDetails']
 
 export function fileSizeGb(value: unknown): string {
   return typeof value === 'number' && Number.isFinite(value) && value >= 0
-    ? (value / 1e9).toFixed(2) : 'Not provided';
+    ? decimal(value / 1e9) : t('Not provided');
 }
+import { decimal, t } from '@/i18n';

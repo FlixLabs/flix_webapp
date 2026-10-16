@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { computed, ref, watch } from 'vue';
 import DeleteConfirmationDialog from './DeleteConfirmationDialog.vue';
 import { useBulkMediaActions, type BulkAction, type BulkMedia } from '@/composables/useBulkMediaActions';
@@ -47,30 +48,30 @@ async function execute(action: BulkAction) {
   <v-card variant="outlined" class="my-3 pa-3">
     <v-row align="center">
       <v-col cols="12" sm="6">
-        <div class="text-body-2 mb-2">{{ selectedIds.length }} selected across pages</div>
-        <v-btn size="small" variant="text" :disabled="pending || pageSelectionDisabled" @click="emit('select-page')">Select page</v-btn>
+        <div class="text-body-2 mb-2">{{ t("{p0} selected across pages", { p0: selectedIds.length }) }}</div>
+        <v-btn size="small" variant="text" :disabled="pending || pageSelectionDisabled" @click="emit('select-page')">{{ t("Select page") }}</v-btn>
       </v-col>
       <v-col cols="12" sm="6" class="d-flex justify-end ga-2">
         <v-menu>
           <template #activator="{ props: menuProps }">
-            <v-btn v-bind="menuProps" size="small" variant="tonal" append-icon="mdi-chevron-down" :disabled="pending || !selection.length">Selection actions</v-btn>
+            <v-btn v-bind="menuProps" size="small" variant="tonal" append-icon="mdi-chevron-down" :disabled="pending || !selection.length">{{ t("Selection actions") }}</v-btn>
           </template>
           <v-list role="menu" density="compact" :disabled="pending || !selection.length">
-            <v-list-item role="menuitem" title="Monitor selected" @click="execute('monitor')" />
-            <v-list-item role="menuitem" title="Unmonitor selected" @click="execute('unmonitor')" />
-            <v-list-item role="menuitem" title="Search selected" @click="execute('search')" />
+            <v-list-item role="menuitem" :title="t('Monitor selected')" @click="execute('monitor')" />
+            <v-list-item role="menuitem" :title="t('Unmonitor selected')" @click="execute('unmonitor')" />
+            <v-list-item role="menuitem" :title="t('Search selected')" @click="execute('search')" />
             <v-divider />
-            <v-list-item role="menuitem" title="Clear selection" @click="emit('update:selectedIds', [])" />
-            <v-list-item role="menuitem" title="Remove selected" base-color="error" @click="requestDeletion" />
+            <v-list-item role="menuitem" :title="t('Clear selection')" @click="emit('update:selectedIds', [])" />
+            <v-list-item role="menuitem" :title="t('Remove selected')" base-color="error" @click="requestDeletion" />
           </v-list>
         </v-menu>
-        <v-btn size="small" variant="text" aria-label="Stop after current item" :disabled="!pending || stopRequested" @click="stop">Stop</v-btn>
+        <v-btn size="small" variant="text" :aria-label="t('Stop after current item')" :disabled="!pending || stopRequested" @click="stop">{{ t("Stop") }}</v-btn>
       </v-col>
     </v-row>
     <div v-if="pending" class="mt-3">
       <v-progress-linear :model-value="total ? completed / total * 100 : 0" color="primary" />
       <div class="mt-2">
-        <span class="text-caption">{{ completed }} / {{ total }} processed</span>
+        <span class="text-caption">{{ t("{p0} / {p1} processed", { p0: completed, p1: total }) }}</span>
       </div>
     </div>
     <v-alert v-if="report" :type="hasFailures ? 'warning' : 'success'" variant="tonal" class="mt-3">{{ report }}</v-alert>

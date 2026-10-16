@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { mediaFileFields } from '@/composables/mediaFileDetails';
 import { readApiJson, requireList } from '@/composables/apiResponse';
 import { useReadRequest } from '@/composables/useReadRequest';
@@ -25,6 +26,7 @@ import { useDialog } from '@/composables/useDialog';
 import { useMediaSheetRoute } from '@/composables/useMediaSheetRoute';
 import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
+import LocalizedMedia from '@/components/common/LocalizedMedia.vue';
 import MediaDialog from '@/components/common/MediaDialog.vue';
 import EpisodePanel from '@/components/common/EpisodePanel.vue';
 import Loading from '@/components/common/Loading.vue';
@@ -87,7 +89,7 @@ const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(fals
 const { state: movieItems, reset: resetMovieItems } = useResettable<any[]>([]);
 const { state: selectedMovie, reset: resetSelectedMovie } = useResettable<any | null>(null);
 const { dialog: movieDialog, reset: resetMovieDialog } = useDialog();
-const { filteredItems: filtered_movies } = useLibraryFilters(movieItems, search, filters);
+const { filteredItems: filtered_movies, translationLoading: movieTranslationLoading } = useLibraryFilters(movieItems, search, filters, { type: 'movies', enabled: () => selected_view.value === 'movies' && !showCollections.value });
 const movies_total_pages = computed(() =>
   Math.ceil(filtered_movies.value.length / items_per_page)
 );
@@ -99,7 +101,7 @@ const { state: serieItems, reset: resetSerieItems } = useResettable<any[]>([]);
 const { state: selectedSerie, reset: resetSelectedSerie } = useResettable<any | null>(null);
 const { dialog: serieDialog, reset: resetSerieDialog } = useDialog();
 const { state: serieEpisodes, reset: resetSerieEpisodes } = useResettable<any[]>([]);
-const { filteredItems: filtered_series } = useLibraryFilters(serieItems, search, filters);
+const { filteredItems: filtered_series, translationLoading: seriesTranslationLoading } = useLibraryFilters(serieItems, search, filters, { type: 'series', enabled: () => selected_view.value === 'series' && !showCollections.value });
 const series_total_pages = computed(() =>
   Math.ceil(filtered_series.value.length / items_per_page)
 );
@@ -410,31 +412,29 @@ watch(serviceContext, () => {
       :total-pages="showCollections ? collectionPages : selected_view === 'movies' ? movies_total_pages : series_total_pages"
       v-model:search="browserSearch"
       v-model:selected-view="selected_view"
-      :total-movies="libraryReads.movies.state.hasData ? total_movies : undefined"
-      :total-series="libraryReads.series.state.hasData ? total_series : undefined"
+      :total-movies="libraryReads.movies.state.hasData && !movieTranslationLoading ? total_movies : undefined"
+      :total-series="libraryReads.series.state.hasData && !seriesTranslationLoading ? total_series : undefined"
     >
       <template v-if="!showCollections" #actions>
       <div
         v-if="selectionMode || (selected_view == 'movies' && filtered_movies.length > 0) || (selected_view == 'series' && filtered_series.length > 0)"
         class="library-tools d-flex justify-end align-center flex-nowrap ga-2"
         >
-        <v-btn variant="outlined" :color="selectionMode ? 'primary' : undefined" :active="selectionMode" :aria-pressed="selectionMode" :disabled="bulkPending || (!selectionMode && selectionLoading)" @click="selectionMode = !selectionMode">
-          Select media
-        </v-btn>
+        <v-btn variant="outlined" :color="selectionMode ? 'primary' : undefined" :active="selectionMode" :aria-pressed="selectionMode" :disabled="bulkPending || (!selectionMode && selectionLoading)" @click="selectionMode = !selectionMode">{{ t("Select media") }}</v-btn>
         <v-menu>
           <template #activator="{ props: menuProps }">
-            <v-btn v-bind="menuProps" variant="outlined" append-icon="mdi-chevron-down" :disabled="bulkPending">Library tools</v-btn>
+            <v-btn v-bind="menuProps" variant="outlined" append-icon="mdi-chevron-down" :disabled="bulkPending">{{ t("Library tools") }}</v-btn>
           </template>
           <v-list role="menu" density="compact">
-            <v-list-item role="menuitem" title="Export" prepend-icon="mdi-file-export-outline" :disabled="!visibleSelectionItems.length" @click="exportLibrary()" />
-            <v-list-item role="menuitem" title="Import" prepend-icon="mdi-file-import-outline" @click="switchShowFileUpload" />
+            <v-list-item role="menuitem" :title="t('Export')" prepend-icon="mdi-file-export-outline" :disabled="!visibleSelectionItems.length" @click="exportLibrary()" />
+            <v-list-item role="menuitem" :title="t('Import')" prepend-icon="mdi-file-import-outline" @click="switchShowFileUpload" />
           </v-list>
         </v-menu>
       </div>
       </template>
     </MediaBrowserToolbar>
     <LibraryCollections v-if="showCollections" v-model:page="collectionPage" :search="collectionSearch" :movies="movieItems" :source="collectionSource" :collection-state="collectionRead.state" :context="serviceContext()" :library-state="libraryReads.movies.state" :initial-collection="requestedCollection" @retry-collections="loadCollections" @open-movie="handleMovieClick" @retry-library="getContent('movies')" @refreshed="applyCollectionUpdate" />
-    <ReadFeedback v-if="!showCollections" :state="libraryReads[selected_view].state" :label="selected_view === 'movies' ? 'Movie library' : 'Series library'" :disabled="bulkPending" @retry="getContent(selected_view)" />
+    <ReadFeedback v-if="!showCollections" :state="libraryReads[selected_view].state" :label="selected_view === 'movies' ? t('Movie library') : t('Series library')" :disabled="bulkPending" @retry="getContent(selected_view)" />
     <LibraryFilters v-show="!showCollections" v-model="filters" :statuses="statuses" :qualities="qualities" :years="years" />
     <LibraryBulkActions
       v-if="selectionMode"
@@ -471,7 +471,7 @@ watch(serviceContext, () => {
         v-if="!showCollections"
         :items="paginated_movies"
         :total="total_movies"
-        :is-loading="isLoadingMovie"
+        :is-loading="isLoadingMovie || movieTranslationLoading"
         id-field="id"
         announcementName="Release"
         :showHasFile="true"
@@ -503,9 +503,11 @@ watch(serviceContext, () => {
       >
         <template #metadata>
           <div v-if="Number.isSafeInteger(selectedMovie?.collection?.tmdbId) && selectedMovie.collection.tmdbId > 0" class="d-flex justify-center mt-3">
-            <v-btn class="collection-link" max-width="100%" variant="tonal" prepend-icon="mdi-filmstrip-box-multiple" :title="`Collection: ${selectedMovie.collection.title || 'View saga'}`" :disabled="!contentLoaded.movies" @click="browseCollections(selectedMovie.collection.tmdbId)">
-              <span class="text-truncate">Collection: {{ selectedMovie.collection.title || 'View saga' }}</span>
+            <LocalizedMedia :item="selectedMovie.collection" type="collection" v-slot="{ media: localizedSaga }">
+            <v-btn class="collection-link" max-width="100%" variant="tonal" prepend-icon="mdi-filmstrip-box-multiple" :title="t('Collection: {p0}', { p0: localizedSaga.title || t('View saga') })" :disabled="!contentLoaded.movies" @click="browseCollections(selectedMovie.collection.tmdbId)">
+              <span class="text-truncate">{{ t("Collection: {p0}", { p0: localizedSaga.title || t("View saga") }) }}</span>
             </v-btn>
+            </LocalizedMedia>
           </div>
         </template>
       </MediaDialog>
@@ -516,7 +518,7 @@ watch(serviceContext, () => {
       <MediaBrowserResults
         :items="paginated_series"
         :total="total_series"
-        :is-loading="isLoadingSerie"
+        :is-loading="isLoadingSerie || seriesTranslationLoading"
         id-field="id"
         announcementName="Premiere"
         :showHasFile="false"
@@ -549,7 +551,7 @@ watch(serviceContext, () => {
         @remove="openDeleteConfirmationDialog('series', $event)"
         >
         <template #status>
-          <ReadFeedback :state="episodeRead.state" label="Series episodes" @retry="getSerieEpisodes(selectedSerie?.id)" />
+          <ReadFeedback :state="episodeRead.state" :label="t('Series episodes')" @retry="getSerieEpisodes(selectedSerie?.id)" />
         </template>
         <template
           #details
@@ -563,7 +565,7 @@ watch(serviceContext, () => {
         <template
           #episodes
           >
-          <EpisodePanel
+          <EpisodePanel :media-identity="selectedSerie"
             :grouped_episodes="grouped_episodes"
             :isLoading="isLoadingSerieEpisodes && !episodeRead.state.hasData"
             :hasTotalSize="totalSerieSizeOnDisk > 0"
@@ -573,7 +575,7 @@ watch(serviceContext, () => {
               >
               <Loading
                 :isLoading="isLoadingSerieEpisodes && !episodeRead.state.hasData"
-                sentence="Research in progress..."
+                :sentence="t('Research in progress...')"
                 />
             </template>
           </EpisodePanel>
