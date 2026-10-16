@@ -2,11 +2,14 @@ import { test, expect } from './fixtures';
 import type { Locator } from '@playwright/test';
 
 async function expectCentered(alert: Locator, selector: string) {
-  const content = await alert.locator('.v-alert__content').boundingBox();
-  const icon = await alert.locator(selector).boundingBox();
-  expect(content).not.toBeNull();
-  expect(icon).not.toBeNull();
-  expect(Math.abs(icon!.y + icon!.height / 2 - content!.y - content!.height / 2)).toBeLessThanOrEqual(2);
+  // Sample both boxes in one frame while the notification is animating.
+  const offset = await alert.evaluate((element, iconSelector) => {
+    const content = element.querySelector('.v-alert__content')?.getBoundingClientRect();
+    const icon = element.querySelector(iconSelector)?.getBoundingClientRect();
+    return content && icon ? Math.abs(icon.y + icon.height / 2 - content.y - content.height / 2) : null;
+  }, selector);
+  expect(offset).not.toBeNull();
+  expect(offset).toBeLessThanOrEqual(2);
 }
 
 test('notification icons and dismiss button stay vertically centered', async ({ page, mutations }) => {
