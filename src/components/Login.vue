@@ -21,6 +21,8 @@ const useAPI = ref(import.meta.env.VITE_FLIX_API_USE === 'true');
 const { alert, showErrorAlert } = useAlert();
 
 const isLoading = ref(false);
+const checkingSession = ref(true);
+const requiresLogin = ref(false);
 const authenticationRead = useReadRequest(() => useAPI.value);
 
 const auth_data = ref<{ username: string | null; password: string | null }>({
@@ -29,6 +31,7 @@ const auth_data = ref<{ username: string | null; password: string | null }>({
 });
 
 async function getData() {
+  if (!requiresLogin.value || checkingSession.value || isLoading.value || authenticationRead.state.error) return;
   if (!auth_data.value.username || !auth_data.value.password) {
     showErrorAlert('Username and password cannot be empty'); return;
   }
@@ -48,18 +51,21 @@ async function getData() {
 }
 
 async function checkData() {
+  checkingSession.value = true;
+  requiresLogin.value = false;
   const read = authenticationRead.begin();
   try {
     const response = await apiFetch(import.meta.env.VITE_FLIX_API_URL + '/session', { signal: read.signal, cache: 'no-store' });
     const data = requireObject<{ authenticated?: boolean }>(await readApiJson(response), 'session');
     if (!read.isCurrent()) return;
+    if (typeof data.authenticated !== 'boolean') throw new Error('Invalid sign-in session.');
     read.success();
     if (data.authenticated === true) {
       sessionStorage.setItem('flix_webapp_is_authenticated', 'true');
       await router.replace(loginDestination(route.query.redirect));
-    }
+    } else requiresLogin.value = true;
   } catch (error) { read.fail(error); }
-  finally { read.finish(); }
+  finally { if (read.isCurrent()) checkingSession.value = false; read.finish(); }
 }
 
 onMounted(() => {
@@ -76,7 +82,7 @@ onMounted(() => {
   <v-container>
     <ReadFeedback :state="authenticationRead.state" :label="t('Login configuration')" @retry="checkData" />
     <div
-      v-if="!isLoading"
+      v-if="requiresLogin && !checkingSession && !authenticationRead.state.loading && !authenticationRead.state.error && !isLoading"
       >
       <v-text-field
         :label="t('Username')"
@@ -108,7 +114,7 @@ onMounted(() => {
       </div>
     </div>
     <Loading
-      :isLoading="isLoading"
+      :isLoading="isLoading || authenticationRead.state.loading || (checkingSession && !authenticationRead.state.error)"
       :sentence="t('Loading data...')"
       />
   </v-container>
