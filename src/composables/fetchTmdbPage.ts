@@ -9,7 +9,7 @@ export interface TmdbItem {
 }
 
 export async function fetchTmdbPage(url: string, options: { signal?: AbortSignal } = {}): Promise<{ results: TmdbItem[]; total_pages: number }> {
-  const response = await fetch(url, { signal: options.signal ?? AbortSignal.timeout(15000) });
+  const response = await fetch(localizedTmdbUrl(url), { signal: options.signal ?? AbortSignal.timeout(15000) });
   if (!response.ok) {
     throw new Error(`Unable to load upcoming media (TMDB HTTP ${response.status}).`);
   }
@@ -28,4 +28,12 @@ export async function fetchTmdbPage(url: string, options: { signal?: AbortSignal
     throw new Error('Invalid upcoming media response from TMDB. Please try again.');
   }
   return { results: data.results, total_pages: data.total_pages || 1 };
+}
+import { metadataLocale, region } from '@/i18n/preferences';
+
+export function localizedTmdbUrl(value: string) {
+  const url = new URL(value);
+  url.searchParams.set('language', metadataLocale.value === 'original' ? 'en-US' : metadataLocale.value);
+  url.searchParams.set('region', region.value);
+  return url.toString();
 }

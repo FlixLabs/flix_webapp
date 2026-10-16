@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useMediaMonitoring, type MonitoredMedia } from '@/composables/useMediaMonitoring';
@@ -27,12 +28,12 @@ const seasons = computed(() => [...(props.item.seasons || [])].sort((a, b) => a.
 
 <template>
   <div class="mt-4 media-monitoring">
-    <v-alert v-if="error" type="error" variant="tonal" class="mb-3">{{ error }}</v-alert>
+    <v-alert v-if="error" type="error" variant="tonal" class="mb-3">{{ t(error) }}</v-alert>
     <div class="d-flex align-center flex-wrap ga-3">
       <v-switch
         v-if="typeof item.monitored === 'boolean'"
         :key="controlRevision"
-        :label="type === 'movies' ? 'Monitor movie' : 'Monitor series'"
+        :label="type === 'movies' ? t('Monitor movie') : t('Monitor series')"
         :model-value="item.monitored"
         :disabled="pending || disabled || !!error"
         :loading="pending"
@@ -40,25 +41,25 @@ const seasons = computed(() => [...(props.item.seasons || [])].sort((a, b) => a.
         hide-details
         @update:model-value="setMonitoring(type, item, $event === true)"
       />
-      <span v-else class="text-body-2 text-medium-emphasis">Monitoring status not provided</span>
+      <span v-else class="text-body-2 text-medium-emphasis">{{ t("Monitoring status not provided") }}</span>
       <v-btn
         v-if="error || typeof item.monitored !== 'boolean'"
         variant="text"
         :loading="pending"
         :disabled="pending || disabled"
         @click="refreshMonitoring(type, item)"
-      >Reload monitoring</v-btn>
-      <span class="text-caption text-medium-emphasis">No search or file deletion is triggered.</span>
+      >{{ t("Reload monitoring") }}</v-btn>
+      <span class="text-caption text-medium-emphasis">{{ t("No search or file deletion is triggered.") }}</span>
     </div>
     <v-expansion-panels v-if="type === 'series' && seasons.length" class="mt-3">
-      <v-expansion-panel title="Season monitoring">
+      <v-expansion-panel :title="t('Season monitoring')">
         <v-expansion-panel-text>
-          <p v-if="!item.monitored" class="text-caption text-medium-emphasis mb-2">Enable series monitoring to monitor individual seasons.</p>
+          <p v-if="!item.monitored" class="text-caption text-medium-emphasis mb-2">{{ t("Enable series monitoring to monitor individual seasons.") }}</p>
           <v-row>
             <v-col v-for="season in seasons" :key="season.seasonNumber" cols="12" sm="6">
               <v-switch
                 :key="controlRevision"
-                :label="season.seasonNumber === 0 ? 'Monitor specials' : `Monitor season ${season.seasonNumber}`"
+                :label="season.seasonNumber === 0 ? t('Monitor specials') : t('Monitor season {p0}', { p0: season.seasonNumber })"
                 :model-value="season.monitored"
                 :disabled="pending || disabled || !!error || !item.monitored"
                 color="primary"

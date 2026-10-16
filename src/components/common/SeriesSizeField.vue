@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, decimal } from '@/i18n';
 defineProps<{ size: number; isLoading: boolean; isOpen: boolean }>();
 </script>
 
@@ -6,9 +7,9 @@ defineProps<{ size: number; isLoading: boolean; isOpen: boolean }>();
   <v-row v-if="isOpen && !isLoading && size > 0">
     <v-col>
       <v-text-field
-        label="Size (GB)"
+        :label="t('Size (GB)')"
         variant="outlined"
-        :model-value="(size / 1e9).toFixed(2)"
+        :model-value="decimal((size / 1e9))"
         disabled
       />
     </v-col>

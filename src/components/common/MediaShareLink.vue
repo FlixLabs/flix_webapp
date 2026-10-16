@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFlixStore } from '@/stores/flixStore';
@@ -21,18 +22,18 @@ async function copy() {
 </script>
 
 <template>
-  <v-btn icon="mdi-link-variant" variant="text" size="small" aria-label="Share media" @click="dialog = true; copied = false; error = ''" />
-  <v-dialog v-model="dialog" :activator="dialogActivator" :open-on-click="false" aria-label="Share media link" max-width="600">
+  <v-btn icon="mdi-link-variant" variant="text" size="small" :aria-label="t('Share media')" @click="dialog = true; copied = false; error = ''" />
+  <v-dialog v-model="dialog" :activator="dialogActivator" :open-on-click="false" :aria-label="t('Share media link')" max-width="600">
     <v-card>
-      <v-card-title>Share media link</v-card-title>
+      <v-card-title>{{ t("Share media link") }}</v-card-title>
       <v-card-text>
-        <v-text-field label="Media link" :model-value="link" readonly variant="outlined" hide-details @click="($event.target as HTMLInputElement)?.select?.()" />
-        <v-alert v-if="copied" type="success" variant="tonal" class="mt-3">Link copied.</v-alert>
-        <v-alert v-if="error" type="info" variant="tonal" class="mt-3">{{ error }}</v-alert>
+        <v-text-field :label="t('Media link')" :model-value="link" readonly variant="outlined" hide-details @click="($event.target as HTMLInputElement)?.select?.()" />
+        <v-alert v-if="copied" type="success" variant="tonal" class="mt-3">{{ t("Link copied.") }}</v-alert>
+        <v-alert v-if="error" type="info" variant="tonal" class="mt-3">{{ t(error) }}</v-alert>
       </v-card-text>
       <v-card-actions>
-        <v-btn color="primary" @click="copy">Copy link</v-btn>
-        <v-spacer /><v-btn color="on-surface" @click="dialog = false">Close</v-btn>
+        <v-btn color="primary" @click="copy">{{ t("Copy link") }}</v-btn>
+        <v-spacer /><v-btn color="on-surface" @click="dialog = false">{{ t("Close") }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

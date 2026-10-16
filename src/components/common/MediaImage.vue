@@ -1,3 +1,6 @@
+<script setup lang="ts">
+import { t } from '@/i18n';
+</script>
 <template>
   <v-img>
     <template #placeholder>
@@ -7,7 +10,7 @@
           color="primary"
           :size="32"
           :width="3"
-          aria-label="Loading image"
+          :aria-label="t('Loading image')"
         />
       </div>
     </template>
@@ -15,7 +18,7 @@
       <div
         class="d-flex align-center justify-center h-100 bg-surface text-medium-emphasis"
         role="img"
-        aria-label="Image unavailable"
+        :aria-label="t('Image unavailable')"
       >
         <v-icon icon="mdi-image-broken-variant" size="32" />
       </div>

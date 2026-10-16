@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, interfaceLanguage } from '@/i18n';
 import { apiFetch, signOut } from '@/composables/apiSession';
 
 import { readApiJson, requireObject, requireList } from '@/composables/apiResponse';
@@ -58,6 +59,8 @@ const filteredDrawerOptions = computed(() => {
 const currentPage = computed(() => initialDrawerOptions.find(
   option => router.currentRoute.value.path === '/' + option.value
 ));
+
+watch([() => currentPage.value?.title, interfaceLanguage], () => { document.title = `${t(currentPage.value?.title ?? 'Login')} | Flix`; }, { immediate: true });
 
 function sessionExpired() {
   if (router.currentRoute.value.path !== '/login') void router.replace({ path: '/login', query: { redirect: router.currentRoute.value.fullPath } });
@@ -125,7 +128,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <a class="flix-skip-link" href="#main-content">Skip to content</a>
+  <a class="flix-skip-link" href="#main-content">{{ t("Skip to content") }}</a>
   <v-app class="flix-app">
     <v-app-bar
       color="surface"
@@ -137,7 +140,7 @@ onMounted(async () => {
         v-slot:prepend
         >
         <v-app-bar-nav-icon
-          :aria-label="drawer ? 'Close navigation' : 'Open navigation'"
+          :aria-label="drawer ? t('Close navigation') : t('Open navigation')"
           :aria-expanded="drawer"
           @click.stop="drawer = !drawer"
           />
@@ -145,8 +148,8 @@ onMounted(async () => {
       <v-toolbar-title
         :class="xs ? 'mx-3' : 'app-bar-title'"
         >
-        <strong class="flix-brand text-primary">Flix</strong>
-        <span v-if="!xs" class="text-caption text-medium-emphasis ml-3">WebApp</span>
+        <strong class="flix-brand text-primary">{{ t("Flix") }}</strong>
+        <span v-if="!xs" class="text-caption text-medium-emphasis ml-3">{{ t("WebApp") }}</span>
       </v-toolbar-title>
       <template
         v-slot:append
@@ -160,13 +163,13 @@ onMounted(async () => {
           :items="store.instances"
           item-title="name"
           item-value="name"
-          label="Instance"
+          :label="t('Instance')"
           variant="outlined"
           density="compact"
           hide-details
           >
           <template #append-inner>
-            <v-btn icon="mdi-refresh" size="x-small" variant="text" aria-label="Reload instances" :loading="instanceRead.state.loading" :disabled="instanceRead.state.loading" @click.stop="getData" />
+            <v-btn icon="mdi-refresh" size="x-small" variant="text" :aria-label="t('Reload instances')" :loading="instanceRead.state.loading" :disabled="instanceRead.state.loading" @click.stop="getData" />
           </template>
         </v-select>
       </template>
@@ -182,7 +185,7 @@ onMounted(async () => {
           v-for="option in filteredDrawerOptions"
           :key="option.value"
           :prepend-icon="option.icon"
-          :title="option.title"
+          :title="t(option.title)"
           :to="option.value != 'signout' ? '/' + option.value : undefined"
           color="primary"
           @click="drawerSelectOption(option.value)"
@@ -193,22 +196,20 @@ onMounted(async () => {
     <v-main id="main-content" class="flix-main" tabindex="-1">
       <Alert :alert="alert" @update:alert="alert = $event" />
       <v-container v-if="!online || instanceRead.state.error || showAuthenticationError" class="pb-0">
-        <v-alert v-if="!online" type="warning" variant="tonal" role="status">Your browser reports it is offline. Some services may be unreachable.</v-alert>
-        <ReadFeedback :state="instanceRead.state" label="API instances" @retry="getData" />
-        <ReadFeedback v-if="showAuthenticationError" :state="authenticationRead.state" label="API authentication" @retry="getAuthentication" />
+        <v-alert v-if="!online" type="warning" variant="tonal" role="status">{{ t("Your browser reports it is offline. Some services may be unreachable.") }}</v-alert>
+        <ReadFeedback :state="instanceRead.state" :label="t('API instances')" @retry="getData" />
+        <ReadFeedback v-if="showAuthenticationError" :state="authenticationRead.state" :label="t('API authentication')" @retry="getAuthentication" />
       </v-container>
       <v-container v-if="currentPage" class="flix-page-heading pb-0">
         <div class="d-flex align-center ga-3">
           <v-icon :icon="currentPage.icon" color="primary" size="28" />
-          <h1 class="flix-page-title">{{ currentPage.title }}</h1>
+          <h1 class="flix-page-title">{{ t(currentPage.title) }}</h1>
         </div>
       </v-container>
       <RouterView v-if="!useAPI || !$route.meta.requiresInstance || store.selectedInstanceData" />
       <v-container v-else>
-        <Loading :is-loading="isLoadingInstances" sentence="Loading instances..." />
-        <v-alert v-if="!isLoadingInstances && !instanceRead.state.error" type="warning">
-          No instance available. Please check the API configuration.
-          <v-btn variant="text" @click="getData">Retry</v-btn>
+        <Loading :is-loading="isLoadingInstances" :sentence="t('Loading instances...')" />
+        <v-alert v-if="!isLoadingInstances && !instanceRead.state.error" type="warning"> {{ t("No instance available. Please check the API configuration.") }} <v-btn variant="text" @click="getData">{{ t("Retry") }}</v-btn>
         </v-alert>
       </v-container>
     </v-main>
@@ -222,7 +223,7 @@ onMounted(async () => {
         <v-col
           class="text-right"
           >
-          <span class="text-caption text-medium-emphasis">{{ new Date().getFullYear() }} &middot; Flix</span>
+          <span class="text-caption text-medium-emphasis">{{ t("{p0} · Flix", { p0: new Date().getFullYear() }) }}</span>
         </v-col>
       </v-row>
     </v-footer>

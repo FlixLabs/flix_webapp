@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import Loading from "@/components/common/Loading.vue";
 import MediaGrid from "@/components/common/MediaGrid.vue";
 
@@ -21,7 +22,7 @@ defineEmits<{ "card-click": [id: number]; 'toggle-selection': [id: number] }>();
 </script>
 
 <template>
-  <Loading :isLoading="isLoading" sentence="Research in progress..." />
+  <Loading :isLoading="isLoading" :sentence="t('Research in progress...')" />
   <MediaGrid
     :paginated_items="items"
     :id-field="idField"
@@ -36,6 +37,6 @@ defineEmits<{ "card-click": [id: number]; 'toggle-selection': [id: number] }>();
     @card-click="$emit('card-click', $event)"
   />
   <v-alert v-if="!total && !isLoading && !unavailable" type="info" class="mt-4">
-    {{ emptyMessage }}
+    {{ t(emptyMessage) }}
   </v-alert>
 </template>

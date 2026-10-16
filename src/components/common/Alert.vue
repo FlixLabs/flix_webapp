@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 
 type AlertState = {
   visible: boolean;
@@ -36,9 +37,9 @@ function hideAlert() {
       :type="(alert.type as 'success' | 'error' | 'info' | 'warning' | undefined) || undefined"
       :icon="alert.icon || undefined"
       class="fixed-alert"
-      :text="alert.text"
+      :text="t(alert.text)"
       closable
-      close-label="Dismiss notification"
+      :close-label="t('Dismiss notification')"
       @click:close="hideAlert"
       />
   </transition>

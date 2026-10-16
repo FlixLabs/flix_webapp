@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import type { MediaType } from '@/composables/useMediaService';
 import { computed } from 'vue';
 import MediaCount from './MediaCount.vue';
@@ -19,15 +20,12 @@ function select(type: MediaType | 'collections') {
 </script>
 
 <template>
-  <v-btn-toggle v-model="activeView" color="primary" variant="outlined" :size="showCollections && $vuetify.display.xs ? 'default' : undefined" mandatory class="media-type-toggle flex-shrink-0" :class="{ 'w-100': showCollections && $vuetify.display.xs }" aria-label="Media type">
-    <v-btn value="movies" prepend-icon="mdi-movie-open-outline" :stacked="showCollections && $vuetify.display.xs" @click="select('movies')">
-      Movies<MediaCount :total="totalMovies" :pending="moviesPending" />
+  <v-btn-toggle v-model="activeView" color="primary" variant="outlined" :size="showCollections && $vuetify.display.xs ? 'default' : undefined" mandatory class="media-type-toggle flex-shrink-0" :class="{ 'w-100': showCollections && $vuetify.display.xs }" :aria-label="t('Media type')">
+    <v-btn value="movies" prepend-icon="mdi-movie-open-outline" :stacked="showCollections && $vuetify.display.xs" @click="select('movies')"> {{ t("Movies") }}<MediaCount :total="totalMovies" :pending="moviesPending" />
     </v-btn>
-    <v-btn value="series" prepend-icon="mdi-television-classic" :stacked="showCollections && $vuetify.display.xs" @click="select('series')">
-      Series<MediaCount :total="totalSeries" :pending="seriesPending" />
+    <v-btn value="series" prepend-icon="mdi-television-classic" :stacked="showCollections && $vuetify.display.xs" @click="select('series')"> {{ t("Series") }}<MediaCount :total="totalSeries" :pending="seriesPending" />
     </v-btn>
-    <v-btn v-if="showCollections" value="collections" prepend-icon="mdi-filmstrip-box-multiple" :stacked="$vuetify.display.xs" :disabled="collectionsDisabled" @click="select('collections')">
-      Collections<MediaCount :total="totalCollections" :pending="totalCollections === undefined" />
+    <v-btn v-if="showCollections" value="collections" prepend-icon="mdi-filmstrip-box-multiple" :stacked="$vuetify.display.xs" :disabled="collectionsDisabled" @click="select('collections')"> {{ t("Collections") }}<MediaCount :total="totalCollections" :pending="totalCollections === undefined" />
     </v-btn>
   </v-btn-toggle>
 </template>

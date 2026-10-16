@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, translatedChoices } from '@/i18n';
 import { readApiJson, requireObject, requireList, optionalList } from '@/composables/apiResponse';
 import { useReadRequest } from '@/composables/useReadRequest';
 import ReadFeedback from '@/components/common/ReadFeedback.vue';
@@ -209,6 +210,7 @@ function getDownload(type: 'movies' | 'series') {
           id: item.id,
           mediaId: downloadMediaId(type, item),
           mediaTitle: downloadMediaTitle(type, item),
+          metadata: type === 'movies' ? item.movie : item.series,
           downloadId: item.downloadId,
           outputPath: item.outputPath,
           trackedDownloadState: item.trackedDownloadState,
@@ -272,6 +274,7 @@ function getHistory(type: 'movies' | 'series') {
           id: item.id,
           mediaId: downloadMediaId(type, item),
           mediaTitle: downloadMediaTitle(type, item),
+          metadata: type === 'movies' ? item.movie : item.series,
           title: item.sourceTitle,
           date: item.date,
           client: item.downloadClient,
@@ -379,8 +382,8 @@ watch(serviceContext, () => {
   <DownloadClientsDialog v-if="useAPI && selectedInstanceData?.has_download_clients" v-model="clientsDialog" :instance="selectedInstance" />
   <MediaDialog v-if="detailItem" v-model="mediaDialog" :item="detailItem" :media-type="detailType === 'movies' ? 'Movie' : 'Serie'" :announcement-name="detailType === 'movies' ? 'Release' : 'Premiere'" :activator="detailActivator" :summary-visible="mediaSheet.state.hasData" :show-search="false" :show-add="false" :show-remove="false" :library-item="mediaSheet.state.hasData && !mediaSheet.state.error" read-only>
     <template #status>
-      <Loading :is-loading="mediaSheet.state.loading" sentence="Loading media..." />
-      <ReadFeedback :state="mediaSheet.state" label="Download media" @retry="mediaSheet.retry" />
+      <Loading :is-loading="mediaSheet.state.loading" :sentence="t('Loading media...')" />
+      <ReadFeedback :state="mediaSheet.state" :label="t('Download media')" @retry="mediaSheet.retry" />
     </template>
     <template v-if="detailType === 'series' && mediaSheet.state.hasData" #details>
       <SeriesSizeField :size="detailSeriesSize" :is-loading="false" :is-open="mediaDialog" />
@@ -395,7 +398,7 @@ watch(serviceContext, () => {
   />
   <v-container>
     <PageNavigation ref="navigation">
-      <v-text-field v-model="search" label="Search" variant="outlined" prepend-inner-icon="mdi-magnify" clearable hide-details />
+      <v-text-field v-model="search" :label="t('Search')" variant="outlined" prepend-inner-icon="mdi-magnify" clearable hide-details />
       <div class="d-flex flex-wrap align-center justify-space-between ga-3 mt-3">
         <MediaTypeToggle
           v-model="mediaType"
@@ -404,15 +407,15 @@ watch(serviceContext, () => {
           :movies-pending="!reads.movies[view].state.hasData"
           :series-pending="!reads.series[view].state.hasData"
         />
-        <v-btn-toggle v-model="view" color="primary" variant="outlined" mandatory aria-label="Download view">
-          <v-btn value="queue" prepend-icon="mdi-download-outline">Queue</v-btn>
-          <v-btn value="history" prepend-icon="mdi-history">History</v-btn>
+        <v-btn-toggle v-model="view" color="primary" variant="outlined" mandatory :aria-label="t('Download view')">
+          <v-btn value="queue" prepend-icon="mdi-download-outline">{{ t("Queue") }}</v-btn>
+          <v-btn value="history" prepend-icon="mdi-history">{{ t("History") }}</v-btn>
         </v-btn-toggle>
         <v-select
           v-if="view === 'queue'"
           v-model="queueFilter"
-          :items="queueFilterOptions"
-          label="Queue filter"
+          :items="translatedChoices(queueFilterOptions)"
+          :label="t('Queue filter')"
           variant="outlined"
           density="compact"
           hide-details
@@ -424,56 +427,56 @@ watch(serviceContext, () => {
           :length="pageCount"
           :total-visible="$vuetify.display.xs ? 3 : 5"
           density="compact"
-          aria-label="Download pages"
+          :aria-label="t('Download pages')"
           rounded
         />
       </div>
     </PageNavigation>
-    <ReadFeedback :state="activeRead" :label="`${mediaType === 'movies' ? 'Movie' : 'Series'} ${view === 'queue' ? 'downloads' : 'history'}`" :disabled="isRemoving" @retry="refreshActive" />
+    <ReadFeedback :state="activeRead" :label="`${mediaType === 'movies' ? t('Movie') : t('Series')} ${view === 'queue' ? 'downloads' : 'history'}`" :disabled="isRemoving" @retry="refreshActive" />
     <v-card class="mt-4">
       <v-card-title class="d-flex flex-wrap align-center justify-space-between ga-3">
-        <span>{{ mediaType === 'movies' ? 'Movie' : 'Series' }} {{ view === 'queue' ? 'downloads' : 'history' }}</span>
-        <v-btn v-if="useAPI && selectedInstanceData?.has_download_clients" variant="text" prepend-icon="mdi-download-network-outline" @click="clientsDialog = true">Download clients</v-btn>
-        <v-btn variant="text" prepend-icon="mdi-refresh" :loading="activeLoading" @click="refreshActive">Refresh</v-btn>
+        <span>{{ mediaType === 'movies' ? t("Movie") : t("Series") }} {{ view === 'queue' ? 'downloads' : 'history' }}</span>
+        <v-btn v-if="useAPI && selectedInstanceData?.has_download_clients" variant="text" prepend-icon="mdi-download-network-outline" @click="clientsDialog = true">{{ t("Download clients") }}</v-btn>
+        <v-btn variant="text" prepend-icon="mdi-refresh" :loading="activeLoading" @click="refreshActive">{{ t("Refresh") }}</v-btn>
       </v-card-title>
       <v-card-text>
         <v-row align="center">
           <v-col cols="12" sm="8">
-            <p class="text-caption text-medium-emphasis">{{ filteredRecords.length }} of {{ activeRecords.length }} loaded items. Search filters the loaded {{ view === 'queue' ? 'queue' : 'history' }}.</p>
+            <p class="text-caption text-medium-emphasis">{{ t("{p0} of {p1} loaded items. Search filters the loaded {p2}.", { p0: filteredRecords.length, p1: activeRecords.length, p2: view === 'queue' ? 'queue' : 'history' }) }}</p>
           </v-col>
           <v-col cols="12" sm="4">
-            <v-text-field v-model="activeInterval" label="Interval (Seconds)" variant="outlined" type="number" min="1" density="compact" hide-details />
+            <v-text-field v-model="activeInterval" :label="t('Interval (Seconds)')" variant="outlined" type="number" min="1" density="compact" hide-details />
           </v-col>
         </v-row>
         <v-data-table
           v-model:page="page"
-          :headers="headers"
+          :headers="translatedChoices(headers)"
           :items="filteredRecords"
           :items-per-page="itemsPerPage"
           :loading="activeLoading ? 'primary' : false"
           :mobile-breakpoint="600"
           hide-default-footer
           class="downloads-table mt-4"
-          :no-data-text="activeRead.error ? 'Data unavailable. Retry to load this view.' : search || (view === 'queue' && queueFilter !== 'all') ? 'No matching items found' : view === 'queue' ? 'No download information found' : 'No history information found'"
+          :no-data-text="activeRead.error ? t('Data unavailable. Retry to load this view.') : search || (view === 'queue' && queueFilter !== 'all') ? t('No matching items found') : view === 'queue' ? t('No download information found') : t('No history information found')"
         >
           <template #item.title="{ item }">
-            <DownloadTitle :key="`${mediaType}-${view}-${item.id}`" :record="item" :queue="view === 'queue'" @open="openDownloadMedia(item, $event)" />
+            <DownloadTitle :media-type="mediaType" :key="`${mediaType}-${view}-${item.id}`" :record="item" :queue="view === 'queue'" @open="openDownloadMedia(item, $event)" />
           </template>
           <template #item.status="{ item }">
             <template v-if="view === 'queue'">
-              <v-chip size="small" :color="item.diagnosis?.color">{{ item.diagnosis?.label }}</v-chip>
-              <div v-if="showRawDownloadStatus(item.status, item.diagnosis?.label)" class="text-caption text-medium-emphasis mt-1 text-capitalize">{{ item.status }}</div>
-              <p v-if="item.blocked" class="download-warning text-caption mt-2"><v-icon icon="mdi-alert-circle-outline" size="16" class="mr-1" />{{ item.messages?.[0] || 'No details provided by the service.' }}</p>
+              <v-chip size="small" :color="item.diagnosis?.color">{{ t(item.diagnosis?.label) }}</v-chip>
+              <div v-if="showRawDownloadStatus(item.status, item.diagnosis?.label)" class="text-caption text-medium-emphasis mt-1 text-capitalize">{{ t(item.status) }}</div>
+              <p v-if="item.blocked" class="download-warning text-caption mt-2"><v-icon icon="mdi-alert-circle-outline" size="16" class="mr-1" />{{ t(item.messages?.[0]) || t("No details provided by the service.") }}</p>
             </template>
-            <span v-else class="text-capitalize">{{ item.status || 'Unavailable' }}</span>
+            <span v-else class="text-capitalize">{{ t(item.status) || t("Unavailable") }}</span>
           </template>
           <template #item.progress="{ item }">
             <div class="download-progress">
               <div class="d-flex flex-wrap align-center justify-space-between ga-2 text-caption mb-2">
-                <strong>{{ item.progressKnown ? `${Math.ceil(item.ratio)} %` : 'Progress not provided' }}</strong>
-                <span class="text-medium-emphasis">Time remaining: {{ item.timeLeft || 'Unavailable' }}</span>
+                <strong>{{ item.progressKnown ? `${Math.ceil(item.ratio)} %` : t("Progress not provided") }}</strong>
+                <span class="text-medium-emphasis">{{ t("Time remaining: {p0}", { p0: item.timeLeft || t("Unavailable") }) }}</span>
               </div>
-              <v-progress-linear v-if="item.progressKnown" :model-value="item.ratio" :color="item.blocked ? 'warning' : 'primary'" height="6" rounded :aria-label="'Download progress for ' + item.title" />
+              <v-progress-linear v-if="item.progressKnown" :model-value="item.ratio" :color="item.blocked ? 'warning' : 'primary'" height="6" rounded :aria-label="t('Download progress for {p0}', { p0: item.title })" />
             </div>
           </template>
           <template #item.actions="{ item }">
@@ -484,19 +487,19 @@ watch(serviceContext, () => {
               variant="text"
               size="small"
               prepend-icon="mdi-file-import-outline"
-              :aria-label="'Manual import ' + item.title"
+              :aria-label="t('Manual import {p0}', { p0: item.title })"
               :disabled="isRemoving || actionsDisabled"
               @click="importType = mediaType; importDialog?.open(mediaType, item)"
-            >Manual Import</v-btn>
+            >{{ t("Manual Import") }}</v-btn>
             <v-btn
               color="error"
               variant="text"
               size="small"
               prepend-icon="mdi-trash-can-outline"
               :disabled="isRemoving || actionsDisabled || !Number.isInteger(item.id)"
-              :aria-label="'Remove ' + item.title"
+              :aria-label="t('Remove {p0}', { p0: item.title })"
               @click="openDeleteConfirmationDialog(mediaType, item)"
-            >Remove</v-btn>
+            >{{ t("Remove") }}</v-btn>
             </div>
           </template>
         </v-data-table>

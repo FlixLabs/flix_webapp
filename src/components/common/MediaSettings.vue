@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useMediaSettings, type MediaSettingsItem } from '@/composables/useMediaSettings';
@@ -19,30 +20,30 @@ const unavailable = computed(() => pending.value || props.disabled || !!error.va
 </script>
 
 <template>
-  <v-expansion-panels v-model="expanded" class="mt-4" aria-label="Media settings">
-    <v-expansion-panel :value="true" title="Media settings" :disabled="pending">
+  <v-expansion-panels v-model="expanded" class="mt-4" :aria-label="t('Media settings')">
+    <v-expansion-panel :value="true" :title="t('Media settings')" :disabled="pending">
       <v-expansion-panel-text>
-        <p class="text-caption text-medium-emphasis mb-3">Change this media's profile and existing tags. No search, file move or deletion is requested.</p>
-        <v-progress-linear v-if="pending && !loaded" indeterminate color="primary" aria-label="Loading media settings" />
-        <v-alert v-if="error" type="error" variant="tonal" class="mb-3">{{ error }}</v-alert>
-        <v-alert v-if="success" type="success" variant="tonal" class="mb-3">{{ success }}</v-alert>
+        <p class="text-caption text-medium-emphasis mb-3">{{ t("Change this media's profile and existing tags. No search, file move or deletion is requested.") }}</p>
+        <v-progress-linear v-if="pending && !loaded" indeterminate color="primary" :aria-label="t('Loading media settings')" />
+        <v-alert v-if="error" type="error" variant="tonal" class="mb-3">{{ t(error) }}</v-alert>
+        <v-alert v-if="success" type="success" variant="tonal" class="mb-3">{{ t(success) }}</v-alert>
         <v-row v-if="loaded">
           <v-col cols="12" sm="6">
-            <v-select v-model="qualityProfileId" :items="profiles" label="Quality profile" variant="outlined" :disabled="unavailable" hide-details />
+            <v-select v-model="qualityProfileId" :items="profiles" :label="t('Quality profile')" variant="outlined" :disabled="unavailable" hide-details />
           </v-col>
           <v-col cols="12" sm="6">
-            <v-select v-model="selectedTags" :items="tags" label="Tags" multiple chips closable-chips variant="outlined" :disabled="unavailable" hide-details />
+            <v-select v-model="selectedTags" :items="tags" :label="t('Tags')" multiple chips closable-chips variant="outlined" :disabled="unavailable" hide-details />
           </v-col>
           <v-col v-if="languageEditable" cols="12" sm="6">
-            <v-select v-model="languageProfileId" :items="languages" label="Language profile" variant="outlined" :disabled="unavailable" hide-details />
+            <v-select v-model="languageProfileId" :items="languages" :label="t('Language profile')" variant="outlined" :disabled="unavailable" hide-details />
           </v-col>
           <v-col v-else cols="12">
-            <p class="text-caption text-medium-emphasis">Language preferences are configured in {{ type === 'movies' ? 'Radarr' : 'Sonarr' }} profiles/custom formats. No separate editable language profile was detected.</p>
+            <p class="text-caption text-medium-emphasis">{{ t("Language preferences are configured in {p0} profiles/custom formats. No separate editable language profile was detected.", { p0: type === 'movies' ? t("Radarr") : t("Sonarr") }) }}</p>
           </v-col>
         </v-row>
         <div class="d-flex flex-wrap ga-2 mt-4">
-          <v-btn color="primary" variant="tonal" :loading="pending && loaded" :disabled="unavailable || !loaded || !dirty" @click="state.save(type, item)">Save settings</v-btn>
-          <v-btn variant="text" :disabled="pending || disabled" @click="state.load(type, item)">Reload settings</v-btn>
+          <v-btn color="primary" variant="tonal" :loading="pending && loaded" :disabled="unavailable || !loaded || !dirty" @click="state.save(type, item)">{{ t("Save settings") }}</v-btn>
+          <v-btn variant="text" :disabled="pending || disabled" @click="state.load(type, item)">{{ t("Reload settings") }}</v-btn>
         </div>
       </v-expansion-panel-text>
     </v-expansion-panel>
