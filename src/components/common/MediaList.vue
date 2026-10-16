@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import MediaImage from './MediaImage.vue';
+import LocalizedMedia from './LocalizedMedia.vue';
 
 const props = defineProps<{
   mediaType: 'movies' | 'series';
@@ -17,9 +19,8 @@ const emit = defineEmits(['add', 'remove', 'details']);
     v-if="paginated_items.length"
     class="custom-list mt-4 pa-0"
     >
+    <LocalizedMedia v-for="(item, index) in paginated_items" :key="index" :item="item" :type="mediaType" v-slot="{ media }">
     <v-list-item
-      v-for="(item, index) in paginated_items"
-      :key="index"
       class="pa-0 spacing-list-item"
       >
       <template
@@ -30,24 +31,24 @@ const emit = defineEmits(['add', 'remove', 'details']);
           >
           <MediaImage
             :src="item.prependAvatar"
-            alt="Poster"
+            :alt="t('Poster')"
             class="custom-img"
             />
         </v-avatar>
       </template>
       <div class="pr-4">
         <v-list-item-title>
-          {{ item.title }} ({{ item.year }})
+          {{ media.title }} ({{ item.year }})
         </v-list-item-title>
         <v-btn
           variant="text"
           size="small"
           prepend-icon="mdi-information-outline"
-          :aria-label="`Details for ${item.title}`"
+          :aria-label="t('Details for {p0}', { p0: media.title })"
           @click="emit('details', mediaType, item, $event.currentTarget)"
-        >Details</v-btn>
+        >{{ t("Details") }}</v-btn>
         <v-tooltip
-          :text="item.overview"
+          :text="media.overview"
           max-width="400"
           location="top"
           >
@@ -56,7 +57,7 @@ const emit = defineEmits(['add', 'remove', 'details']);
               <p
                 class="truncate-overview"
                 >
-                {{ item.overview }}
+                {{ media.overview }}
               </p>
             </span>
           </template>
@@ -71,7 +72,7 @@ const emit = defineEmits(['add', 'remove', 'details']);
               v-model="item.selected_quality"
               :items="qualityItems"
               :menu-props="{ maxWidth: 400 }"
-              label="Quality"
+              :label="t('Quality')"
               variant="outlined"
               :disabled="actionsDisabled || item.already_in_library || isPending?.(mediaType, item)"
               />
@@ -86,9 +87,7 @@ const emit = defineEmits(['add', 'remove', 'details']);
               @click="emit('add', mediaType, item)"
               block
               style="height: 56px"
-              >
-              Add
-            </v-btn>
+              >{{ t("Add") }}</v-btn>
             <v-btn
               v-if="!item.already_in_library && !qualityItems.length"
               color="primary"
@@ -97,9 +96,7 @@ const emit = defineEmits(['add', 'remove', 'details']);
               block
               style="height: 56px"
               disabled
-              >
-              Add
-            </v-btn>
+              >{{ t("Add") }}</v-btn>
             <v-btn
               v-if="item.already_in_library"
               :loading="isPending?.(mediaType, item)"
@@ -109,13 +106,12 @@ const emit = defineEmits(['add', 'remove', 'details']);
               @click="emit('remove', mediaType, item)"
               block
               style="height: 56px"
-              >
-              Remove
-            </v-btn>
+              >{{ t("Remove") }}</v-btn>
           </v-col>
         </v-row>
       </div>
     </v-list-item>
+    </LocalizedMedia>
   </v-list>
 </template>
 

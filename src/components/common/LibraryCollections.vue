@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { computed, ref, watch, defineAsyncComponent } from 'vue';
 import { downloadableCollectionMovies } from '@/composables/useCollectionDownloads';
 import { removableCollectionMovies } from '@/composables/useCollectionRemoval';
@@ -7,6 +8,7 @@ import type { ReadState } from '@/composables/useReadRequest';
 import { useDialogActivator } from '@/composables/useDialogActivator';
 import { useCollectionSheetRefresh, type CollectionSheetUpdate } from '@/composables/useCollectionSheetRefresh';
 import { useFlixStore } from '@/stores/flixStore';
+import { useLocalizedMedia } from '@/composables/useLocalizedMedia';
 import { useDisplay } from 'vuetify';
 import DialogSheet from './DialogSheet.vue';
 import MediaSummary from './MediaSummary.vue';
@@ -46,6 +48,7 @@ const filtered = computed(() => collections.value.filter(collection => collectio
 const pages = computed(() => Math.ceil(filtered.value.length / 12));
 const items = computed(() => filtered.value.slice((page.value - 1) * 12, page.value * 12));
 const selected = computed(() => collections.value.find(collection => collection.tmdbId === selectedId.value));
+const localizedCollection = useLocalizedMedia(() => dialog.value ? selected.value : undefined, () => 'collection');
 const members = computed(() => selected.value?.members ?? []);
 const downloadable = computed(() => downloadableCollectionMovies(members.value));
 const removable = computed(() => removableCollectionMovies(members.value));
@@ -98,40 +101,40 @@ watch(selected, value => { if (!value && props.collectionState.hasData) { dialog
 </script>
 
 <template>
-  <ReadFeedback :state="collectionState" label="Collections" @retry="emit('retry-collections')" />
-  <ReadFeedback :state="libraryState" label="Movie library" @retry="emit('retry-library')" />
-  <Loading :is-loading="collectionState.loading || libraryState.loading" sentence="Loading collections..." />
+  <ReadFeedback :state="collectionState" :label="t('Collections')" @retry="emit('retry-collections')" />
+  <ReadFeedback :state="libraryState" :label="t('Movie library')" @retry="emit('retry-library')" />
+  <Loading :is-loading="collectionState.loading || libraryState.loading" :sentence="t('Loading collections...')" />
   <v-row class="mt-2" density="compact">
     <v-col v-for="collection in items" :key="collection.tmdbId" cols="6" sm="4" md="3" lg="2" class="mb-4">
-      <MediaCard :title="collection.title" :poster="collection.poster" :poster-height="250" :subtitle="`${collection.movies.length} films`" :label="`Open collection ${collection.title}`" :disabled="disabled" @open="openCollection(collection.tmdbId)">
+      <MediaCard :metadata="collection" media-type="collection" :title="collection.title" :poster="collection.poster" :poster-height="250" :subtitle="t('{p0} films', { p0: collection.movies.length })" :label="t('Open collection {p0}', { p0: collection.title })" :disabled="disabled" @open="openCollection(collection.tmdbId)">
         <MediaTag :badge="countedBadge(availabilityBadge(true), collection.available)" />
         <MediaTag v-if="collection.missing" :badge="countedBadge(availabilityBadge(false), collection.missing)" />
       </MediaCard>
     </v-col>
   </v-row>
-  <v-alert v-if="!filtered.length && !disabled" type="info" class="mt-4">{{ search.trim() ? 'No collections match your search' : 'No automatic movie collections in this library' }}</v-alert>
-  <v-alert v-if="initialPending && !disabled && !collections.some(collection => collection.tmdbId === initialPending)" type="info" class="mt-4">This collection is not available in the selected instance.</v-alert>
-  <DialogSheet v-if="selected" v-model="dialog" title="Collection" :label="`Collection: ${selected.title}`" :context="`${selectedId}:${memberPage}:${memberPageSize}`" :activator="activator" close-label="Close collection">
-    <ReadFeedback :state="updates.state" label="Collection updates" @retry="updates.refresh" />
-    <ReadFeedback :state="collectionState" label="Collections" @retry="emit('retry-collections')" />
-    <ReadFeedback :state="libraryState" label="Movie library" @retry="emit('retry-library')" />
-    <MediaSummary :item="selected" :facts="collectionFacts">
-      <v-alert v-if="!members.length" type="info" class="mt-3">No films reported for this collection</v-alert>
+  <v-alert v-if="!filtered.length && !disabled" type="info" class="mt-4">{{ search.trim() ? t("No collections match your search") : t("No automatic movie collections in this library") }}</v-alert>
+  <v-alert v-if="initialPending && !disabled && !collections.some(collection => collection.tmdbId === initialPending)" type="info" class="mt-4">{{ t("This collection is not available in the selected instance.") }}</v-alert>
+  <DialogSheet v-if="selected" v-model="dialog" :title="t('Collection')" :label="t('Collection: {p0}', { p0: localizedCollection?.title ?? selected.title })" :context="`${selectedId}:${memberPage}:${memberPageSize}`" :activator="activator" :close-label="t('Close collection')">
+    <ReadFeedback :state="updates.state" :label="t('Collection updates')" @retry="updates.refresh" />
+    <ReadFeedback :state="collectionState" :label="t('Collections')" @retry="emit('retry-collections')" />
+    <ReadFeedback :state="libraryState" :label="t('Movie library')" @retry="emit('retry-library')" />
+    <MediaSummary :item="selected" media-type="collection" :facts="collectionFacts">
+      <v-alert v-if="!members.length" type="info" class="mt-3">{{ t("No films reported for this collection") }}</v-alert>
     </MediaSummary>
-    <section v-if="members.length" class="collection-members mt-6" aria-label="Collection movies">
-      <div class="d-flex align-center justify-space-between flex-wrap ga-2 mb-3"><h3 class="text-subtitle-1 font-weight-bold">Movies</h3><span class="text-caption text-medium-emphasis">Release year order</span></div>
+    <section v-if="members.length" class="collection-members mt-6" :aria-label="t('Collection movies')">
+      <div class="d-flex align-center justify-space-between flex-wrap ga-2 mb-3"><h3 class="text-subtitle-1 font-weight-bold">{{ t("Movies") }}</h3><span class="text-caption text-medium-emphasis">{{ t("Release year order") }}</span></div>
       <v-row density="compact">
         <v-col v-for="movie in displayedMembers" :key="movie.tmdbId" cols="6" sm="4" md="3">
-          <MediaCard :title="movie.title" :poster="movie.poster" :subtitle="movie.year || 'Unknown year'" :label="`View ${movie.title}`" :disabled="disabled" @open="openMember(movie)">
+          <MediaCard :metadata="movie" :title="movie.title" :poster="movie.poster" :subtitle="movie.year || t('Unknown year')" :label="t('View {p0}', { p0: movie.title })" :disabled="disabled" @open="openMember(movie)">
             <MediaBadges :has-file="movie.hasFile" :status="movie.status" />
           </MediaCard>
         </v-col>
       </v-row>
     </section>
-    <template #navigation><v-pagination v-if="memberPages > 1" v-model="memberPage" :length="memberPages" :total-visible="$vuetify.display.xs ? 3 : 5" density="compact" aria-label="Collection film pages" /></template>
+    <template #navigation><v-pagination v-if="memberPages > 1" v-model="memberPage" :length="memberPages" :total-visible="$vuetify.display.xs ? 3 : 5" density="compact" :aria-label="t('Collection film pages')" /></template>
     <template #actions>
-      <v-btn v-if="downloadable.length" color="primary" prepend-icon="mdi-download-outline" :disabled="disabled" @click="downloadDialog = true">Download missing ({{ downloadable.length }})</v-btn>
-      <v-btn v-if="removable.length" color="error" prepend-icon="mdi-trash-can-outline" :disabled="disabled" @click="removalDialog = true">Remove movies ({{ removable.length }})</v-btn>
+      <v-btn v-if="downloadable.length" color="primary" prepend-icon="mdi-download-outline" :disabled="disabled" @click="downloadDialog = true">{{ t("Download missing ({p0})", { p0: downloadable.length }) }}</v-btn>
+      <v-btn v-if="removable.length" color="error" prepend-icon="mdi-trash-can-outline" :disabled="disabled" @click="removalDialog = true">{{ t("Remove movies ({p0})", { p0: removable.length }) }}</v-btn>
     </template>
   </DialogSheet>
   <CollectionDownloadDialog v-if="downloadDialogReady" v-model="downloadDialog" :activator="downloadActivator" :movies="members" :context="context" :disabled="disabled" @refresh="emit('retry-library'); emit('retry-collections')" />

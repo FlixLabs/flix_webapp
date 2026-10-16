@@ -1,7 +1,10 @@
+<script setup lang="ts">
+import { t } from '@/i18n';
+</script>
 <template>
   <div class="scroll-hint" aria-hidden="true">
     <v-icon size="16">mdi-chevron-double-down</v-icon>
-    <span>Scroll</span>
+    <span>{{ t("Scroll") }}</span>
   </div>
 </template>
 

@@ -1,28 +1,33 @@
 <script setup lang="ts">
+import { t, formatDate } from '@/i18n';
+import { computed } from 'vue';
+import { useLocalizedMedia } from '@/composables/useLocalizedMedia';
 import DownloadDetails from './DownloadDetails.vue';
 import type { DownloadDetailRecord } from './DownloadDetails.vue';
-defineProps<{ record: DownloadDetailRecord & { title: string; mediaTitle?: string; mediaId?: number; date?: string; client?: string; indexer?: string; languages?: string }; queue: boolean }>();
+const props = defineProps<{ record: DownloadDetailRecord & { title: string; mediaTitle?: string; mediaId?: number; metadata?: { title?: string; tmdbId?: unknown; tvdbId?: unknown }; date?: string; client?: string; indexer?: string; languages?: string }; queue: boolean; mediaType?: 'movies' | 'series' }>();
+const translated = useLocalizedMedia(() => props.record.metadata, () => props.mediaType ?? 'movies');
+const title = computed(() => translated.value?.title ?? props.record.mediaTitle ?? props.record.title);
 defineEmits<{ open: [event: MouseEvent] }>();
 function date(value?: string) {
-  if (!value) return 'Not provided';
+  if (!value) return t('Not provided');
   const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? value : parsed.toLocaleString();
+  return Number.isNaN(parsed.getTime()) ? value : formatDate(parsed);
 }
 </script>
 
 <template>
   <div class="download-heading">
-    <v-btn v-if="record.mediaId" variant="text" class="download-title download-media-link px-0" :aria-label="'Open media for ' + record.title" @click="$emit('open', $event)">{{ record.mediaTitle || record.title }}</v-btn>
-    <div v-else class="download-title font-weight-medium">{{ record.mediaTitle || record.title }}</div>
+    <v-btn v-if="record.mediaId" variant="text" class="download-title download-media-link px-0" :aria-label="t('Open media for {p0}', { p0: record.title })" @click="$emit('open', $event)">{{ title }}</v-btn>
+    <div v-else class="download-title font-weight-medium">{{ title }}</div>
     <p v-if="record.mediaTitle && record.mediaTitle !== record.title" class="download-release text-caption text-medium-emphasis" :title="record.title">{{ record.title }}</p>
     <details class="download-metadata text-caption text-medium-emphasis mt-2">
-      <summary :aria-label="'Download details for ' + record.title">Details</summary>
+      <summary :aria-label="t('Download details for {p0}', { p0: record.title })">{{ t("Details") }}</summary>
       <dl class="mt-2">
-        <template v-if="record.mediaTitle && record.mediaTitle !== record.title"><dt>Release</dt><dd>{{ record.title }}</dd></template>
-        <dt>{{ queue ? 'Added' : 'Date' }}</dt><dd>{{ date(record.date) }}</dd>
-        <template v-if="record.client"><dt>Client</dt><dd>{{ record.client }}</dd></template>
-        <template v-if="record.indexer"><dt>Indexer</dt><dd>{{ record.indexer }}</dd></template>
-        <template v-if="record.languages"><dt>Languages</dt><dd>{{ record.languages }}</dd></template>
+        <template v-if="record.mediaTitle && record.mediaTitle !== record.title"><dt>{{ t("Release") }}</dt><dd>{{ record.title }}</dd></template>
+        <dt>{{ queue ? t('Added') : t('Date') }}</dt><dd>{{ date(record.date) }}</dd>
+        <template v-if="record.client"><dt>{{ t("Client") }}</dt><dd>{{ record.client }}</dd></template>
+        <template v-if="record.indexer"><dt>{{ t("Indexer") }}</dt><dd>{{ record.indexer }}</dd></template>
+        <template v-if="record.languages"><dt>{{ t("Languages") }}</dt><dd>{{ record.languages }}</dd></template>
       </dl>
       <DownloadDetails v-if="queue" :record="record" />
     </details>

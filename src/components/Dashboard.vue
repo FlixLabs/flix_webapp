@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, metadataLocale, region, metadataContext } from '@/i18n';
 import { useReadRequest } from '@/composables/useReadRequest';
 import ReadFeedback from '@/components/common/ReadFeedback.vue';
 import { readApiJson, requireList, optionalList } from '@/composables/apiResponse';
@@ -190,7 +191,7 @@ function getContent(type: 'movies' | 'series') {
       const supplemented = await supplementMediaSearch(json_data, {
         query: term, type, serviceUrl: base_url, serviceKey: api_key,
         tmdbUrl: import.meta.env.VITE_TMDB_BASE_URL, tmdbKey: import.meta.env.VITE_TMDB_API_KEY,
-        language: navigator.language || 'en-US', signal: request.signal,
+        language: metadataLocale.value === 'original' ? 'en-US' : metadataLocale.value, region: region.value, signal: request.signal,
       });
       if (!request.isCurrent()) return;
       if (supplemented !== json_data) publishResults(supplemented);
@@ -243,7 +244,7 @@ onMounted(() => {
   getQualityProfileList('series');
 });
 
-watch(serviceContext, () => {
+watch([serviceContext, metadataContext], () => {
   detailDialog.value = false;
   selectedItem.value = null;
   resetDeleteConfirmationDialog();
@@ -297,11 +298,11 @@ onBeforeUnmount(cancelSearch);
           <v-select
             v-model="selectedItem.selected_quality"
             :items="detailQualities"
-            label="Quality"
+            :label="t('Quality')"
             variant="outlined"
             :disabled="isPending(detailType, selectedItem) || !detailQualities.length"
           />
-          <p v-if="!detailQualities.length" class="text-caption text-warning">No quality profile available. Adding is unavailable.</p>
+          <p v-if="!detailQualities.length" class="text-caption text-warning">{{ t("No quality profile available. Adding is unavailable.") }}</p>
         </v-col>
       </v-row>
       <SeriesSizeField
@@ -316,7 +317,7 @@ onBeforeUnmount(cancelSearch);
     <PageNavigation ref="navigation">
         <v-text-field
           v-model="search"
-          label="Search"
+          :label="t('Search')"
           variant="outlined"
           prepend-inner-icon="mdi-magnify"
           clearable
@@ -330,16 +331,16 @@ onBeforeUnmount(cancelSearch);
             :length="Math.ceil(activeTotal / items_per_page)"
             :total-visible="$vuetify.display.xs ? 3 : 5"
             density="compact"
-            aria-label="Search results pages"
+            :aria-label="t('Search results pages')"
             rounded
           />
         </div>
     </PageNavigation>
-    <ReadFeedback :state="requests[mediaType].state" label="Search results" @retry="getContent(mediaType)" />
-    <ReadFeedback :state="mediaType === 'movies' ? movieLibraryRead : seriesLibraryRead" label="Library status" @retry="mediaType === 'movies' ? checkMovies() : checkSeries()" />
-    <ReadFeedback :state="qualityReads[mediaType].state" label="Quality profiles" @retry="getQualityProfileList(mediaType)" />
+    <ReadFeedback :state="requests[mediaType].state" :label="t('Search results')" @retry="getContent(mediaType)" />
+    <ReadFeedback :state="mediaType === 'movies' ? movieLibraryRead : seriesLibraryRead" :label="t('Library status')" @retry="mediaType === 'movies' ? checkMovies() : checkSeries()" />
+    <ReadFeedback :state="qualityReads[mediaType].state" :label="t('Quality profiles')" @retry="getQualityProfileList(mediaType)" />
     <DashboardAttention class="mt-4" />
-    <section :aria-label="mediaType === 'movies' ? 'Movie results' : 'Series results'" :aria-busy="activeLoading">
+    <section :aria-label="mediaType === 'movies' ? t('Movie results') : t('Series results')" :aria-busy="activeLoading">
       <MediaList
         :mediaType="mediaType"
         :paginated_items="activeItems"
@@ -350,9 +351,9 @@ onBeforeUnmount(cancelSearch);
         @remove="openDeleteConfirmationDialog"
         @details="openDetails"
       />
-      <Loading :isLoading="activeLoading" sentence="Research in progress..." />
+      <Loading :isLoading="activeLoading" :sentence="t('Research in progress...')" />
       <v-alert v-if="!activeItems.length && !activeLoading && !requests[mediaType].state.error && (!hasSearchTerm || requests[mediaType].state.hasData)" type="info" class="mt-4">
-        {{ !search || search.trim().length < 3 ? 'Enter at least 3 characters to search for movies and series.' : mediaType === 'movies' ? 'No movies found' : 'No series found' }}
+        {{ !search || search.trim().length < 3 ? t("Enter at least 3 characters to search for movies and series.") : mediaType === 'movies' ? t("No movies found") : t("No series found") }}
       </v-alert>
     </section>
   </v-container>

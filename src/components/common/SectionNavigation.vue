@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { computed, nextTick, ref, watch } from 'vue';
 import { useDisplay } from 'vuetify';
 import PageNavigation from './PageNavigation.vue';
@@ -21,8 +22,8 @@ watch(selected, async () => {
     <div class="d-flex flex-wrap align-center ga-3">
       <slot />
       <div class="d-flex flex-wrap ga-3" :class="{ 'w-100': xs }">
-        <v-btn-toggle v-for="row in rows" :key="row[0]?.value" v-model="selected" mandatory color="primary" variant="outlined" class="flex-shrink-0" :class="{ 'w-100': xs }" aria-label="Page sections">
-          <v-btn v-for="section in row" :key="section.value" :value="section.value" :prepend-icon="section.icon" :class="{ 'flex-grow-1': xs }">{{ section.title }}</v-btn>
+        <v-btn-toggle v-for="row in rows" :key="row[0]?.value" v-model="selected" mandatory color="primary" variant="outlined" class="flex-shrink-0" :class="{ 'w-100': xs }" :aria-label="t('Page sections')">
+          <v-btn v-for="section in row" :key="section.value" :value="section.value" :prepend-icon="section.icon" :class="{ 'flex-grow-1': xs }">{{ t(section.title) }}</v-btn>
         </v-btn-toggle>
       </div>
     </div>

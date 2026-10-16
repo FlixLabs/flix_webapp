@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { t, decimal } from '@/i18n';
 import MediaFileDetails from './MediaFileDetails.vue';
+import LocalizedEpisode from './LocalizedEpisode.vue';
 import { computed } from 'vue';
 
 const props = withDefaults(defineProps<{
   grouped_episodes: Record<number, any[]>;
   isLoading: boolean;
   hasTotalSize?: boolean;
+  mediaIdentity?: { tmdbId?: unknown; tvdbId?: unknown };
 }>(), {
   hasTotalSize: true
 });
@@ -21,7 +24,7 @@ const seasonSizes = computed(() => {
 });
 
 function formatSizeGb(sizeInBytes: number) {
-  return (sizeInBytes / 1e9).toFixed(2);
+  return decimal((sizeInBytes / 1e9));
 }
 </script>
 
@@ -40,12 +43,12 @@ function formatSizeGb(sizeInBytes: number) {
         >
         <v-expansion-panel-title>
           <div class="d-flex align-center w-100">
-            <span>Season {{ season }}</span>
+            <span>{{ t("Season {p0}", { p0: season }) }}</span>
             <v-spacer />
             <v-text-field
               v-if="(seasonSizes[String(season)] || 0) > 0"
               class="season-size-field"
-              label="Size (GB)"
+              :label="t('Size (GB)')"
               variant="outlined"
               density="compact"
               hide-details
@@ -62,10 +65,9 @@ function formatSizeGb(sizeInBytes: number) {
               >
               <div>
                 <v-list-item-title>
-                  {{ episode.title }}
+                  <LocalizedEpisode :item="{ ...mediaIdentity, season: episode.season, episode: episode.episode, title: episode.title }" v-slot="{ title }">{{ title }}</LocalizedEpisode>
                 </v-list-item-title>
-                <v-list-item-subtitle>
-                  Episode {{ episode.episode }} - {{ episode.airDate || "Date unknown" }}
+                <v-list-item-subtitle>{{ t("Episode {p0} - {p1}", { p0: episode.episode, p1: episode.airDate || t("Date unknown") }) }}
                 </v-list-item-subtitle>
                 <div
                   class="pt-2"
@@ -74,16 +76,12 @@ function formatSizeGb(sizeInBytes: number) {
                     v-if="episode.hasFile"
                     color="green"
                     small
-                    >
-                    Existing
-                  </v-chip>
+                    >{{ t("Existing") }}</v-chip>
                   <v-chip
                     v-else
                     color="red"
                     small
-                    >
-                    Missing
-                  </v-chip>
+                    >{{ t("Missing") }}</v-chip>
                 </div>
                 <MediaFileDetails v-if="episode.relativePath" class="mt-4" :item="episode" />
               </div>
@@ -99,9 +97,7 @@ function formatSizeGb(sizeInBytes: number) {
     <v-alert
       type="info"
       class="mt-4"
-      >
-      No episode found
-    </v-alert>
+      >{{ t("No episode found") }}</v-alert>
   </div>
 </template>
 

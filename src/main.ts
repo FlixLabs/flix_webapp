@@ -7,6 +7,9 @@ import './assets/flix.css'
 import { createApp } from 'vue'
 import { createVuetify } from 'vuetify'
 import { createPinia } from 'pinia';
+import { watch } from 'vue';
+import { en, fr } from 'vuetify/locale';
+import { i18n, interfaceLanguage } from '@/i18n';
 import App from './App.vue'
 import router from './router'
 import * as components from 'vuetify/components'
@@ -16,6 +19,7 @@ import { aliases, mdi } from 'vuetify/iconsets/mdi'
 import { DEFAULT_THEME_NAME, LIGHT_THEME_NAME, DEFAULT_PRIMARY, DEFAULT_LIGHT_PRIMARY, isCustomPrimary, getSavedTheme, applyPrimary } from '@/theme/constants'
 
 const vuetify = createVuetify({
+  locale: { locale: interfaceLanguage.value, fallback: 'en', messages: { en, fr } },
   defaults: {
     VDialog: { transition: 'fade-transition' },
     VCard: { rounded: 'lg', elevation: 0, border: true },
@@ -67,6 +71,8 @@ const app = createApp(App)
 const pinia = createPinia()
 
 app.use(router)
+app.use(i18n)
+watch(interfaceLanguage, value => { vuetify.locale.current.value = value; });
 
 app.use(vuetify)
 

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, formatDate } from '@/i18n';
 import { readApiJson, requireObject, requireList } from '@/composables/apiResponse';
 import { useReadRequest } from '@/composables/useReadRequest';
 import ReadFeedback from '@/components/common/ReadFeedback.vue';
@@ -349,24 +350,24 @@ onUnmounted(() => {
     <SectionNavigation v-model="section" :sections="sections">
       <MediaTypeToggle v-if="section !== 'integrations'" v-model="selectedMedia" />
       <v-btn v-else prepend-icon="mdi-refresh" :loading="integrations.services.value.some(service => service.state === 'checking')"
-        @click="integrations.refresh">Check All</v-btn>
+        @click="integrations.refresh">{{ t("Check All") }}</v-btn>
     </SectionNavigation>
     <div v-if="section !== 'integrations'" class="system-progress">
-      <v-progress-linear :active="refreshing" indeterminate aria-label="Loading system information" />
+      <v-progress-linear :active="refreshing" indeterminate :aria-label="t('Loading system information')" />
     </div>
-    <div v-if="initialLoading" role="status" aria-live="polite" aria-label="Loading system information" class="mt-4">
-      <span class="text-body-2 text-medium-emphasis">Loading system information...</span>
+    <div v-if="initialLoading" role="status" aria-live="polite" :aria-label="t('Loading system information')" class="mt-4">
+      <span class="text-body-2 text-medium-emphasis">{{ t("Loading system information...") }}</span>
       <v-skeleton-loader class="mt-3" type="heading, table-heading, table-row-divider@3" />
     </div>
     <div v-if="!initialLoading" :aria-busy="refreshing" data-testid="system-content">
-    <ReadFeedback v-for="endpoint in activeEndpoints" :key="`${selectedMedia}:${endpoint}`" :state="reads[selectedMedia][endpoint].state" :label="`${selectedMedia === 'movies' ? 'Radarr' : 'Sonarr'} ${endpoint}`" @retry="getData(selectedMedia, endpoint)" />
+    <ReadFeedback v-for="endpoint in activeEndpoints" :key="`${selectedMedia}:${endpoint}`" :state="reads[selectedMedia][endpoint].state" :label="`${selectedMedia === 'movies' ? t('Radarr') : t('Sonarr')} ${endpoint}`" @retry="getData(selectedMedia, endpoint)" />
     <IntegrationStatusPanel v-if="section === 'integrations'" :services="integrations.services.value"
       @retry="integrations.check" />
     <v-row v-if="section !== 'integrations'" class="mt-4">
       <v-col
         v-if="selectedMedia === 'movies'" cols="12"
         >
-        <h3>Radarr</h3>
+        <h3>{{ t("Radarr") }}</h3>
         <v-row
           v-if="section === 'status' && configHostMovie && Object.keys(configHostMovie).length > 0"
           >
@@ -374,32 +375,22 @@ onUnmounted(() => {
             <v-card
               class="mt-4"
               >
-              <v-card-title>
-                Host Configuration
-              </v-card-title>
+              <v-card-title>{{ t("Host Configuration") }}</v-card-title>
               <v-card-text>
                 <p>
-                  <strong>
-                    Bind Address:
-                  </strong>
+                  <strong>{{ t("Bind Address:") }}</strong>
                   {{ configHostMovie.bindAddress }}
                 </p>
                 <p>
-                  <strong>
-                    Port:
-                  </strong>
+                  <strong>{{ t("Port:") }}</strong>
                   {{ configHostMovie.port }}
                 </p>
                 <p>
-                  <strong>
-                    Enable SSL:
-                  </strong>
+                  <strong>{{ t("Enable SSL:") }}</strong>
                   {{ configHostMovie.enableSsl }}
                 </p>
                 <p>
-                  <strong>
-                    Instance Name:
-                  </strong>
+                  <strong>{{ t("Instance Name:") }}</strong>
                   {{ configHostMovie.instanceName }}
                 </p>
               </v-card-text>
@@ -413,12 +404,10 @@ onUnmounted(() => {
             <v-card>
               <v-card-title>
                 <v-row>
-                  <v-col>
-                    System Status
-                  </v-col>
+                  <v-col>{{ t("System Status") }}</v-col>
                   <v-col>
                     <v-text-field
-                      label="Interval (Seconds)"
+                      :label="t('Interval (Seconds)')"
                       variant="outlined"
                       v-model="systemStatusMovieInterval"
                       type="number"
@@ -428,69 +417,47 @@ onUnmounted(() => {
               </v-card-title>
               <v-card-text>
                 <p>
-                  <strong>
-                    Version:
-                  </strong>
+                  <strong>{{ t("Version:") }}</strong>
                   {{ systemStatusMovie.version }}
                 </p>
                 <p>
-                  <strong>
-                    Debug:
-                  </strong>
+                  <strong>{{ t("Debug:") }}</strong>
                   {{ systemStatusMovie.isDebug }}
                 </p>
                 <p>
-                  <strong>
-                    Production:
-                  </strong>
+                  <strong>{{ t("Production:") }}</strong>
                   {{ systemStatusMovie.isProduction }}
                 </p>
                 <p>
-                  <strong>
-                    Net Core:
-                  </strong>
+                  <strong>{{ t("Net Core:") }}</strong>
                   {{ systemStatusMovie.isNetCore }}
                 </p>
                 <p>
-                  <strong>
-                    Linux:
-                  </strong>
+                  <strong>{{ t("Linux:") }}</strong>
                   {{ systemStatusMovie.isLinux }}
                 </p>
                 <p>
-                  <strong>
-                    MacOS:
-                  </strong>
+                  <strong>{{ t("MacOS:") }}</strong>
                   {{ systemStatusMovie.isOsx }}
                 </p>
                 <p>
-                  <strong>
-                    Windows:
-                  </strong>
+                  <strong>{{ t("Windows:") }}</strong>
                   {{ systemStatusMovie.isWindows }}
                 </p>
                 <p>
-                  <strong>
-                    Docker:
-                  </strong>
+                  <strong>{{ t("Docker:") }}</strong>
                   {{ systemStatusMovie.isDocker }}
                 </p>
                 <p>
-                  <strong>
-                    Mode:
-                  </strong>
+                  <strong>{{ t("Mode:") }}</strong>
                   {{ systemStatusMovie.mode }}
                 </p>
                 <p>
-                  <strong>
-                    Branch:
-                  </strong>
+                  <strong>{{ t("Branch:") }}</strong>
                   {{ systemStatusMovie.branch }}
                 </p>
                 <p>
-                  <strong>
-                    Uptime:
-                  </strong>
+                  <strong>{{ t("Uptime:") }}</strong>
                   {{ systemStatusMovie.uptime }}
                 </p>
               </v-card-text>
@@ -504,12 +471,10 @@ onUnmounted(() => {
             <v-card>
               <v-card-title>
                 <v-row>
-                  <v-col>
-                    Disks visible to Radarr
-                  </v-col>
+                  <v-col>{{ t("Disks visible to Radarr") }}</v-col>
                   <v-col>
                     <v-text-field
-                      label="Interval (Seconds)"
+                      :label="t('Interval (Seconds)')"
                       variant="outlined"
                       v-model="diskListMovieInterval"
                       type="number"
@@ -520,10 +485,10 @@ onUnmounted(() => {
               <v-table>
                 <thead>
                   <tr>
-                    <th>Path</th>
-                    <th>Free Space (Go)</th>
-                    <th>Total Space (Go)</th>
-                    <th>Ratio</th>
+                    <th>{{ t("Path") }}</th>
+                    <th>{{ t("Free Space (Go)") }}</th>
+                    <th>{{ t("Total Space (Go)") }}</th>
+                    <th>{{ t("Ratio") }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -555,7 +520,7 @@ onUnmounted(() => {
         </v-row>
         <v-row v-if="section === 'storage'">
           <v-col>
-            <StorageLocations title="Movie Storage" :locations="displayedMovieStorage"
+            <StorageLocations :title="t('Movie Storage')" :locations="displayedMovieStorage"
               :interval="storageAgent.enabled.value ? storageAgentInterval : undefined"
               @update:interval="storageAgentInterval = $event"
               :loading="storageAgent.enabled.value ? storageAgent.loading.value : isLoadingMovie" :error="storageAgent.error.value" :last-success-at="storageAgent.lastSuccessAt.value" />
@@ -568,12 +533,10 @@ onUnmounted(() => {
             <v-card>
               <v-card-title>
                 <v-row>
-                  <v-col>
-                    Log
-                  </v-col>
+                  <v-col>{{ t("Log") }}</v-col>
                   <v-col>
                     <v-text-field
-                      label="Interval (Seconds)"
+                      :label="t('Interval (Seconds)')"
                       variant="outlined"
                       v-model="logListMovieInterval"
                       type="number"
@@ -584,9 +547,9 @@ onUnmounted(() => {
               <v-table>
                 <thead>
                   <tr>
-                    <th>Time</th>
-                    <th>Level</th>
-                    <th>Message</th>
+                    <th>{{ t("Time") }}</th>
+                    <th>{{ t("Level") }}</th>
+                    <th>{{ t("Message") }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -610,12 +573,10 @@ onUnmounted(() => {
             <v-card>
               <v-card-title>
                 <v-row>
-                  <v-col>
-                    Health
-                  </v-col>
+                  <v-col>{{ t("Health") }}</v-col>
                   <v-col>
                     <v-text-field
-                      label="Interval (Seconds)"
+                      :label="t('Interval (Seconds)')"
                       variant="outlined"
                       v-model="healthListMovieInterval"
                       type="number"
@@ -635,9 +596,7 @@ onUnmounted(() => {
                     <a
                       :href="issue.wikiUrl"
                       target="_blank"
-                      >
-                      More Info
-                    </a>
+                      >{{ t("More Info") }}</a>
                   </v-list-item-subtitle>
                 </v-list-item>
               </v-list>
@@ -653,16 +612,14 @@ onUnmounted(() => {
                 !healthListMovie.length"
           type="info"
           class="mt-4"
-          >
-          No system information found
-        </v-alert>
-        <v-alert v-if="section === 'logs' && !isLoadingMovie && reads.movies.log.state.hasData && !reads.movies.log.state.error && !logListMovie.length" type="info" class="mt-4">No logs found</v-alert>
-        <v-alert v-if="section === 'health' && !isLoadingMovie && reads.movies.health.state.hasData && !reads.movies.health.state.error && !healthListMovie.length" type="info" class="mt-4">No health issues reported</v-alert>
+          >{{ t("No system information found") }}</v-alert>
+        <v-alert v-if="section === 'logs' && !isLoadingMovie && reads.movies.log.state.hasData && !reads.movies.log.state.error && !logListMovie.length" type="info" class="mt-4">{{ t("No logs found") }}</v-alert>
+        <v-alert v-if="section === 'health' && !isLoadingMovie && reads.movies.health.state.hasData && !reads.movies.health.state.error && !healthListMovie.length" type="info" class="mt-4">{{ t("No health issues reported") }}</v-alert>
       </v-col>
       <v-col
         v-if="selectedMedia === 'series'" cols="12"
         >
-        <h3>Sonarr</h3>
+        <h3>{{ t("Sonarr") }}</h3>
         <v-row
           v-if="section === 'status' && configHostSerie && Object.keys(configHostSerie).length > 0"
           >
@@ -670,32 +627,22 @@ onUnmounted(() => {
             <v-card
               class="mt-4"
               >
-              <v-card-title>
-                Host Configuration
-              </v-card-title>
+              <v-card-title>{{ t("Host Configuration") }}</v-card-title>
               <v-card-text>
                 <p>
-                  <strong>
-                    Bind Address:
-                  </strong>
+                  <strong>{{ t("Bind Address:") }}</strong>
                   {{ configHostSerie.bindAddress }}
                 </p>
                 <p>
-                  <strong>
-                    Port:
-                  </strong>
+                  <strong>{{ t("Port:") }}</strong>
                   {{ configHostSerie.port }}
                 </p>
                 <p>
-                  <strong>
-                    Enable SSL:
-                  </strong>
+                  <strong>{{ t("Enable SSL:") }}</strong>
                   {{ configHostSerie.enableSsl }}
                 </p>
                 <p>
-                  <strong>
-                    Instance Name:
-                  </strong>
+                  <strong>{{ t("Instance Name:") }}</strong>
                   {{ configHostSerie.instanceName }}
                 </p>
               </v-card-text>
@@ -709,12 +656,10 @@ onUnmounted(() => {
             <v-card>
               <v-card-title>
                 <v-row>
-                  <v-col>
-                    System Status
-                  </v-col>
+                  <v-col>{{ t("System Status") }}</v-col>
                   <v-col>
                     <v-text-field
-                      label="Interval (Seconds)"
+                      :label="t('Interval (Seconds)')"
                       variant="outlined"
                       v-model="systemStatusSerieInterval"
                       type="number"
@@ -724,69 +669,47 @@ onUnmounted(() => {
               </v-card-title>
               <v-card-text>
                 <p>
-                  <strong>
-                    Version:
-                  </strong>
+                  <strong>{{ t("Version:") }}</strong>
                   {{ systemStatusSerie.version }}
                 </p>
                 <p>
-                  <strong>
-                    Debug:
-                  </strong>
+                  <strong>{{ t("Debug:") }}</strong>
                   {{ systemStatusSerie.isDebug }}
                 </p>
                 <p>
-                  <strong>
-                    Production:
-                  </strong>
+                  <strong>{{ t("Production:") }}</strong>
                   {{ systemStatusSerie.isProduction }}
                 </p>
                 <p>
-                  <strong>
-                    Net Core:
-                  </strong>
+                  <strong>{{ t("Net Core:") }}</strong>
                   {{ systemStatusSerie.isNetCore }}
                 </p>
                 <p>
-                  <strong>
-                    Linux:
-                  </strong>
+                  <strong>{{ t("Linux:") }}</strong>
                   {{ systemStatusSerie.isLinux }}
                 </p>
                 <p>
-                  <strong>
-                    MacOS:
-                  </strong>
+                  <strong>{{ t("MacOS:") }}</strong>
                   {{ systemStatusSerie.isOsx }}
                 </p>
                 <p>
-                  <strong>
-                    Windows:
-                  </strong>
+                  <strong>{{ t("Windows:") }}</strong>
                   {{ systemStatusSerie.isWindows }}
                 </p>
                 <p>
-                  <strong>
-                    Docker:
-                  </strong>
+                  <strong>{{ t("Docker:") }}</strong>
                   {{ systemStatusSerie.isDocker }}
                 </p>
                 <p>
-                  <strong>
-                    Mode:
-                  </strong>
+                  <strong>{{ t("Mode:") }}</strong>
                   {{ systemStatusSerie.mode }}
                 </p>
                 <p>
-                  <strong>
-                    Branch:
-                  </strong>
+                  <strong>{{ t("Branch:") }}</strong>
                   {{ systemStatusSerie.branch }}
                 </p>
                 <p>
-                  <strong>
-                    Uptime:
-                  </strong>
+                  <strong>{{ t("Uptime:") }}</strong>
                   {{ systemStatusSerie.uptime }}
                 </p>
               </v-card-text>
@@ -800,12 +723,10 @@ onUnmounted(() => {
             <v-card>
               <v-card-title>
                 <v-row>
-                  <v-col>
-                    Disks visible to Sonarr
-                  </v-col>
+                  <v-col>{{ t("Disks visible to Sonarr") }}</v-col>
                   <v-col>
                     <v-text-field
-                      label="Interval (Seconds)"
+                      :label="t('Interval (Seconds)')"
                       variant="outlined"
                       v-model="diskListSerieInterval"
                       type="number"
@@ -816,10 +737,10 @@ onUnmounted(() => {
               <v-table>
                 <thead>
                   <tr>
-                    <th>Path</th>
-                    <th>Free Space (Go)</th>
-                    <th>Total Space (Go)</th>
-                    <th>Ratio</th>
+                    <th>{{ t("Path") }}</th>
+                    <th>{{ t("Free Space (Go)") }}</th>
+                    <th>{{ t("Total Space (Go)") }}</th>
+                    <th>{{ t("Ratio") }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -851,7 +772,7 @@ onUnmounted(() => {
         </v-row>
         <v-row v-if="section === 'storage'">
           <v-col>
-            <StorageLocations title="Series Storage" :locations="displayedSerieStorage"
+            <StorageLocations :title="t('Series Storage')" :locations="displayedSerieStorage"
               :interval="storageAgent.enabled.value ? storageAgentInterval : undefined"
               @update:interval="storageAgentInterval = $event"
               :loading="storageAgent.enabled.value ? storageAgent.loading.value : isLoadingSerie" :error="storageAgent.error.value" :last-success-at="storageAgent.lastSuccessAt.value" />
@@ -864,12 +785,10 @@ onUnmounted(() => {
             <v-card>
               <v-card-title>
                 <v-row>
-                  <v-col>
-                    Log
-                  </v-col>
+                  <v-col>{{ t("Log") }}</v-col>
                   <v-col>
                     <v-text-field
-                      label="Interval (Seconds)"
+                      :label="t('Interval (Seconds)')"
                       variant="outlined"
                       v-model="logListSerieInterval"
                       type="number"
@@ -880,9 +799,9 @@ onUnmounted(() => {
               <v-table>
                 <thead>
                   <tr>
-                    <th>Time</th>
-                    <th>Level</th>
-                    <th>Message</th>
+                    <th>{{ t("Time") }}</th>
+                    <th>{{ t("Level") }}</th>
+                    <th>{{ t("Message") }}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -906,12 +825,10 @@ onUnmounted(() => {
             <v-card>
               <v-card-title>
                 <v-row>
-                  <v-col>
-                    Health
-                  </v-col>
+                  <v-col>{{ t("Health") }}</v-col>
                   <v-col>
                     <v-text-field
-                      label="Interval (Seconds)"
+                      :label="t('Interval (Seconds)')"
                       variant="outlined"
                       v-model="healthListSerieInterval"
                       type="number"
@@ -923,7 +840,7 @@ onUnmounted(() => {
                 <v-list-item v-for="(issue, index) in healthListSerie" :key="index">
                   <v-list-item-title>{{ issue.message }}</v-list-item-title>
                   <v-list-item-subtitle>
-                    <a :href="issue.wikiUrl" target="_blank">More Info</a>
+                    <a :href="issue.wikiUrl" target="_blank">{{ t("More Info") }}</a>
                   </v-list-item-subtitle>
                 </v-list-item>
               </v-list>
@@ -939,31 +856,26 @@ onUnmounted(() => {
                 !healthListSerie.length"
           type="info"
           class="mt-4"
-          >
-          No system information found
-        </v-alert>
-        <v-alert v-if="section === 'logs' && !isLoadingSerie && reads.series.log.state.hasData && !reads.series.log.state.error && !logListSerie.length" type="info" class="mt-4">No logs found</v-alert>
-        <v-alert v-if="section === 'health' && !isLoadingSerie && reads.series.health.state.hasData && !reads.series.health.state.error && !healthListSerie.length" type="info" class="mt-4">No health issues reported</v-alert>
+          >{{ t("No system information found") }}</v-alert>
+        <v-alert v-if="section === 'logs' && !isLoadingSerie && reads.series.log.state.hasData && !reads.series.log.state.error && !logListSerie.length" type="info" class="mt-4">{{ t("No logs found") }}</v-alert>
+        <v-alert v-if="section === 'health' && !isLoadingSerie && reads.series.health.state.hasData && !reads.series.health.state.error && !healthListSerie.length" type="info" class="mt-4">{{ t("No health issues reported") }}</v-alert>
       </v-col>
     </v-row>
     <v-row v-if="section === 'storage'">
       <v-col>
-        <StorageLocations v-if="storageAgent.enabled.value" title="Download Storage"
+        <StorageLocations v-if="storageAgent.enabled.value" :title="t('Download Storage')"
           v-model:interval="storageAgentInterval"
           :locations="displayedDownloadStorage" :loading="storageAgent.loading.value" :error="storageAgent.error.value" :last-success-at="storageAgent.lastSuccessAt.value" />
         <v-card v-else>
-          <v-card-title>Download Storage</v-card-title>
-          <v-card-text>
-            Unavailable: download storage measurements require Flix API and a configured storage agent.
-          </v-card-text>
+          <v-card-title>{{ t("Download Storage") }}</v-card-title>
+          <v-card-text>{{ t("Unavailable: download storage measurements require Flix API and a configured storage agent.") }}</v-card-text>
         </v-card>
       </v-col>
     </v-row>
     <v-row v-if="section === 'storage' && storageAgent.enabled.value" align="center">
       <v-col>
-        <v-btn :loading="storageAgent.loading.value" @click="storageAgent.refresh">Refresh Storage</v-btn>
-        <div v-if="storageAgent.collectedAt.value" class="text-caption mt-2">
-          Last measurement: {{ new Date(storageAgent.collectedAt.value).toLocaleString() }}
+        <v-btn :loading="storageAgent.loading.value" @click="storageAgent.refresh">{{ t("Refresh Storage") }}</v-btn>
+        <div v-if="storageAgent.collectedAt.value" class="text-caption mt-2">{{ t("Last measurement: {p0}", { p0: formatDate(new Date(storageAgent.collectedAt.value)) }) }}
         </div>
       </v-col>
     </v-row>

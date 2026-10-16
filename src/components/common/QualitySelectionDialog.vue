@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 
 import { ref, watch } from 'vue';
 import { useDialogActivator } from '@/composables/useDialogActivator';
@@ -52,19 +53,17 @@ function confirm() {
     v-model="internalVisible"
     :activator="dialogActivator"
     :open-on-click="false"
-    aria-label="Choose quality"
+    :aria-label="t('Choose quality')"
     max-width="600px"
     class="blur-dialog"
     >
     <v-card>
-      <v-card-title>
-        Choose quality
-      </v-card-title>
+      <v-card-title>{{ t("Choose quality") }}</v-card-title>
       <v-card-text>
         <v-select
           v-model="selected"
           :items="items"
-          label="Quality"
+          :label="t('Quality')"
           variant="outlined"
           />
       </v-card-text>
@@ -72,15 +71,11 @@ function confirm() {
         <v-btn
           @click="cancel"
           color="on-surface"
-          >
-          Cancel
-        </v-btn>
+          >{{ t("Cancel") }}</v-btn>
         <v-btn
           @click="confirm"
           color="primary"
-          >
-          Confirm
-        </v-btn>
+          >{{ t("Confirm") }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

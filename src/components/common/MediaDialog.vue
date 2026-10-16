@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
+import { useLocalizedMedia } from '@/composables/useLocalizedMedia';
 import MediaFileDetails from './MediaFileDetails.vue';
 import MediaMonitoring from './MediaMonitoring.vue';
 import MediaHistory from './MediaHistory.vue';
@@ -39,6 +41,7 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'release-grabbed', 'navigate', 'refreshed']);
 const releaseDialog = ref(false);
+const localizedItem = useLocalizedMedia(() => props.modelValue ? props.item : null, () => props.mediaType === 'Movie' ? 'movies' : 'series');
 const dialogActivator = useDialogActivator(() => props.modelValue);
 const monitoringPending = ref(false);
 const settingsPending = ref(false);
@@ -77,19 +80,19 @@ const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episode
 </script>
 
 <template>
-  <DialogSheet v-if="item" :model-value="modelValue" :title="mediaType === 'Movie' ? 'Movie' : 'Series'" :label="`${mediaType === 'Movie' ? 'Movie' : 'Series'}: ${item.title}`" :context="item" :activator="activator ?? dialogActivator" @update:model-value="emit('update:modelValue', $event)" @closed="renderDetails = false">
+  <DialogSheet v-if="item" :model-value="modelValue" :title="mediaType === 'Movie' ? t('Movie') : t('Serie')" :label="`${mediaType === 'Movie' ? t('Movie') : t('Serie')}: ${localizedItem?.title ?? item.title}`" :context="item" :activator="activator ?? dialogActivator" @update:model-value="emit('update:modelValue', $event)" @closed="renderDetails = false">
     <template #header-actions>
-      <div v-if="neighbors.index >= 0 && neighbors.total > 1" class="d-flex align-center ga-1" role="group" aria-label="Media navigation">
-        <v-btn icon="mdi-chevron-left" variant="text" size="small" aria-label="Previous media" :disabled="navigationDisabled || !neighbors.previous" @click="navigate('previous')" />
+      <div v-if="neighbors.index >= 0 && neighbors.total > 1" class="d-flex align-center ga-1" role="group" :aria-label="t('Media navigation')">
+        <v-btn icon="mdi-chevron-left" variant="text" size="small" :aria-label="t('Previous media')" :disabled="navigationDisabled || !neighbors.previous" @click="navigate('previous')" />
         <span class="text-caption text-medium-emphasis" aria-live="polite">{{ neighbors.index + 1 }} / {{ neighbors.total }}</span>
-        <v-btn icon="mdi-chevron-right" variant="text" size="small" aria-label="Next media" :disabled="navigationDisabled || !neighbors.next" @click="navigate('next')" />
+        <v-btn icon="mdi-chevron-right" variant="text" size="small" :aria-label="t('Next media')" :disabled="navigationDisabled || !neighbors.next" @click="navigate('next')" />
       </div>
       <MediaShareLink v-if="showRemove && modelValue && Number.isSafeInteger(item.id) && item.id > 0" :key="`${mediaType}-share-${item.id}`" :media-id="item.id" :type="mediaType === 'Movie' ? 'movies' : 'series'" />
     </template>
     <template #default="{ showScrollHint }">
       <slot name="status" />
-      <ReadFeedback :state="updates.state" label="Media updates" @retry="updates.refresh" />
-      <MediaSummary v-if="summaryVisible" :item="item" :announcement-name="announcementName"><slot name="metadata" /></MediaSummary>
+      <ReadFeedback :state="updates.state" :label="t('Media updates')" @retry="updates.refresh" />
+      <MediaSummary :media-type="mediaType === 'Movie' ? 'movies' : 'series'" v-if="summaryVisible" :item="item" :announcement-name="announcementName"><slot name="metadata" /></MediaSummary>
       <p v-if="showSearch && searchDisabledReason" role="status" class="text-caption text-medium-emphasis my-3">{{ searchDisabledReason }}</p>
       <MediaMonitoring v-if="showRemove && renderDetails" :key="`${mediaType}-${item.id}`" :item="item" :type="mediaType === 'Movie' ? 'movies' : 'series'" :disabled="mediaBusy || actionPending || settingsPending" @busy="monitoringPending = $event" />
       <div v-if="hasSupplementalDetails" class="media-supplemental-details" :class="{ 'media-details-concealed': showFileDetails && showScrollHint }">
@@ -101,10 +104,10 @@ const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episode
       </div>
     </template>
     <template #actions>
-      <v-btn v-if="showSearch" :disabled="mediaBusy || actionPending || !!searchDisabledReason" color="primary" @click="releaseDialog = true">Choose Release</v-btn>
-      <v-btn v-if="showSearch" :disabled="mediaBusy || actionPending || !!searchDisabledReason" color="primary" @click="emit('search', item)">{{ item.hasFile || item.statistics?.sizeOnDisk > 0 ? 'Search Again' : 'Search' }}</v-btn>
-      <v-btn v-if="showAdd" :loading="actionPending" :disabled="actionPending || mediaBusy || addDisabled" color="primary" @click="emit('add', item)">Add</v-btn>
-      <v-btn v-if="showRemove" :loading="actionPending" :disabled="actionPending || mediaBusy" color="error" @click="emit('remove', item)">Remove</v-btn>
+      <v-btn v-if="showSearch" :disabled="mediaBusy || actionPending || !!searchDisabledReason" color="primary" @click="releaseDialog = true">{{ t("Choose Release") }}</v-btn>
+      <v-btn v-if="showSearch" :disabled="mediaBusy || actionPending || !!searchDisabledReason" color="primary" @click="emit('search', item)">{{ item.hasFile || item.statistics?.sizeOnDisk > 0 ? t("Search Again") : t("Search") }}</v-btn>
+      <v-btn v-if="showAdd" :loading="actionPending" :disabled="actionPending || mediaBusy || addDisabled" color="primary" @click="emit('add', item)">{{ t("Add") }}</v-btn>
+      <v-btn v-if="showRemove" :loading="actionPending" :disabled="actionPending || mediaBusy" color="error" @click="emit('remove', item)">{{ t("Remove") }}</v-btn>
     </template>
   </DialogSheet>
   <ReleaseSelectionDialog v-model="releaseDialog" :media-type="mediaType === 'Movie' ? 'movies' : 'series'" :item="item" @grabbed="releaseGrabbed" />

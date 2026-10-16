@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { t, metadataContext } from '@/i18n';
 import { useReadRequest } from '@/composables/useReadRequest';
 import ReadFeedback from '@/components/common/ReadFeedback.vue';
 import { mediaFileFields } from '@/composables/mediaFileDetails';
@@ -29,7 +30,7 @@ import MediaBrowserToolbar from '@/components/common/MediaBrowserToolbar.vue';
 import MediaBrowserResults from '@/components/common/MediaBrowserResults.vue';
 import SeriesSizeField from '@/components/common/SeriesSizeField.vue';
 import { useEpisodeSummary } from '@/composables/useEpisodeSummary';
-import { fetchTmdbPage } from '@/composables/fetchTmdbPage';
+import { fetchTmdbPage, localizedTmdbUrl } from '@/composables/fetchTmdbPage';
 
 const store = useFlixStore();
 
@@ -270,7 +271,7 @@ function getSerieEpisodes(serie_id: number) {
 
   if (!episodeRead.state.hasData) serieEpisodes.value = [];
 
-  return fetch(base_url + '/tv/' + serie_id + '?api_key=' + api_key, { signal: read.signal })
+  return fetch(localizedTmdbUrl(base_url + '/tv/' + serie_id + '?api_key=' + api_key), { signal: read.signal })
     .then(async (response) => {
       if (!response.ok) throw new Error(`Unable to load seasons (TMDB HTTP ${response.status}).`);
       const json_data: any = requireObject(await readApiJson(response), 'TMDB');
@@ -289,7 +290,7 @@ function getSerieEpisodes(serie_id: number) {
       for (const episode of sonarrRecords) lookup[`${episode.seasonNumber}:${episode.episodeNumber}`] = episode;
 
       for (const season of json_data.seasons) {
-        const seasonPromise = fetch(base_url + '/tv/' + serie_id + '/season/' + season.season_number + '?api_key=' + api_key, { signal: read.signal })
+        const seasonPromise = fetch(localizedTmdbUrl(base_url + '/tv/' + serie_id + '/season/' + season.season_number + '?api_key=' + api_key), { signal: read.signal })
           .then(async response => requireObject(await readApiJson(response), 'TMDB season'))
           .then(async seasonData => {
             if (!read.isCurrent()) return [];
@@ -441,7 +442,7 @@ function searchContent(type: 'movies' | 'series', item: any) {
 
 watch(search, () => { movie_page.value = 1; serie_page.value = 1; });
 
-watch(serviceContext, () => {
+watch([serviceContext, metadataContext], () => {
   resetMovieDialog(); resetSerieDialog(); resetSelectedMovie(); resetSelectedSerie();
   resetDeleteConfirmationDialog(); resetQualitySelectionDialog(); resetItemQuality();
   if (useAPI.value && !selectedInstanceData.value) return;
@@ -480,9 +481,9 @@ watch(serviceContext, () => {
       :total-series="reads.series.state.hasData ? total_series : undefined"
     >
     </MediaBrowserToolbar>
-    <ReadFeedback :state="reads[selected_view].state" label="Upcoming media" @retry="getContent(selected_view)" />
-    <ReadFeedback :state="selected_view === 'movies' ? movieLibraryRead : seriesLibraryRead" label="Library status" @retry="selected_view === 'movies' ? checkMovies() : checkSeries()" />
-    <ReadFeedback :state="qualityReads[selected_view].state" label="Quality profiles" @retry="getQualityProfileList(selected_view)" />
+    <ReadFeedback :state="reads[selected_view].state" :label="t('Upcoming media')" @retry="getContent(selected_view)" />
+    <ReadFeedback :state="selected_view === 'movies' ? movieLibraryRead : seriesLibraryRead" :label="t('Library status')" @retry="selected_view === 'movies' ? checkMovies() : checkSeries()" />
+    <ReadFeedback :state="qualityReads[selected_view].state" :label="t('Quality profiles')" @retry="getQualityProfileList(selected_view)" />
     <div
       v-if="selected_view == 'movies'"
       >
@@ -554,8 +555,8 @@ watch(serviceContext, () => {
         @remove="openDeleteConfirmationDialog('series', $event)"
         >
         <template #status>
-          <ReadFeedback :state="identityRead.state" label="Series identity" @retry="getSerieTvdbId(selectedSerie)" />
-          <ReadFeedback :state="episodeRead.state" label="Series episodes" @retry="getSerieEpisodes(selectedSerie?.tmdbId)" />
+          <ReadFeedback :state="identityRead.state" :label="t('Series identity')" @retry="getSerieTvdbId(selectedSerie)" />
+          <ReadFeedback :state="episodeRead.state" :label="t('Series episodes')" @retry="getSerieEpisodes(selectedSerie?.tmdbId)" />
         </template>
         <template
           #details
@@ -579,7 +580,7 @@ watch(serviceContext, () => {
               >
               <Loading
                 :isLoading="isLoadingSerieEpisodes && !episodeRead.state.hasData"
-                sentence="Research in progress..."
+                :sentence="t('Research in progress...')"
                 />
             </template>
           </EpisodePanel>

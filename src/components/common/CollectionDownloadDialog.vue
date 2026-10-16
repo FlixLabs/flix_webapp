@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { t } from '@/i18n';
 import { computed, ref, watch } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useQualityProfiles } from '@/composables/useQualityProfiles';
 import { useCollectionDownloads, downloadableCollectionMovies, type CollectionDownloadMovie } from '@/composables/useCollectionDownloads';
+import LocalizedMedia from './LocalizedMedia.vue';
 import DialogSheet from './DialogSheet.vue';
 import ReadFeedback from './ReadFeedback.vue';
 
@@ -42,29 +44,31 @@ function close(value: boolean) { if (!pending.value) visible.value = value; }
 </script>
 
 <template>
-  <DialogSheet :model-value="visible" :activator="activator" title="Missing movies" label="Download missing movies" :context="context" :close-disabled="pending" @update:model-value="close">
-    <p class="mb-3">Released films will be searched for. Upcoming films will be monitored for future releases, without an immediate search. Films not in your library will be added first.</p>
-    <v-list density="compact" aria-label="Missing movies" class="collection-request-list">
-      <v-list-item v-for="movie in candidates" :key="movie.tmdbId" :subtitle="movie.status !== 'released' ? movie.localId ? 'Monitor with existing settings' : 'Add and monitor for release' : movie.localId ? 'Search with existing quality profile' : 'Add and search'">
-        <template #title><span class="text-wrap">{{ movie.title }}</span></template>
-        <template #prepend><v-checkbox-btn v-model="selectedIds" :value="movie.tmdbId" :aria-label="`Request ${movie.title}`" :disabled="pending || submitted || disabled" /></template>
+  <DialogSheet :model-value="visible" :activator="activator" :title="t('Missing movies')" :label="t('Download missing movies')" :context="context" :close-disabled="pending" @update:model-value="close">
+    <p class="mb-3">{{ t("Released films will be searched for. Upcoming films will be monitored for future releases, without an immediate search. Films not in your library will be added first.") }}</p>
+    <v-list density="compact" :aria-label="t('Missing movies')" class="collection-request-list">
+      <LocalizedMedia v-for="movie in candidates" :key="movie.tmdbId" :item="movie" type="movies" v-slot="{ media: displayedMovie }">
+      <v-list-item :subtitle="movie.status !== 'released' ? movie.localId ? t('Monitor with existing settings') : t('Add and monitor for release') : movie.localId ? t('Search with existing quality profile') : t('Add and search')">
+        <template #title><span class="text-wrap">{{ displayedMovie.title }}</span></template>
+        <template #prepend><v-checkbox-btn v-model="selectedIds" :value="movie.tmdbId" :aria-label="t('Request {p0}', { p0: displayedMovie.title })" :disabled="pending || submitted || disabled" /></template>
       </v-list-item>
+      </LocalizedMedia>
     </v-list>
     <template v-if="needsQuality">
-      <ReadFeedback :state="qualityReads.movies.state" label="Quality profiles" :disabled="pending" @retry="getQualityProfileList('movies')" />
-      <v-select v-model="qualityMovie" :items="qualityMovieItems" label="Quality for new movies" variant="outlined" class="mt-3" :loading="qualityReads.movies.state.loading" :disabled="pending || submitted" hide-details />
+      <ReadFeedback :state="qualityReads.movies.state" :label="t('Quality profiles')" :disabled="pending" @retry="getQualityProfileList('movies')" />
+      <v-select v-model="qualityMovie" :items="qualityMovieItems" :label="t('Quality for new movies')" variant="outlined" class="mt-3" :loading="qualityReads.movies.state.loading" :disabled="pending || submitted" hide-details />
     </template>
     <template v-if="results.length">
     <v-divider class="my-4" />
-    <h3 class="text-subtitle-2 mb-2">Request results</h3>
-    <v-list density="compact" aria-label="Download request results" aria-live="polite" class="collection-request-list">
-      <v-list-item v-for="result in results" :key="result.tmdbId" :subtitle="result.message">
-        <template #title><span class="text-wrap">{{ result.title }}</span></template>
+    <h3 class="text-subtitle-2 mb-2">{{ t("Request results") }}</h3>
+    <v-list density="compact" :aria-label="t('Download request results')" aria-live="polite" class="collection-request-list">
+      <v-list-item v-for="result in results" :key="result.tmdbId" :subtitle="t(result.message)">
+        <template #title><span class="text-wrap"><LocalizedMedia :item="result" type="movies" v-slot="{ media }">{{ media.title }}</LocalizedMedia></span></template>
         <template #prepend><v-icon :icon="result.state === 'requested' ? 'mdi-check-circle-outline' : result.state === 'failed' ? 'mdi-alert-circle-outline' : 'mdi-minus-circle-outline'" :color="result.state === 'requested' ? 'success' : result.state === 'failed' ? 'error' : undefined" /></template>
       </v-list-item>
     </v-list>
     </template>
-    <template #actions><v-btn color="primary" :loading="pending" :disabled="blocked" @click="confirm">Request downloads</v-btn></template>
+    <template #actions><v-btn color="primary" :loading="pending" :disabled="blocked" @click="confirm">{{ t("Request downloads") }}</v-btn></template>
   </DialogSheet>
 </template>
 
