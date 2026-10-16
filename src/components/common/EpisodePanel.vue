@@ -43,7 +43,10 @@ function formatSizeGb(sizeInBytes: number) {
         >
         <v-expansion-panel-title>
           <div class="d-flex align-center w-100">
-            <span>{{ t("Season {p0}", { p0: season }) }}</span>
+            <div class="d-flex align-center flex-wrap ga-2 mr-2">
+              <span>{{ t("Season {p0}", { p0: season }) }}</span>
+              <span class="text-caption text-medium-emphasis text-no-wrap">{{ t('{p0} episodes', { p0: episodes.length }) }}</span>
+            </div>
             <v-spacer />
             <v-text-field
               v-if="(seasonSizes[String(season)] || 0) > 0"

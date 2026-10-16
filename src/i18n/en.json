@@ -11,7 +11,7 @@
   "{p0} among the loaded downloads (up to 1000 per service).": "{p0} among the loaded downloads (up to 1000 per service).",
   "{p0} completed torrents. Active downloads are excluded. Untracked does not guarantee a file has been imported or is safe to delete.": "{p0} completed torrents. Active downloads are excluded. Untracked does not guarantee a file has been imported or is safe to delete.",
   "{p0} downloads · {p1} {p2} · {p3} storage alerts": "{p0} downloads · {p1} {p2} · {p3} storage alerts",
-  "{p0} episodes": "{p0} episodes",
+  "{p0} episodes": "{p0} episode | {p0} episodes",
   "{p0} events": "{p0} events",
   "{p0} films": "{p0} films",
   "{p0} GB · Languages: {p1}": "{p0} GB · Languages: {p1}",
