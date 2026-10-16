@@ -1,11 +1,12 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { apiFetch, apiSessionToken, clearApiSession, saveApiSession, signOut } from '@/composables/apiSession';
+import { apiFetch, apiSessionToken, clearApiSession, saveApiSession, signOut, sessionRole, verifySessionRole } from '@/composables/apiSession';
 
 function storage() {
   const values = new Map<string, string>();
   return { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) };
 }
 beforeEach(() => {
+  sessionRole.value = null;
   vi.stubEnv('VITE_FLIX_API_URL', 'https://api.test');
   vi.stubGlobal('localStorage', storage()); vi.stubGlobal('sessionStorage', storage());
   vi.stubGlobal('window', new EventTarget());
@@ -60,4 +61,31 @@ it('keeps a session available for a safe sign-out retry if revocation could not 
   vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
   await expect(signOut()).rejects.toThrow();
   expect(apiSessionToken()).toBe(token);
+});
+it('verifies roles server-side and never trusts a saved role to unlock administrator pages', async () => {
+  saveApiSession({ token, expiresIn: 60, role: 'admin' });
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ authenticated: true, role: 'user' })));
+  expect(await verifySessionRole()).toBe('user');
+  expect(sessionRole.value).toBe('user');
+  clearApiSession();
+  expect(sessionRole.value).toBeNull();
+});
+it('rejects revoked sessions during navigation instead of rendering a protected page', async () => {
+  saveApiSession({ token, expiresIn: 60, role: 'user' });
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(Response.json({ authenticated: false })));
+  await expect(verifySessionRole()).rejects.toThrow();
+  expect(apiSessionToken()).toBe('');
+  expect(sessionRole.value).toBeNull();
+});
+it('does not clear a newer login when an earlier role verification completes late', async () => {
+  saveApiSession({ token, expiresIn: 60, role: 'user' });
+  let finish!: (response: Response) => void;
+  const fetch = vi.fn().mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve; }))
+    .mockResolvedValue(Response.json({ authenticated: true }));
+  vi.stubGlobal('fetch', fetch);
+  const pending = verifySessionRole();
+  saveApiSession({ token: 'b'.repeat(64), expiresIn: 60 });
+  finish(Response.json({ authenticated: false }));
+  expect(await pending).toBe('admin');
+  expect(apiSessionToken()).toBe('b'.repeat(64));
 });
