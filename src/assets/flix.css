@@ -65,6 +65,12 @@
   font-weight: 600;
 }
 
+/* Span both alert rows so multiline feedback and Retry do not offset icons. */
+:is(.flix-app, .v-overlay-container) .v-alert :is(.v-alert__prepend, .v-alert__close) {
+  grid-row: 1 / -1;
+  align-self: center;
+}
+
 .collection-link .v-btn__content { min-width: 0; }
 .collection-link .v-btn__prepend { flex-shrink: 0; }
 

@@ -45,6 +45,7 @@ const initialDrawerOptions = [
   { title: 'Settings', icon: 'mdi-cog-outline', value: 'settings' },
   { title: 'System', icon: 'mdi-server-outline', value: 'system' },
   { title: 'Users', icon: 'mdi-account-group-outline', value: 'users' },
+  { title: 'Requests', icon: 'mdi-movie-search-outline', value: 'requests' },
   { title: 'My account', icon: 'mdi-account-circle-outline', value: 'account' },
   { title: 'Sign Out', icon: 'mdi-logout', value: 'signout' }
 ];
@@ -52,9 +53,9 @@ const { state: drawerOptions, reset: resetDrawerOptions } = useResettable(initia
 
 const filteredDrawerOptions = computed(() => {
   return drawerOptions.value.filter(option => {
-    if (sessionRole.value === 'user') return ['account', 'signout'].includes(option.value);
+    if (sessionRole.value === 'user') return ['requests', 'account', 'signout'].includes(option.value);
     if (option.value === 'account') return false;
-    if (option.value === 'users') return useAPI.value;
+    if (['users', 'requests'].includes(option.value)) return useAPI.value;
     return option.value === 'signout'
       ? useAPI.value && store.authenticationEnabled
       : true;
@@ -161,7 +162,7 @@ onMounted(async () => {
         v-slot:append
         >
         <v-select
-          v-if="useAPI && sessionRole !== 'user' && $route.meta.requiresAuth"
+          v-if="useAPI && sessionRole !== 'user' && $route.meta.requiresAuth && $route.path !== '/requests'"
           class="mr-3"
           :width="xs ? 160 : undefined"
           :max-width="xs ? '45vw' : undefined"

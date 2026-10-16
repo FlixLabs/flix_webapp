@@ -22,11 +22,15 @@ onMounted(load);
   <v-container>
     <v-progress-linear v-if="loading" indeterminate color="primary" :aria-label="t('Loading data...')" />
     <v-alert v-if="error" type="error" variant="tonal">{{ t(error) }} <v-btn variant="text" @click="load">{{ t('Retry') }}</v-btn></v-alert>
-    <v-card v-if="user" variant="outlined" class="pa-5">
-      <h2 class="text-h6">{{ user.name }}</h2>
+    <v-card v-if="user" class="mt-4">
+      <v-card-title><h2 class="text-h6">{{ user.name }}</h2></v-card-title>
+      <v-card-text>
       <p class="text-medium-emphasis mb-5">{{ user.email }}</p>
       <v-select v-model="interfaceLanguage" :label="t('Interface language')" :items="translatedChoices([{ title: 'English', value: 'en' }, { title: 'French', value: 'fr' }])" variant="outlined" hide-details />
-      <p class="mt-5 text-medium-emphasis">{{ t('Your account is ready. Media requests will be available in a future update.') }}</p>
+      </v-card-text>
+      <v-card-actions class="justify-end">
+      <v-btn to="/requests" color="primary" variant="outlined" prepend-icon="mdi-movie-search-outline">{{ t('Requests') }}</v-btn>
+      </v-card-actions>
     </v-card>
   </v-container>
 </template>
