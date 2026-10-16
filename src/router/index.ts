@@ -8,6 +8,7 @@ const routes = [
   { path: '/join', name: 'Join', component: () => import('../components/AcceptInvitation.vue') },
   { path: '/account', name: 'Account', component: () => import('../components/GuestAccount.vue'), meta: { requiresAuth: true, guest: true } },
   { path: '/users', name: 'Users', component: () => import('../components/UserAdministration.vue'), meta: { requiresAuth: true } },
+  { path: '/requests', name: 'Requests', component: () => import('../components/MediaRequests.vue'), meta: { requiresAuth: true, guest: true, adminAllowed: true } },
   {
     path: '/',
     redirect: '/login'
@@ -87,7 +88,7 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  if (!useAPI.value && ['/join', '/account', '/users'].includes(to.path)) return '/dashboard';
+  if (!useAPI.value && ['/join', '/account', '/users', '/requests'].includes(to.path)) return '/dashboard';
   if (useAPI.value) {
     const is_authenticated = sessionStorage.getItem('flix_webapp_is_authenticated') === 'true' || !!apiSessionToken();
 
@@ -97,8 +98,8 @@ router.beforeEach(async (to) => {
     if (to.meta.requiresAuth && apiSessionToken()) {
       try {
         const role = await verifySessionRole();
-        if (role === 'user' && !to.meta.guest) return '/account';
-        if (role === 'admin' && to.meta.guest) return '/dashboard';
+        if (role === 'user' && !to.meta.guest) return '/requests';
+        if (role === 'admin' && to.meta.guest && !to.meta.adminAllowed) return '/dashboard';
       } catch { return { path: '/login', query: { redirect: to.fullPath } }; }
     }
   }

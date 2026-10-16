@@ -35,14 +35,14 @@ async function accept() {
 
 <template>
   <v-container class="invitation-page">
-    <v-card variant="outlined" class="pa-6">
+    <v-card class="pa-6">
       <h1 class="text-h5 mb-3">{{ t('Welcome to Flix') }}</h1>
       <p class="text-medium-emphasis mb-6">{{ t('Create your account using your invitation.') }}</p>
       <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ t(error) }}</v-alert>
       <form @submit.prevent="accept">
         <v-text-field v-model="name" :label="t('Name')" autocomplete="name" maxlength="128" required variant="outlined" :disabled="busy" />
         <v-text-field v-model="password" :label="t('Password')" :hint="t('At least 12 characters')" persistent-hint autocomplete="new-password" type="password" minlength="12" maxlength="1024" required variant="outlined" :disabled="busy" />
-        <v-btn type="submit" color="primary" variant="flat" class="mt-5" :loading="busy" :disabled="!token || !name.trim() || password.length < 12">{{ t('Create account') }}</v-btn>
+        <div class="d-flex justify-end mt-5"><v-btn type="submit" color="primary" variant="outlined" :loading="busy" :disabled="!token || !name.trim() || password.length < 12">{{ t('Create account') }}</v-btn></div>
       </form>
     </v-card>
   </v-container>

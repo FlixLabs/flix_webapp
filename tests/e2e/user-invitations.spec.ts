@@ -28,16 +28,16 @@ test('invitation acceptance removes the secret from the URL and opens a restrict
   await expect(page.getByText('Downloads', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('combobox', { name: 'Instance', exact: true })).toHaveCount(0);
   await page.goto('/settings');
-  await expect(page).toHaveURL(/\/account$/);
+  await expect(page).toHaveURL(/\/requests$/);
   await page.goto('/library');
-  await expect(page).toHaveURL(/\/account$/);
+  await expect(page).toHaveURL(/\/requests$/);
   await page.reload();
-  await expect(page.getByRole('heading', { name: 'Guest', exact: true })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Requests', exact: true })).toBeVisible();
   expect(privateReads).toEqual([]);
   expect(mutations).toEqual([]);
 });
 
-test('administrator queues invitations and revokes account access from the same page', async ({ page, mutations }) => {
+test('administrator queues invitations and revokes account access from the same page', async ({ page, mutations }, testInfo) => {
   let invited = false;
   let disabled = false;
   await page.route('**/admin/accounts', route => route.fulfill({ json: {
@@ -61,6 +61,7 @@ test('administrator queues invitations and revokes account access from the same 
   await expect(page.getByText('new@example.test', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Revoke access', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Enable access', exact: true })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath('users.png'), fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   expect(mutations).toEqual([]);
 });
@@ -92,7 +93,38 @@ test('guest email sign-in redirects away from administrator destinations', async
   await page.getByRole('textbox', { name: 'Username', exact: true }).fill(user.email);
   await page.getByLabel('Password', { exact: true }).fill('my-long-guest-password');
   await page.getByRole('button', { name: 'Sign In', exact: true }).click();
-  await expect(page).toHaveURL(/\/account$/);
-  await expect(page.getByRole('heading', { name: 'Guest', exact: true })).toBeVisible();
+  await expect(page).toHaveURL(/\/requests$/);
+  await expect(page.getByRole('heading', { name: 'Requests', exact: true })).toBeVisible();
+  expect(mutations).toEqual([]);
+});
+
+test('missing Users API shows a deployment error and retry restores the form', async ({ page, mutations }) => {
+  let ready = false;
+  await page.route('**/admin/accounts', route => ready
+    ? route.fulfill({ json: { users: [], invitations: [], mailConfigured: true } })
+    : route.fulfill({ status: 404, contentType: 'text/html', body: '<pre>Cannot GET /admin/accounts</pre>' }));
+  await page.goto('/users');
+  await expect(page.getByText('User management is unavailable on this API. Deploy the matching API version.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Email', exact: true })).toBeDisabled();
+  await expect(page.getByText('No invited users yet.', { exact: true })).toHaveCount(0);
+  ready = true;
+  await page.getByRole('button', { name: 'Retry Users', exact: true }).click();
+  await expect(page.getByRole('textbox', { name: 'Email', exact: true })).toBeEnabled();
+  await expect(page.getByText('No invited users yet.', { exact: true })).toBeVisible();
+  expect(mutations).toEqual([]);
+});
+
+test('a failed Users refresh keeps data but blocks mutations', async ({ page, mutations }) => {
+  let ready = true;
+  await page.route('**/admin/accounts', route => ready
+    ? route.fulfill({ json: { users: [{ ...user, disabled: false }], invitations: [], mailConfigured: true } })
+    : route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html>' }));
+  await page.goto('/users');
+  await expect(page.getByRole('button', { name: 'Revoke access', exact: true })).toBeEnabled();
+  ready = false;
+  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+  await expect(page.getByText('Invalid JSON response from the service. Please try again.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Showing last successful data. Changes are blocked until refreshed.', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Revoke access', exact: true })).toBeDisabled();
   expect(mutations).toEqual([]);
 });
