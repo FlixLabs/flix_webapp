@@ -27,5 +27,6 @@ watch(selected, async () => {
         </v-btn-toggle>
       </div>
     </div>
+    <div v-if="$slots.controls" class="mt-3"><slot name="controls" /></div>
   </PageNavigation>
 </template>
