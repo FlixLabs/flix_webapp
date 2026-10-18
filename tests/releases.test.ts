@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { effectScope, ref } from 'vue';
-import { useReleaseSearch, type Release } from '@/composables/useReleaseSearch';
+import { useReleaseSearch, releaseSourceUrl, type Release } from '@/composables/useReleaseSearch';
 import type { MediaInstance } from '@/composables/useMediaService';
 
 const candidate: Release = { guid: 'release-guid', indexerId: 7, title: 'Selected release', downloadAllowed: true };
@@ -21,6 +21,15 @@ function createOptions() {
   };
 }
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+
+describe('release source links', () => {
+  it.each(['https://indexer.test/details/42?id=42#comments', 'http://192.168.1.10:8080/details/42'])('accepts absolute source pages: %s', infoUrl => {
+    expect(releaseSourceUrl({ infoUrl })).toBe(infoUrl);
+  });
+  it.each([undefined, null, 42, {}, '', '/details/42', '//indexer.test/42', 'javascript:alert(1)', 'data:text/html,hello', 'magnet:?xt=test', 'https://', 'https://user:password@indexer.test/42', 'https://indexer.test/\n42', 'https://indexer.test\\42'])('hides absent or unsafe source links: %s', infoUrl => {
+    expect(releaseSourceUrl({ infoUrl } as Release)).toBeUndefined();
+  });
+});
 
 describe('interactive release search', () => {
   it.each([

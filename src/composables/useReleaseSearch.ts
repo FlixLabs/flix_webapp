@@ -8,6 +8,7 @@ export interface Release {
   indexerId: number;
   title: string;
   indexer?: string;
+  infoUrl?: string;
   size?: number;
   quality?: { quality?: { name?: string } };
   languages?: { name: string }[];
@@ -19,6 +20,16 @@ export interface Release {
   temporarilyRejected?: boolean;
   rejections?: string[];
   downloadAllowed?: boolean;
+}
+
+export function releaseSourceUrl(release: Pick<Release, 'infoUrl'>): string | undefined {
+  if (typeof release.infoUrl !== 'string') return;
+  const value = release.infoUrl.trim();
+  if (!/^https?:\/\//i.test(value) || [...value].some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127 || char === '\\')) return;
+  try {
+    const url = new URL(value);
+    if (['http:', 'https:'].includes(url.protocol) && !url.username && !url.password) return url.href;
+  } catch { /* Indexers may omit or return an invalid details URL. */ }
 }
 
 interface Episode {
