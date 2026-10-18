@@ -866,5 +866,7 @@
   "Seasons": "Saisons",
   "Root folder": "Dossier racine",
   "Expires": "Expiration",
-  "User management is unavailable on this API. Deploy the matching API version.": "La gestion des utilisateurs est indisponible sur cette API. Déployez la version correspondante de l’API."
+  "User management is unavailable on this API. Deploy the matching API version.": "La gestion des utilisateurs est indisponible sur cette API. Déployez la version correspondante de l’API.",
+  "Source page": "Fiche source",
+  "View source page for {p0}": "Voir la fiche source de {p0}"
 }

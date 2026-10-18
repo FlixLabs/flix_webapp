@@ -3,7 +3,7 @@ import { t, translatedChoices, decimal } from '@/i18n';
 import { useLocalizedMedia, useLocalizedEpisode, localizedEpisodeTitle } from '@/composables/useLocalizedMedia';
 import { computed, ref, shallowRef, watch } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
-import { useReleaseSearch, type Release } from '@/composables/useReleaseSearch';
+import { useReleaseSearch, releaseSourceUrl, type Release } from '@/composables/useReleaseSearch';
 import type { MediaActionItem } from '@/composables/useMediaActions';
 import type { MediaType } from '@/composables/useMediaService';
 import { useDialogActivator, preserveNestedDialogFocus } from '@/composables/useDialogActivator';
@@ -100,6 +100,7 @@ async function download() {
         >
           <template #[slots.title]="{ item: release }">
             <div class="py-2 text-wrap release-title">{{ release.title }}</div>
+            <a v-if="releaseSourceUrl(release)" :href="releaseSourceUrl(release)" target="_blank" rel="noopener noreferrer" class="release-source text-primary text-caption d-inline-flex align-center ga-1 mb-2" :aria-label="t('View source page for {p0}', { p0: release.title })">{{ t('Source page') }}<v-icon icon="mdi-open-in-new" size="14" aria-hidden="true" /></a>
             <div v-if="release.languages?.length" class="text-caption text-medium-emphasis pb-2">{{ release.languages.map((language: { name: string }) => language.name).join(', ') }}</div>
           </template>
           <template #[slots.size]="{ item: release }">{{ typeof release.size === 'number' ? decimal((release.size / 1e9)) : '-' }}</template>
@@ -143,4 +144,6 @@ async function download() {
 .release-title {
   overflow-wrap: anywhere;
 }
+.release-source { text-decoration: none; }
+.release-source:hover { text-decoration: underline; }
 </style>
