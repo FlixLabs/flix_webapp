@@ -887,5 +887,8 @@
   "Unable to review the selected files (HTTP {p0}). Check the media, quality and languages. No import was requested.": "Impossible de vérifier les fichiers sélectionnés (HTTP {p0}). Vérifiez le média, la qualité et les langues. Aucun import n’a été demandé.",
   "Unable to parse file": "Impossible d’analyser le fichier",
   "Suggested from the filename": "Suggestion d’après le nom du fichier",
-  "Use suggested media {p0}": "Utiliser le média suggéré {p0}"
+  "Use suggested media {p0}": "Utiliser le média suggéré {p0}",
+  "Radarr could not parse this filename. No import was requested.": "Radarr n’a pas pu analyser ce nom de fichier. Aucun import n’a été demandé.",
+  "Continue with manual information": "Continuer avec les informations manuelles",
+  "Radarr could not verify this filename. Confirming requests an import using the movie, quality and languages you selected. The file is not renamed and the import may still fail.": "Radarr n’a pas pu vérifier ce nom de fichier. La confirmation demande un import avec le film, la qualité et les langues sélectionnés. Le fichier n’est pas renommé et l’import peut encore échouer."
 }

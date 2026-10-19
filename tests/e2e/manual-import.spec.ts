@@ -70,7 +70,41 @@ test('a failed review never sends an import command', async ({ page, mutations }
   await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
   await expect(page.getByText('Unable to review the selected files (HTTP 500). Check the media, quality and languages. No import was requested.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Confirm Import', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Continue with manual information', exact: true })).toHaveCount(0);
   expect(mutations.map(item => item.path)).toEqual(['/api/v3/manualimport']);
+});
+
+test('the specific Radarr parsing failure allows explicit manual confirmation without renaming', async ({ page, mutations }) => {
+  await mockImport(page, mutations);
+  const path = '/downloads/[ OxTorrent.com ] Mad Max 1-1080p.MULTI.x264 ac3 mHDgz.mkv';
+  await page.route(/\/api\/v3\/manualimport(?:\?|$)/, route => {
+    if (route.request().method() === 'POST') {
+      mutations.push({ method: 'POST', path: '/api/v3/manualimport', body: route.request().postDataJSON() });
+      return route.fulfill({ status: 500, json: { message: `Unable to parse movie info from path: ${path}`,
+        description: 'NzbDrone.Core.MediaFiles.MovieImport.Aggregation.AugmentingFailedException: parsing failed' } });
+    }
+    return route.fulfill({ json: [{ ...candidate, path, relativePath: path.split('/').pop() }] });
+  });
+  await page.goto('/downloads');
+  await page.getByRole('button', { name: 'Manual import Completed download', exact: true }).click();
+  await page.getByRole('checkbox', { name: `Select ${path.split('/').pop()}`, exact: true }).check();
+  const continuation = page.getByRole('button', { name: 'Continue with manual information', exact: true });
+  await expect(continuation).toHaveCount(0);
+  await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
+  await expect(page.getByText('Radarr could not parse this filename. No import was requested.', { exact: true })).toBeVisible();
+  await continuation.click();
+  const confirmation = page.getByRole('dialog', { name: 'Confirm Manual Import', exact: true });
+  await expect(confirmation.getByText('Radarr could not verify this filename.', { exact: false })).toBeVisible();
+  expect(mutations.some(item => item.path === '/api/v3/command')).toBe(false);
+  await confirmation.getByRole('button', { name: 'Cancel', exact: true }).click();
+  expect(mutations.some(item => item.path === '/api/v3/command')).toBe(false);
+  await continuation.click();
+  await confirmation.getByRole('button', { name: 'Confirm Import', exact: true }).click();
+  await expect.poll(() => mutations.filter(item => item.path === '/api/v3/command').length).toBe(1);
+  expect(mutations.find(item => item.path === '/api/v3/command')!.body).toMatchObject({
+    name: 'ManualImport', files: [{ path, movieId: movie.id, quality: candidate.quality, languages: candidate.languages }],
+  });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
 test('Sonarr imports only the selected episode associations', async ({ page, mutations }) => {
