@@ -43,9 +43,9 @@ export interface ImportFile {
 
 export function canManualImport(download: ImportDownload) {
   return typeof download.downloadId === 'string' && !!download.downloadId.trim()
-    && !['importpending', 'importing', 'imported'].includes(download.trackedDownloadState?.toLowerCase() ?? '') && (
+    && !['importing', 'imported'].includes(download.trackedDownloadState?.toLowerCase() ?? '') && (
     download.status?.toLowerCase() === 'completed'
-    || ['importblocked', 'importfailed']
+    || ['importpending', 'importblocked', 'importfailed']
       .includes(download.trackedDownloadState?.toLowerCase() ?? '')
   );
 }
@@ -125,7 +125,9 @@ export function useManualImport(options: MediaServiceOptions) {
       const records = queue.filter(record => typeof record.downloadId === 'string' && record.downloadId.trim().toLowerCase() === id);
       if (!records.length) throw new Error('Download no longer available');
       for (const record of records) {
-        const reason = queueImportBlock(record.trackedDownloadState);
+        // ImportPending alone is not an active command; it also follows unsuccessful automatic attempts.
+        const reason = String(record.trackedDownloadState).toLowerCase() === 'importpending'
+          ? null : queueImportBlock(record.trackedDownloadState);
         if (reason) throw new ImportProtectionError(`${reason}. No new import was requested.`);
         if (!canManualImport({ title: active.download.title, downloadId: id,
           status: typeof record.status === 'string' ? record.status : undefined,

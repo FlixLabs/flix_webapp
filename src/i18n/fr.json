@@ -895,6 +895,7 @@
   "Continue with manual information": "Continuer avec les informations manuelles",
   "Import in progress": "Import en cours",
   "Import queued": "Import en attente",
+  "Automatic import pending; removal is protected.": "Import automatique en attente ; suppression protégée.",
   "Import in progress. No new import was requested.": "Import en cours. Aucun nouvel import n’a été demandé.",
   "Import queued. No new import was requested.": "Import en attente. Aucun nouvel import n’a été demandé.",
   "Import status unavailable. No new import was requested.": "Statut de l’import indisponible. Aucun nouvel import n’a été demandé.",

@@ -44,7 +44,9 @@ already in the library after removing recognized advertising prefixes (currently
 explicit selection and never rename the file or infer its quality/languages.
 
 Manual Import stays available for completed downloads without an active import.
-Import-pending/importing items do not offer a new import. Flix also rereads the
+Importing items do not offer a new import. The queue's `importPending` state alone
+does not prove an active command and still permits manual review; removal remains
+protected. Flix also rereads the
 selected service's queue and commands at opening and immediately before submission;
 active, queued or unverifiable imports prevent a new command. This applies in API
 and standalone modes, but remains a browser preflight rather than an atomic
