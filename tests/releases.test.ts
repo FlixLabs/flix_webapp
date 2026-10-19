@@ -71,6 +71,45 @@ describe('interactive release search', () => {
     expect(JSON.parse(request.body)).toEqual({ guid: 'release-guid', indexerId: 9, movieId: 42 });
   });
 
+  it('clears an old provider error for a new choice without starting another request', async () => {
+    const second = { ...candidate, indexerId: 9 };
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json([candidate, second]))
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const actions = useReleaseSearch(createOptions());
+    await actions.open('movies', { id: 42, title: 'Movie' });
+    expect(await actions.grab(candidate)).toBe(false);
+    expect(actions.error.value).toContain('Check the indexer');
+    actions.clearGrabError();
+    expect(actions.error.value).toBe('');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(await actions.grab(second)).toBe(true);
+    expect(actions.error.value).toBe('');
+    expect(JSON.parse(fetchMock.mock.calls[2]![1].body).indexerId).toBe(9);
+  });
+
+  it('does not dismiss search failures when clearing an old download error', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 503 })));
+    const actions = useReleaseSearch(createOptions());
+    await actions.open('movies', { id: 42, title: 'Movie' });
+    actions.clearGrabError();
+    expect(actions.error.value).toContain('Unable to search releases');
+  });
+
+  it('shows a fresh error if a subsequent release download also fails', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json([candidate]))
+      .mockResolvedValueOnce(new Response(null, { status: 503 }))
+      .mockResolvedValueOnce(new Response(null, { status: 404 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const actions = useReleaseSearch(createOptions());
+    await actions.open('movies', { id: 42, title: 'Movie' });
+    await actions.grab(candidate);
+    actions.clearGrabError();
+    expect(await actions.grab(candidate)).toBe(false);
+    expect(actions.error.value).toContain('no longer cached');
+  });
+
   it.each([{ title: 'No ID' }, { id: 42, title: 'Not added', already_in_library: false }])('rejects media absent from the library', async item => {
     const fetchMock = vi.fn(); vi.stubGlobal('fetch', fetchMock);
     const actions = useReleaseSearch(createOptions());
