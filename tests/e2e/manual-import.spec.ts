@@ -156,3 +156,44 @@ test('unparseable filenames can be reviewed with explicit quality and multiple l
   const command = mutations.find(item => item.path === '/api/v3/command');
   expect(command?.body).toMatchObject({ name: 'ManualImport', files: [{ path, quality: { quality: { id: 7 } }, languages: [{ id: 2 }, { id: 1 }] }] });
 });
+
+for (const mediaType of ['movies', 'series']) {
+  test(`${mediaType} media suggestions require confirmation and preserve the original filename`, async ({ page, mutations }) => {
+    await mockImport(page, mutations);
+    const item = mediaType === 'movies' ? { ...movie, title: 'Mad Max 2', year: 1981 } : series;
+    const name = mediaType === 'movies' ? '[ OxTorrent.com ] Mad Max 2 -1080p.MULTI.x264 ac3 mHDgz.mkv' : '[ OxTorrent.com ] Example.Series.S01E01.1080p.mkv';
+    const path = `/downloads/example/${name}`;
+    await page.route(/\/api\/v3\/(movie|series)(?:\?|$)/, route => route.fulfill({ json: [item] }));
+    await page.route(/\/api\/v3\/manualimport(?:\?|$)/, route => {
+      if (route.request().method() === 'POST') {
+        const body = route.request().postDataJSON();
+        expect(body[0]).toMatchObject({ path, quality: candidate.quality, languages: candidate.languages,
+          ...(mediaType === 'movies' ? { movieId: item.id } : { seriesId: item.id, episodeIds: [21] }) });
+        mutations.push({ method: 'POST', path: '/api/v3/manualimport', body });
+        return route.fulfill({ json: body.map((file: object) => ({ ...file, rejections: [] })) });
+      }
+      return route.fulfill({ json: [{ ...candidate, path, relativePath: name, movie: undefined, series: undefined, episodes: [] }] });
+    });
+    await page.goto('/downloads');
+    if (mediaType === 'series') await page.getByRole('button', { name: 'Series (1)', exact: true }).click();
+    await page.getByRole('button', { name: 'Manual import Completed download', exact: true }).click();
+    const choice = page.getByRole('button', { name: `Use suggested media ${item.title} (${item.year})`, exact: true });
+    await expect(choice).toBeVisible();
+    const checkbox = page.getByRole('checkbox', { name: `Select ${name}`, exact: true });
+    await expect(checkbox).not.toBeChecked();
+    await checkbox.check();
+    await expect(page.getByRole('button', { name: 'Review Import (1)', exact: true })).toBeDisabled();
+    expect(mutations).toEqual([]);
+    await choice.click();
+    await expect(choice).toHaveCount(0);
+    if (mediaType === 'series') {
+      await page.getByRole('combobox', { name: 'Episodes', exact: true }).locator('..').click();
+      await page.getByRole('option', { name: 'S1 E1 · Pilot', exact: true }).click();
+      await page.keyboard.press('Escape');
+    }
+    await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Confirm Manual Import', exact: true })).toContainText(name);
+    expect(mutations.map(item => item.path)).toEqual(['/api/v3/manualimport']);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+}
