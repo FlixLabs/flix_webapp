@@ -4,9 +4,14 @@ import { onScopeDispose, ref, watch, type Ref } from 'vue';
 export interface ClientTorrent {
   id: string; name: string; state: string; progress: number; completed: boolean;
   sizeBytes: number; path: string; ratio: number | null; tracked: boolean; removable: boolean;
+  removalBlockedReason?: 'Import in progress' | 'Import queued' | 'Import status unavailable' | null;
 }
 export interface DownloadClient {
   id: string; name: string; type: string; allowDeleteData: boolean; allowForceRemoval?: boolean; torrents: ClientTorrent[];
+}
+export function canRemoveClientTorrent(client: DownloadClient, item: ClientTorrent, force = false): boolean {
+  return item.removalBlockedReason === null && item.completed
+    && (item.tracked ? force && client.allowForceRemoval === true : item.removable);
 }
 export function parseDownloadClients(value: unknown): DownloadClient[] {
   const data = value as { clients?: DownloadClient[] } | null;
@@ -25,6 +30,12 @@ export function parseDownloadClients(value: unknown): DownloadClient[] {
         || (item.completed && item.progress !== 100)
         || !['completed', 'tracked', 'removable'].every(key => typeof item[key as keyof ClientTorrent] === 'boolean')
         || (item.removable && (!item.completed || item.tracked))) throw new Error('Invalid torrent response.');
+      if (item.removalBlockedReason === undefined) {
+        item.removalBlockedReason = 'Import status unavailable';
+        item.removable = false;
+      }
+      if (item.removalBlockedReason !== null && !['Import in progress', 'Import queued', 'Import status unavailable'].includes(item.removalBlockedReason)) throw new Error('Invalid import protection response.');
+      if (item.removalBlockedReason && item.removable) throw new Error('Invalid removal protection.');
       torrents.add(item.id);
     }
   }
@@ -67,7 +78,7 @@ export function useDownloadClients(instance: Ref<string | null>) {
     } finally { clearTimeout(timer); if (active === generation) loading.value = false; }
   }
   async function remove(client: DownloadClient, item: ClientTorrent, deleteData: boolean, force = false) {
-    if (removing.value || loading.value || uncertain.value || (!item.removable && !(force && item.tracked && client.allowForceRemoval)) || !item.completed || (item.tracked && !force) || !instance.value || (deleteData && !client.allowDeleteData)) return false;
+    if (removing.value || loading.value || uncertain.value || !canRemoveClientTorrent(client, item, force) || !instance.value || (deleteData && !client.allowDeleteData)) return false;
     const active = generation;
     const abort = new AbortController(); controller = abort;
     const timer = setTimeout(() => abort.abort(), 60000);

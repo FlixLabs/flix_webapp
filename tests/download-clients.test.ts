@@ -3,7 +3,7 @@ import { effectScope, ref } from 'vue';
 import { parseDownloadClients, useDownloadClients } from '@/composables/useDownloadClients';
 
 const item = { id: 'a'.repeat(40), name: 'Torrent', state: 'Seeding', progress: 100, completed: true,
-  sizeBytes: 1e9, path: '/downloads', ratio: 2, tracked: false, removable: true };
+  sizeBytes: 1e9, path: '/downloads', ratio: 2, tracked: false, removable: true, removalBlockedReason: null };
 const client = { id: 'main', name: 'Client', type: 'deluge', allowDeleteData: false, torrents: [item] };
 const scopes: ReturnType<typeof effectScope>[] = [];
 function setup() {
@@ -26,6 +26,21 @@ describe('download clients', () => {
     expect(fetch.mock.calls[0]![0]).toContain('/download-clients/Test');
     instance.value = 'Second';
     expect(actions.clients.value).toEqual([]);
+  });
+  it('blocks importing, queued and unverifiable torrents even with force enabled', async () => {
+    const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);
+    const { actions } = setup();
+    for (const removalBlockedReason of ['Import in progress', 'Import queued', 'Import status unavailable'] as const) {
+      const blocked = { ...item, tracked: true, removable: false, removalBlockedReason };
+      expect(await actions.remove({ ...client, allowForceRemoval: true }, blocked, false, true)).toBe(false);
+      expect(() => parseDownloadClients({ clients: [{ ...client, torrents: [{ ...blocked, removable: true }] }] })).toThrow();
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  });
+  it('disables cleanup when an older API does not report import protection', () => {
+    const data = parseDownloadClients({ clients: [{ ...client, torrents: [{ ...item, removalBlockedReason: undefined }] }] });
+    expect(data[0]!.torrents[0]!.removalBlockedReason).toBe('Import status unavailable');
+    expect(data[0]!.torrents[0]!.removable).toBe(false);
   });
   it('blocks tracked torrents and data removal without server permission', async () => {
     const fetch = vi.fn(); vi.stubGlobal('fetch', fetch);

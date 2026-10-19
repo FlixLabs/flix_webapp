@@ -890,5 +890,15 @@
   "Use suggested media {p0}": "Use suggested media {p0}",
   "Radarr could not parse this filename. No import was requested.": "Radarr could not parse this filename. No import was requested.",
   "Continue with manual information": "Continue with manual information",
+  "Import in progress": "Import in progress",
+  "Import queued": "Import queued",
+  "Import in progress. Removal is blocked, including forced removal. Refresh before another removal. No automatic retry was made.": "Import in progress. Removal is blocked, including forced removal. Refresh before another removal. No automatic retry was made.",
+  "Import queued. Removal is blocked, including forced removal. Refresh before another removal. No automatic retry was made.": "Import queued. Removal is blocked, including forced removal. Refresh before another removal. No automatic retry was made.",
+  "Import status unavailable. Removal is blocked, including forced removal. Refresh before another removal. No automatic retry was made.": "Import status unavailable. Removal is blocked, including forced removal. Refresh before another removal. No automatic retry was made.",
+  "Inspect completed torrents before cleanup. Seeding torrents are not necessarily leftovers. Active or queued imports block removal, including forced removal.": "Inspect completed torrents before cleanup. Seeding torrents are not necessarily leftovers. Active or queued imports block removal, including forced removal.",
+  "Radarr or Sonarr still tracks this torrent. Removal is allowed only if no active or queued import is detected. This does not remove the media from your library or clear its Radarr/Sonarr queue entry.": "Radarr or Sonarr still tracks this torrent. Removal is allowed only if no active or queued import is detected. This does not remove the media from your library or clear its Radarr/Sonarr queue entry.",
+  "Import in progress. Removal is blocked, including forced removal.": "Import in progress. Removal is blocked, including forced removal.",
+  "Import queued. Removal is blocked, including forced removal.": "Import queued. Removal is blocked, including forced removal.",
+  "Import status unavailable. Removal is blocked, including forced removal.": "Import status unavailable. Removal is blocked, including forced removal.",
   "Radarr could not verify this filename. Confirming requests an import using the movie, quality and languages you selected. The file is not renamed and the import may still fail.": "Radarr could not verify this filename. Confirming requests an import using the movie, quality and languages you selected. The file is not renamed and the import may still fail."
 }

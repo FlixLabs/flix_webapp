@@ -11,9 +11,10 @@ async function open(page: import('@playwright/test').Page, writes: unknown[], al
       return route.fulfill(fail ? { status: 502, json: { error: 'Removal outcome is uncertain.' } } : { status: 204 });
     }
     return route.fulfill({ json: { clients: [{ id: 'main', name: 'My Deluge', type: 'deluge', allowForceRemoval: true, allowDeleteData, torrents: [
-      { id: hash, name: 'A completed torrent with a long name to check mobile layout', state: 'Seeding', progress: 100, completed: true, sizeBytes: 1e9, path: '/downloads/movie', ratio: 2, tracked: false, removable: true },
-      { id: 'b'.repeat(40), name: 'Tracked film', state: 'Paused', progress: 100, completed: true, sizeBytes: 1e9, path: '/downloads/tracked', ratio: 0, tracked: true, removable: false },
-      { id: 'c'.repeat(40), name: 'Active film', state: 'Downloading', progress: 10, completed: false, sizeBytes: 1e9, path: '/downloads/active', ratio: 0, tracked: false, removable: false },
+      { id: hash, name: 'A completed torrent with a long name to check mobile layout', state: 'Seeding', progress: 100, completed: true, sizeBytes: 1e9, path: '/downloads/movie', ratio: 2, tracked: false, removable: true, removalBlockedReason: null },
+      { id: 'b'.repeat(40), name: 'Tracked film', state: 'Paused', progress: 100, completed: true, sizeBytes: 1e9, path: '/downloads/tracked', ratio: 0, tracked: true, removable: false, removalBlockedReason: null },
+      { id: 'c'.repeat(40), name: 'Active film', state: 'Downloading', progress: 10, completed: false, sizeBytes: 1e9, path: '/downloads/active', ratio: 0, tracked: false, removable: false, removalBlockedReason: null },
+      ...['Import in progress', 'Import queued', 'Import status unavailable'].map((removalBlockedReason, index) => ({ id: String(index + 4).repeat(40), name: `Protected ${index}`, state: 'Seeding', progress: 100, completed: true, sizeBytes: 1e9, path: '/downloads/import', ratio: 0, tracked: true, removable: false, removalBlockedReason })),
     ] }] } });
   });
   await page.goto('/downloads');
@@ -83,5 +84,18 @@ test('forcing tracked removal requires explicit consent and keeps files by defau
   await confirm.getByRole('checkbox', { name: 'Force removal despite Radarr/Sonarr tracking', exact: true }).check();
   await remove.click();
   expect(writes).toEqual([{ name: 'Tracked film', deleteData: false, force: true }]);
+  expect(mutations).toEqual([]);
+});
+
+test('active and pending imports show a non-overridable reason for removal protection', async ({ page, mutations }) => {
+  const writes: unknown[] = [];
+  const dialog = await open(page, writes);
+  for (const [index, reason] of ['Import in progress', 'Import queued', 'Import status unavailable'].entries()) {
+    const button = dialog.getByRole('button', { name: `Remove torrent Protected ${index}`, exact: true });
+    await expect(button).toBeDisabled();
+    await expect(dialog.getByText(reason, { exact: true })).toBeVisible();
+  }
+  await expect(page.getByRole('dialog', { name: 'Remove torrent?', exact: true })).toHaveCount(0);
+  expect(writes).toEqual([]);
   expect(mutations).toEqual([]);
 });
