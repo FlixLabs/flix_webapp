@@ -21,6 +21,7 @@ import MediaDialog from '@/components/common/MediaDialog.vue';
 import Loading from '@/components/common/Loading.vue';
 import SeriesSizeField from '@/components/common/SeriesSizeField.vue';
 import DownloadTitle from '@/components/common/DownloadTitle.vue';
+import { useDownloadSourceLinks } from '@/composables/useDownloadSourceLinks';
 import ManualImportDialog from '@/components/common/ManualImportDialog.vue';
 import ManualImportActivity from '@/components/common/ManualImportActivity.vue';
 import DownloadClientsDialog from '@/components/common/DownloadClientsDialog.vue';
@@ -38,6 +39,7 @@ const selectedInstanceData = computed(() => store.selectedInstanceData);
 
 const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE_FLIX_API_USE === 'true');
 const { getConfig, serviceContext } = useMediaService({ useAPI, selectedInstanceData });
+const sourceLinks = useDownloadSourceLinks({ useAPI, selectedInstanceData });
 const importDialog = ref<InstanceType<typeof ManualImportDialog> | null>(null);
 const importType = ref<'movies' | 'series'>('movies');
 const importOptions = { useAPI, selectedInstanceData };
@@ -217,6 +219,7 @@ function getDownload(type: 'movies' | 'series') {
           mediaTitle: downloadMediaTitle(type, item),
           metadata: type === 'movies' ? item.movie : item.series,
           downloadId: item.downloadId,
+          infoUrl: item.infoUrl,
           outputPath: item.outputPath,
           trackedDownloadState: item.trackedDownloadState,
           title: item.title,
@@ -281,6 +284,8 @@ function getHistory(type: 'movies' | 'series') {
           mediaTitle: downloadMediaTitle(type, item),
           metadata: type === 'movies' ? item.movie : item.series,
           title: item.sourceTitle,
+          downloadId: item.downloadId,
+          data: item.data,
           date: item.date,
           client: item.downloadClient,
           languages: languages.join(', '),
@@ -466,7 +471,7 @@ watch(serviceContext, () => {
           :no-data-text="activeRead.error ? t('Data unavailable. Retry to load this view.') : search || (view === 'queue' && queueFilter !== 'all') ? t('No matching items found') : view === 'queue' ? t('No download information found') : t('No history information found')"
         >
           <template #item.title="{ item }">
-            <DownloadTitle :media-type="mediaType" :key="`${mediaType}-${view}-${item.id}`" :record="item" :queue="view === 'queue'" @open="openDownloadMedia(item, $event)" />
+            <DownloadTitle :media-type="mediaType" :key="`${mediaType}-${view}-${item.id}`" :record="item" :source-context="serviceContext()" :resolve-source="sourceLinks.resolve" :queue="view === 'queue'" @open="openDownloadMedia(item, $event)" />
           </template>
           <template #item.status="{ item }">
             <template v-if="view === 'queue'">

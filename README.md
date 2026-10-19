@@ -127,6 +127,12 @@ for Library, Outings and Collections, including collection totals.
 
 ### Download Media Sheets
 
+Downloads also show **Source page** when Radarr/Sonarr retain the release details
+URL in their grab history, including downloads that need attention. Source lookups
+use the download ID (never the title), are cached in memory for the current instance,
+and do not block the queue. This works with or without Flix API. No link is shown
+when the source is missing or invalid; torrent/NZB download URLs are never substituted.
+
 Downloads use a compact desktop table and mobile cards backed by the same
 Vuetify table, filters and pagination. Queue responses include the service's
 movie/series so confirmed media titles appear before release names without
