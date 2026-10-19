@@ -30,14 +30,50 @@ function setup(mediaType: 'movies' | 'series' = 'movies') {
     if (path.endsWith('/command')) return Response.json({ id: 99, status: 'queued' });
     return Response.json({ id: 99, status: 'completed' });
   });
-  vi.stubGlobal('fetch', fetchMock);
+  const checks = vi.fn(async (url: string) => Response.json(new URL(url).pathname.endsWith('/queue')
+    ? { totalRecords: 1, records: [{ id: 101, downloadId: download.downloadId, status: 'completed', trackedDownloadState: 'importBlocked' }] } : []));
+  vi.stubGlobal('fetch', (url: string, init?: RequestInit) => {
+    const path = new URL(url).pathname;
+    return path.endsWith('/queue') || (path.endsWith('/command') && init?.method === 'GET') ? checks(url) : fetchMock(url, init);
+  });
   const scope = effectScope();
   const actions = scope.run(() => useManualImport(options))!;
-  return { actions, options, fetchMock, scope };
+  return { actions, options, fetchMock, checks, scope };
 }
 afterEach(() => { trackedImports.value = []; vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('manual download imports', () => {
+  it.each(['movies', 'series'] as const)('blocks %s when a queued command exists outside this browser session', async type => {
+    const { actions, fetchMock, checks, scope } = setup(type);
+    checks.mockImplementation(async url => Response.json(new URL(url).pathname.endsWith('/queue')
+      ? { totalRecords: 1, records: [{ id: 101, downloadId: download.downloadId, status: 'completed', trackedDownloadState: 'importBlocked' }] }
+      : [{ name: 'ManualImport', status: 'queued', body: { files: [{ downloadId: download.downloadId }] } }]));
+    await actions.open(type, download);
+    expect(actions.error.value).toContain('Import queued');
+    expect(actions.files.value).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+    scope.stop();
+  });
+  it('rechecks native imports immediately before submission', async () => {
+    const { actions, fetchMock, checks, scope } = setup();
+    await actions.open('movies', download);
+    actions.files.value[0]!.selected = true;
+    await actions.review();
+    checks.mockResolvedValueOnce(Response.json({ totalRecords: 1, records: [{ id: 101, downloadId: download.downloadId, status: 'completed', trackedDownloadState: 'importing' }] }));
+    expect(await actions.submit()).toBe(false);
+    expect(actions.error.value).toContain('Import in progress');
+    expect(fetchMock.mock.calls.some(([url, init]) => url.endsWith('/command') && init?.method === 'POST')).toBe(false);
+    scope.stop();
+  });
+  it('fails closed when native import verification is unavailable', async () => {
+    const { actions, fetchMock, checks, scope } = setup();
+    checks.mockResolvedValueOnce(Response.json({}, { status: 503 }));
+    await actions.open('movies', download);
+    expect(actions.error.value).toContain('Import status unavailable');
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(canManualImport({ ...download, trackedDownloadState: 'importPending' })).toBe(false);
+    scope.stop();
+  });
   it('offers manual continuation only after the exact parser failure, then requires explicit confirmation', async () => {
     const { actions, fetchMock, scope } = setup();
     await actions.open('movies', download);
