@@ -515,7 +515,7 @@ watch(serviceContext, () => {
               :aria-label="t('Remove {p0}', { p0: item.title })"
               @click="openDeleteConfirmationDialog(mediaType, item)"
             >{{ t("Remove") }}</v-btn>
-            <span v-if="queueImportBlock(item.trackedDownloadState)" class="text-caption text-warning">{{ t(queueImportBlock(item.trackedDownloadState)) }}</span>
+            <span v-if="queueImportBlock(item.trackedDownloadState)" class="text-caption text-warning">{{ item.trackedDownloadState?.toLowerCase() === 'importpending' ? t('Automatic import pending; removal is protected.') : t(queueImportBlock(item.trackedDownloadState)) }}</span>
             </div>
           </template>
         </v-data-table>
