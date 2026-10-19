@@ -868,5 +868,20 @@
   "Expires": "Expires",
   "User management is unavailable on this API. Deploy the matching API version.": "User management is unavailable on this API. Deploy the matching API version.",
   "Source page": "Source page",
-  "View source page for {p0}": "View source page for {p0}"
+  "View source page for {p0}": "View source page for {p0}",
+  "Import completed": "Import completed",
+  "Import failed": "Import failed",
+  "Import status unavailable": "Import status unavailable",
+  "Import launched": "Import launched",
+  "Import command #{p0}": "Import command #{p0}",
+  "Manual imports": "Manual imports",
+  "Imports launched from this browser tab. Closing Flix does not cancel them.": "Imports launched from this browser tab. Closing Flix does not cancel them.",
+  "Check import status for {p0}": "Check import status for {p0}",
+  "Dismiss import status for {p0}": "Dismiss import status for {p0}",
+  "Status unavailable": "Status unavailable",
+  "Dismiss": "Dismiss",
+  "Failed": "Failed",
+  "Aborted": "Aborted",
+  "Cancelled": "Cancelled",
+  "Manual import: {p0}": "Manual import: {p0}"
 }

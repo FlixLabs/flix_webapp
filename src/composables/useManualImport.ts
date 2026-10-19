@@ -1,6 +1,7 @@
 import { readApiJson, requireList, requireObject, optionalList } from '@/composables/apiResponse';
 import { computed, getCurrentScope, onScopeDispose, ref, watch } from 'vue';
 import { useMediaService, type MediaServiceConfig, type MediaServiceOptions, type MediaType } from './useMediaService';
+import { rememberImport, findRunningImport, checkTrackedImport } from './manualImportTracking';
 
 export interface ImportDownload {
   title: string;
@@ -59,6 +60,7 @@ export function useManualImport(options: MediaServiceOptions) {
   const error = ref('');
   const commandId = ref<number | null>(null);
   const commandState = ref('');
+  let trackingKey = '';
   const submissionAttempted = ref(false);
   const selected = computed(() => files.value.filter(file => file.selected));
   const canReview = computed(() => !submissionAttempted.value && selected.value.length > 0 && selected.value.every(validFile));
@@ -91,6 +93,11 @@ export function useManualImport(options: MediaServiceOptions) {
     context = null;
     dialog.value = false;
     confirming.value = false;
+    loading.value = false;
+    busy.value = false;
+  }
+  function resetForm() {
+    // Keep the final status visible during the closing transition.
     files.value = [];
     media.value = [];
     qualities.value = [];
@@ -100,6 +107,7 @@ export function useManualImport(options: MediaServiceOptions) {
     busy.value = false;
     commandId.value = null;
     commandState.value = '';
+    trackingKey = '';
     submissionAttempted.value = false;
     error.value = '';
   }
@@ -118,6 +126,7 @@ export function useManualImport(options: MediaServiceOptions) {
   }
   async function open(mediaType: MediaType, download: ImportDownload) {
     close();
+    resetForm();
     type.value = mediaType;
     title.value = download.title;
     dialog.value = true;
@@ -129,6 +138,13 @@ export function useManualImport(options: MediaServiceOptions) {
     const active = { type: mediaType, download: { ...download }, config: { ...config } };
     context = active;
     controller = new AbortController();
+    const running = findRunningImport(mediaType, config, download.downloadId!);
+    if (running) {
+      trackingKey = running.key;
+      commandId.value = running.commandId;
+      commandState.value = running.status;
+      return;
+    }
     loading.value = true;
     try {
       // Sonarr's seriesId query scans the library instead of the download directory.
@@ -207,11 +223,13 @@ export function useManualImport(options: MediaServiceOptions) {
     try {
       if (JSON.stringify(selected.value.map(payload)) !== JSON.stringify(reviewed)) throw new Error('Selection changed. Review it again before importing.');
       submissionAttempted.value = true;
-      const command = requireObject<{ id: number; status?: string }>(await request(active, 'command', { name: 'ManualImport', files: reviewed, importMode: 'auto' }), 'import command');
+      const command = requireObject<{ id: number; status?: string; result?: string }>(await request(active, 'command', { name: 'ManualImport', files: reviewed, importMode: 'auto' }), 'import command');
       if (!current(active)) return false;
       if (!Number.isInteger(command.id) || command.id <= 0) throw new Error('Invalid import command response.');
       commandId.value = command.id;
-      commandState.value = command.status ?? 'queued';
+      const tracked = rememberImport(active.type, active.config, active.download.downloadId!, active.download.title, command);
+      trackingKey = tracked.key;
+      commandState.value = tracked.status;
       confirming.value = false;
       return true;
     } catch (cause) {
@@ -229,11 +247,10 @@ export function useManualImport(options: MediaServiceOptions) {
     busy.value = true;
     error.value = '';
     try {
-      const command = requireObject(await request(active, `command/${commandId.value}`), 'import command');
+      const command = await checkTrackedImport(trackingKey, active.config);
       if (!current(active)) return false;
-      if (typeof command.status !== 'string') throw new Error('Invalid command status.');
+      if (!command || command.error) throw new Error('Invalid command status.');
       commandState.value = command.status;
-      if (['failed', 'aborted', 'cancelled'].includes(command.status)) error.value = 'Import failed. Check the remaining download messages in Radarr or Sonarr.';
       return command.status === 'completed';
     } catch {
       if (current(active)) error.value = 'Unable to check the import status. The command may still be running.';

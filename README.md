@@ -31,6 +31,20 @@ already supported. In-app/email request notifications are the next separate stag
 
 Standalone mode remains unchanged and does not expose these account pages.
 
+## Manual Import Tracking
+
+Downloads confirms when Radarr or Sonarr accepts a manual import and shows its
+command status after the import window is closed. Tracking survives navigation
+and reloads in the same browser tab, in API and standalone modes. It is scoped to
+the configured service; API keys and file paths are not stored in the tracking
+history. Closing Flix does not cancel commands already accepted by the service.
+
+Status checks are read-only and never resubmit an import. If the service is
+unreachable, the last known state remains visible with a retry action. A completed
+command is not proof that every file was imported: check any remaining download
+messages in Radarr or Sonarr. Dismissing a finished entry only removes its local
+tracking record, not the command or files.
+
 
 **flix_webapp** is a flexible, *frontend-first* application built on Vue 3 and Vite, designed to unify the management of [Radarr](https://radarr.video/) and [Sonarr](https://sonarr.tv/) into a single interface. Whether you opt for a purely frontend approach or integrate an optional backend, flix_webapp aims to simplify the process of monitoring and controlling your movie and TV series libraries.
 
