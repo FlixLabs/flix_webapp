@@ -56,7 +56,9 @@ export function useReleaseSearch(options: MediaServiceOptions) {
   const isLoadingEpisodes = ref(false);
   const isGrabbing = ref(false);
   const hasSearched = ref(false);
-  const error = ref('');
+  const searchError = ref('');
+  const grabError = ref('');
+  const error = computed(() => grabError.value || searchError.value);
   const seasons = computed(() => [...new Set(episodes.value.map(e => e.seasonNumber))].sort((a, b) => a - b));
   const seasonEpisodes = computed(() => episodes.value.filter(e => e.seasonNumber === season.value).sort((a, b) => a.episodeNumber - b.episodeNumber));
   let context: SearchContext | null = null;
@@ -71,7 +73,8 @@ export function useReleaseSearch(options: MediaServiceOptions) {
     releases.value = [];
     isSearching.value = false;
     hasSearched.value = false;
-    error.value = '';
+    searchError.value = '';
+    grabError.value = '';
   }
 
   function close() {
@@ -93,7 +96,7 @@ export function useReleaseSearch(options: MediaServiceOptions) {
     close();
     const config = getConfig(type);
     if (!Number.isInteger(item.id) || (item.id ?? 0) <= 0 || item.already_in_library === false || !config.base_url || !config.api_key) {
-      error.value = 'Interactive search requires media already present in the library and a configured service.';
+      searchError.value = 'Interactive search requires media already present in the library and a configured service.';
       dialog.value = true;
       return;
     }
@@ -117,7 +120,7 @@ export function useReleaseSearch(options: MediaServiceOptions) {
       episodes.value = data;
       season.value = seasons.value.find(s => s > 0) ?? seasons.value[0] ?? null;
     } catch {
-      if (validContext(active) && !abort.signal.aborted) error.value = 'Unable to load seasons and episodes. Please try again.';
+      if (validContext(active) && !abort.signal.aborted) searchError.value = 'Unable to load seasons and episodes. Please try again.';
     } finally {
       if (validContext(active)) isLoadingEpisodes.value = false;
     }
@@ -132,7 +135,7 @@ export function useReleaseSearch(options: MediaServiceOptions) {
     if (active.type === 'movies') params.set('movieId', String(active.item.id));
     else if (episodeId.value !== null) {
       if (!seasonEpisodes.value.some(e => e.id === episodeId.value)) {
-        error.value = 'Please select an episode from this season.';
+        searchError.value = 'Please select an episode from this season.';
         return;
       }
       params.set('episodeId', String(episodeId.value));
@@ -140,7 +143,7 @@ export function useReleaseSearch(options: MediaServiceOptions) {
       params.set('seriesId', String(active.item.id));
       params.set('seasonNumber', String(season.value));
     } else {
-      error.value = 'Please select a season or an episode.';
+      searchError.value = 'Please select a season or an episode.';
       return;
     }
     const id = ++requestId;
@@ -164,21 +167,25 @@ export function useReleaseSearch(options: MediaServiceOptions) {
       releases.value = data;
       hasSearched.value = true;
     } catch {
-      if (validContext(active) && id === requestId && !abort.signal.aborted) error.value = 'Unable to search releases. Please try again.';
+      if (validContext(active) && id === requestId && !abort.signal.aborted) searchError.value = 'Unable to search releases. Please try again.';
     } finally {
       if (id === requestId) isSearching.value = false;
     }
+  }
+
+  function clearGrabError() {
+    if (!isGrabbing.value) grabError.value = '';
   }
 
   async function grab(release: Release): Promise<boolean> {
     const active = context;
     if (isGrabbing.value || !active || !validContext(active)) return false;
     if (isSearching.value || !releases.value.some(r => r.guid === release.guid && r.indexerId === release.indexerId) || !release.guid || !Number.isInteger(release.indexerId) || release.indexerId <= 0 || release.downloadAllowed === false) {
-      error.value = 'This release cannot be downloaded. Please search again.';
+      grabError.value = 'This release cannot be downloaded. Please search again.';
       return false;
     }
     isGrabbing.value = true;
-    error.value = '';
+    grabError.value = '';
     const payload = {
       guid: release.guid, indexerId: release.indexerId,
       ...(active.type === 'movies' ? { movieId: active.item.id } : { seriesId: active.item.id, ...(episodeId.value !== null ? { episodeId: episodeId.value } : {}) }),
@@ -190,14 +197,14 @@ export function useReleaseSearch(options: MediaServiceOptions) {
       });
       if (!validContext(active)) return false;
       if (!response.ok) {
-        error.value = response.status === 404
+        grabError.value = response.status === 404
           ? 'The release is no longer cached by the service. Search again before downloading.'
           : 'Unable to download this release. Check the indexer and download client, then try again.';
         return false;
       }
       return true;
     } catch {
-      if (validContext(active)) error.value = 'Unable to download this release. Please try again.';
+      if (validContext(active)) grabError.value = 'Unable to download this release. Please try again.';
       return false;
     } finally {
       isGrabbing.value = false;
@@ -222,5 +229,5 @@ export function useReleaseSearch(options: MediaServiceOptions) {
   watch(() => [options.useAPI.value, options.selectedInstanceData.value], close, { flush: 'sync' });
   if (getCurrentScope()) onScopeDispose(close);
 
-  return { dialog, releases, episodes, seasons, seasonEpisodes, season, episodeId, isSearching, isLoadingEpisodes, isGrabbing, hasSearched, error, open, close, search, grab };
+  return { dialog, releases, episodes, seasons, seasonEpisodes, season, episodeId, isSearching, isLoadingEpisodes, isGrabbing, hasSearched, error, clearGrabError, open, close, search, grab };
 }

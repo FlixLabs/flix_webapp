@@ -56,6 +56,9 @@ watch(() => [model.value, props.mediaType, props.item?.id], () => {
 });
 watch(actions.dialog, value => { if (!value) model.value = false; });
 watch(releases, () => { selectedRelease.value = null; });
+watch(selectedRelease, release => {
+  if (release) actions.clearGrabError();
+}, { flush: 'sync' });
 
 async function download() {
   if (selectedRelease.value && await actions.grab(selectedRelease.value)) {
