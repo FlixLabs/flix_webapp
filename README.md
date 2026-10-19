@@ -33,6 +33,11 @@ Standalone mode remains unchanged and does not expose these account pages.
 
 ## Manual Import Tracking
 
+Manual Import lets you correct the quality and select multiple audio languages
+before reviewing a file, including filenames Radarr or Sonarr cannot parse.
+The review and explicit confirmation remain required; Flix does not rename the
+file or start an import while you edit these values.
+
 Downloads confirms when Radarr or Sonarr accepts a manual import and shows its
 command status after the import window is closed. Tracking survives navigation
 and reloads in the same browser tab, in API and standalone modes. It is scoped to

@@ -9,7 +9,7 @@ const movie = { id: 42, title: 'Movie' };
 const series = { id: 7, title: 'Series' };
 const episode = { id: 12, seasonNumber: 1, episodeNumber: 2, title: 'Second' };
 const quality = { id: 4, name: 'HDTV-720p' };
-const file = { id: 8, path: '/downloads/movie/Movie.mkv', movie, quality: { quality, revision: { version: 1, real: 0, isRepack: 0 } }, languages: [{ id: 1, name: 'English' }], rejections: [{ reason: 'Not an upgrade for existing movie file' }] };
+const file = { id: 8, path: '/downloads/movie/Movie.mkv', movie, quality: { quality, revision: { version: 1, real: 0, isRepack: false } }, languages: [{ id: 1, name: 'English' }], rejections: [{ reason: 'Not an upgrade for existing movie file' }] };
 function setup(mediaType: 'movies' | 'series' = 'movies') {
   const options = { useAPI: ref(true), selectedInstanceData: ref<MediaInstance | null>({ name: 'Test',
     radarr: { base_url: 'http://radarr.test', api_key: 'movie-key', root_folder_path: '/movies' },
@@ -21,6 +21,7 @@ function setup(mediaType: 'movies' | 'series' = 'movies') {
       ? JSON.parse(String(init.body)).map((item: object) => ({ ...item, rejections: file.rejections }))
       : [mediaType === 'movies' ? file : { ...file, movie: undefined, series, episodes: [episode] }]);
     if (path.endsWith('/qualitydefinition')) return Response.json([{ quality }]);
+    if (path.endsWith('/language')) return Response.json([{ id: 1, name: 'English' }, { id: 2, name: 'French' }]);
     if (path.endsWith('/movie')) return Response.json([movie]);
     if (path.endsWith('/series')) return Response.json([series]);
     if (path.endsWith('/episode')) return Response.json([episode]);
@@ -35,6 +36,49 @@ function setup(mediaType: 'movies' | 'series' = 'movies') {
 afterEach(() => { trackedImports.value = []; vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('manual download imports', () => {
+  it('reviews unparseable filenames using explicitly selected quality and multiple languages', async () => {
+    const { actions, fetchMock, scope } = setup();
+    const path = '/downloads/movie/[ OxTorrent.com ] Mad Max 2 -1080p.MULTI.x264 ac3 mHDgz.mkv';
+    fetchMock.mockResolvedValueOnce(Response.json([{ ...file, path, quality: { quality: { id: 0, name: 'Unknown' }, revision: null }, languages: [], rejections: [{ reason: 'Unable to parse file' }] }]));
+    await actions.open('movies', download);
+    const candidate = actions.files.value[0]!;
+    candidate.selected = true;
+    expect(actions.canReview.value).toBe(false);
+    candidate.qualityId = quality.id;
+    candidate.languages = [...actions.languages.value];
+    await actions.review();
+    expect(actions.confirming.value).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/command'))).toBe(false);
+    expect(await actions.submit()).toBe(true);
+    const command = fetchMock.mock.calls.find(([url]) => url.endsWith('/command'))!;
+    expect(JSON.parse(String(command[1]?.body)).files[0]).toMatchObject({ path, movieId: movie.id,
+      quality: { quality, revision: { version: 1, real: 0, isRepack: false } },
+      languages: [{ id: 1, name: 'English' }, { id: 2, name: 'French' }],
+    });
+    scope.stop();
+  });
+  it('requires another review when languages change after confirmation was prepared', async () => {
+    const { actions, fetchMock, scope } = setup();
+    await actions.open('movies', download);
+    actions.files.value[0]!.selected = true;
+    await actions.review();
+    actions.files.value[0]!.languages = [{ id: 2, name: 'French' }];
+    expect(await actions.submit()).toBe(false);
+    expect(actions.error.value).toContain('Selection changed');
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/command'))).toBe(false);
+    scope.stop();
+  });
+  it('reports review HTTP failures without issuing an import command', async () => {
+    const { actions, fetchMock, scope } = setup();
+    await actions.open('movies', download);
+    actions.files.value[0]!.selected = true;
+    fetchMock.mockResolvedValueOnce(new Response(null, { status: 400 }));
+    await actions.review();
+    expect(actions.error.value).toContain('HTTP 400');
+    expect(actions.confirming.value).toBe(false);
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/command'))).toBe(false);
+    scope.stop();
+  });
   it('only offers import for completed downloads with a download identifier', () => {
     expect(canManualImport(download)).toBe(true);
     expect(canManualImport({ ...download, status: 'downloading' })).toBe(false);
