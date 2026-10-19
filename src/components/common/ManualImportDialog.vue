@@ -40,7 +40,7 @@ defineExpose({ open: actions.open, close: actions.close, isOpen: dialog });
 </script>
 
 <template>
-  <v-dialog :model-value="dialog" :activator="dialogActivator" :open-on-click="false" :aria-label="t('Manual Import - {p0}', { p0: title })" max-width="960" scrollable :fullscreen="$vuetify.display.xs" :persistent="busy || confirming || commandId !== null" @after-enter="preserveNestedDialogFocus(importCard?.$el)" @update:model-value="value => { if (!value && !busy && !confirming && commandId === null) actions.close(); }">
+  <v-dialog :model-value="dialog" :activator="dialogActivator" :open-on-click="false" :aria-label="t('Manual Import - {p0}', { p0: title })" max-width="960" scrollable :fullscreen="$vuetify.display.xs" :persistent="busy || confirming" @after-enter="preserveNestedDialogFocus(importCard?.$el)" @update:model-value="value => { if (!value && !busy && !confirming) actions.close(); }">
     <v-card ref="importCard">
       <v-card-title>{{ t("Manual Import") }}</v-card-title>
       <v-card-subtitle class="text-wrap">{{ title }}</v-card-subtitle>

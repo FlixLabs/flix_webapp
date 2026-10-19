@@ -157,6 +157,73 @@ test('accepted imports remain visible after closing and reloading without resubm
   await expect(activity).not.toBeVisible();
 });
 
+for (const status of ['started', 'completed', 'failed']) {
+  test(`accepted ${status} imports can be dismissed without cancelling or resubmitting`, async ({ page, mutations }, testInfo) => {
+    await mockImport(page, mutations, 200, { status });
+    await page.goto('/downloads');
+    const opener = page.getByRole('button', { name: 'Manual import Completed download', exact: true });
+    await opener.click();
+    const dialog = page.getByRole('dialog', { name: 'Manual Import - Completed download', exact: true });
+    await page.getByRole('checkbox', { name: `Select ${filename}`, exact: true }).check();
+    await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
+    await page.getByRole('button', { name: 'Confirm Import', exact: true }).click();
+    const label = status === 'started' ? 'Import launched' : status === 'completed' ? 'Import completed' : 'Import failed';
+    await expect(dialog.getByText(label, { exact: true })).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Close', exact: true })).toBeEnabled();
+    if (testInfo.project.name === 'mobile') await page.keyboard.press('Escape');
+    else await page.locator('.v-dialog.v-overlay--active .v-overlay__scrim').last().click({ position: { x: 8, y: 8 } });
+    await expect(dialog).toBeHidden();
+    await expect(opener).toBeFocused();
+    await expect(page.getByText('Manual imports', { exact: true })).toBeVisible();
+    expect(mutations.filter(item => item.path === '/api/v3/command')).toHaveLength(1);
+    expect(mutations.every(item => item.method === 'POST' && ['/api/v3/manualimport', '/api/v3/command'].includes(item.path))).toBe(true);
+  });
+}
+
+test('review and submission remain protected against accidental dismissal', async ({ page, mutations }) => {
+  await mockImport(page, mutations);
+  let finishReview!: () => void;
+  let finishSubmission!: () => void;
+  await page.route(/\/api\/v3\/manualimport$/, async route => {
+    mutations.push({ method: 'POST', path: '/api/v3/manualimport', body: route.request().postDataJSON() });
+    await new Promise<void>(resolve => { finishReview = resolve; });
+    await route.fulfill({ json: [candidate] });
+  });
+  await page.route(/\/api\/v3\/command$/, async route => {
+    mutations.push({ method: 'POST', path: '/api/v3/command', body: route.request().postDataJSON() });
+    await new Promise<void>(resolve => { finishSubmission = resolve; });
+    await route.fulfill({ json: { id: 99, status: 'queued' } });
+  });
+  await page.goto('/downloads');
+  await page.getByRole('button', { name: 'Manual import Completed download', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Manual Import - Completed download', exact: true });
+  await page.getByRole('checkbox', { name: `Select ${filename}`, exact: true }).check();
+  await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
+  await expect.poll(() => !!finishReview).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeVisible();
+  finishReview();
+  const confirmation = page.getByRole('dialog', { name: 'Confirm Manual Import', exact: true });
+  await expect(confirmation).toBeVisible();
+  // Escape dismisses the idle confirmation, not its parent or the selected files.
+  await page.keyboard.press('Escape');
+  await expect(confirmation).toBeHidden();
+  await expect(dialog).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: `Select ${filename}`, exact: true })).toBeChecked();
+  await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
+  await expect.poll(() => mutations.filter(item => item.path === '/api/v3/manualimport').length).toBe(2);
+  finishReview();
+  await confirmation.getByRole('button', { name: 'Confirm Import', exact: true }).click();
+  await expect.poll(() => !!finishSubmission).toBe(true);
+  await page.keyboard.press('Escape');
+  await expect(confirmation).toBeVisible();
+  await expect(dialog).toBeVisible();
+  finishSubmission();
+  await expect(confirmation).toBeHidden();
+  await expect(dialog.getByText('Import launched', { exact: true })).toBeVisible();
+  expect(mutations.filter(item => item.path === '/api/v3/command')).toHaveLength(1);
+});
+
 test('unparseable filenames can be reviewed with explicit quality and multiple languages', async ({ page, mutations }) => {
   await mockImport(page, mutations);
   const name = '[ OxTorrent.com ] Mad Max 2 -1080p.MULTI.x264 ac3 mHDgz.mkv';
