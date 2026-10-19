@@ -8,7 +8,7 @@ const candidate = { id: 8, path: `/downloads/example/${filename}`, relativePath:
   languages: [{ id: 1, name: 'English' }], rejections: [{ reason: 'Not an upgrade for existing file' }],
 };
 async function mockImport(page: Page, mutations: { method: string; path: string; body: unknown }[], reviewStatus = 200, command = { status: 'completed' }) {
-  await page.route(/\/api\/v3\/queue\?/, route => route.fulfill({ json: { records: [{ id: 101, title: 'Completed download',
+  await page.route(/\/api\/v3\/queue\?/, route => route.fulfill({ json: { totalRecords: 1, records: [{ id: 101, title: 'Completed download',
     downloadId: 'download-1', outputPath: '/downloads/example', status: 'completed', trackedDownloadState: 'importBlocked',
     size: 2e9, sizeleft: 0, languages: [], statusMessages: [{ title: 'Unable to import automatically', messages: ['Not an upgrade for existing file'] }],
   }] } }));
@@ -26,7 +26,7 @@ async function mockImport(page: Page, mutations: { method: string; path: string;
       mutations.push({ method: 'POST', path: '/api/v3/command', body: route.request().postDataJSON() });
       return route.fulfill({ json: { id: 99, status: 'queued' } });
     }
-    return route.fulfill({ json: { id: 99, status: command.status } });
+    return route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/command') ? [] : { id: 99, status: command.status } });
   });
 }
 
@@ -60,6 +60,41 @@ test('manual import is not offered for an active download', async ({ page, mutat
   await expect(page.getByText('Download example', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /^Manual import / })).toHaveCount(0);
   expect(mutations).toEqual([]);
+});
+
+for (const type of ['movies', 'series']) {
+  test(`${type} rejects a native import that was queued outside Flix`, async ({ page, mutations }) => {
+    await mockImport(page, mutations);
+    await page.route(/\/api\/v3\/command$/, route => route.fulfill({ json: [{ name: 'ManualImport', status: 'queued', body: { files: [{ downloadId: 'download-1' }] } }] }));
+    await page.goto('/downloads');
+    if (type === 'series') await page.getByRole('button', { name: /^Series/ }).click();
+    await page.getByRole('button', { name: 'Manual import Completed download', exact: true }).click();
+    await expect(page.getByText('Import queued. No new import was requested.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('checkbox')).toHaveCount(0);
+    expect(mutations).toEqual([]);
+  });
+}
+
+test('a native import starting during review prevents a duplicate command on confirmation', async ({ page, mutations }) => {
+  await mockImport(page, mutations);
+  let queued = false;
+  await page.route(/\/api\/v3\/command$/, route => {
+    if (route.request().method() !== 'GET') {
+      mutations.push({ method: 'POST', path: '/api/v3/command', body: route.request().postDataJSON() });
+      return route.fulfill({ json: { id: 99, status: 'queued' } });
+    }
+    return route.fulfill({ json: queued ? [{ name: 'DownloadedMoviesScan', status: 'started', body: { downloadClientId: 'download-1' } }] : [] });
+  });
+  await page.goto('/downloads');
+  await page.getByRole('button', { name: 'Manual import Completed download', exact: true }).click();
+  await page.getByRole('checkbox', { name: `Select ${filename}`, exact: true }).check();
+  await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
+  const confirmation = page.getByRole('dialog', { name: 'Confirm Manual Import', exact: true });
+  await expect(confirmation).toBeVisible();
+  queued = true;
+  await confirmation.getByRole('button', { name: 'Confirm Import', exact: true }).click();
+  await expect(confirmation.getByText('Import in progress. No new import was requested.', { exact: true })).toBeVisible();
+  expect(mutations.filter(item => item.path === '/api/v3/command')).toEqual([]);
 });
 
 test('a failed review never sends an import command', async ({ page, mutations }) => {
@@ -190,6 +225,7 @@ test('review and submission remain protected against accidental dismissal', asyn
     await route.fulfill({ json: [candidate] });
   });
   await page.route(/\/api\/v3\/command$/, async route => {
+    if (route.request().method() === 'GET') return route.fulfill({ json: [] });
     mutations.push({ method: 'POST', path: '/api/v3/command', body: route.request().postDataJSON() });
     await new Promise<void>(resolve => { finishSubmission = resolve; });
     await route.fulfill({ json: { id: 99, status: 'queued' } });
@@ -254,6 +290,7 @@ test('unparseable filenames can be reviewed with explicit quality and multiple l
   await expect(confirmation).toContainText('French, English');
   expect(mutations.some(item => item.path === '/api/v3/command')).toBe(false);
   await confirmation.getByRole('button', { name: 'Confirm Import', exact: true }).click();
+  await expect.poll(() => mutations.filter(item => item.path === '/api/v3/command').length).toBe(1);
   const command = mutations.find(item => item.path === '/api/v3/command');
   expect(command?.body).toMatchObject({ name: 'ManualImport', files: [{ path, quality: { quality: { id: 7 } }, languages: [{ id: 2 }, { id: 1 }] }] });
 });

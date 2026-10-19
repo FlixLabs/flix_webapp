@@ -2,6 +2,7 @@ import { readApiJson, requireList, requireObject, optionalList } from '@/composa
 import { computed, getCurrentScope, onScopeDispose, ref, watch } from 'vue';
 import { useMediaService, type MediaServiceConfig, type MediaServiceOptions, type MediaType } from './useMediaService';
 import { rememberImport, findRunningImport, checkTrackedImport } from './manualImportTracking';
+import { queueImportBlock, commandImportBlock, readRemovalQueue } from './queueImportProtection';
 
 export interface ImportDownload {
   title: string;
@@ -16,6 +17,7 @@ interface Language { id: number; name: string }
 class ImportRequestError extends Error {
   constructor(public status: number, public unparsedMoviePath?: string) { super(`Service request failed (${status}).`); }
 }
+class ImportProtectionError extends Error {}
 interface Episode { id: number; seasonNumber: number; episodeNumber: number; title: string }
 export interface ImportFile {
   id: number;
@@ -41,9 +43,9 @@ export interface ImportFile {
 
 export function canManualImport(download: ImportDownload) {
   return typeof download.downloadId === 'string' && !!download.downloadId.trim()
-    && !['importing', 'imported'].includes(download.trackedDownloadState?.toLowerCase() ?? '') && (
+    && !['importpending', 'importing', 'imported'].includes(download.trackedDownloadState?.toLowerCase() ?? '') && (
     download.status?.toLowerCase() === 'completed'
-    || ['importpending', 'importblocked', 'importfailed']
+    || ['importblocked', 'importfailed']
       .includes(download.trackedDownloadState?.toLowerCase() ?? '')
   );
 }
@@ -112,6 +114,32 @@ export function useManualImport(options: MediaServiceOptions) {
       && (type.value === 'movies' || (!!file.episodeIds.length && file.episodeIds.every(id =>
         episodes.value[file.mediaId!]?.some(episode => episode.id === id))));
   }
+  async function verifyImportAvailable(active: NonNullable<typeof context>) {
+    const verificationController = controller;
+    const timeout = setTimeout(() => verificationController?.abort(), 15000);
+    try {
+      if (!controller || !current(active)) throw new Error('Import context changed');
+      const queue = await readRemovalQueue(active.config, controller.signal);
+      if (!current(active)) throw new Error('Import context changed');
+      const id = active.download.downloadId!.trim().toLowerCase();
+      const records = queue.filter(record => typeof record.downloadId === 'string' && record.downloadId.trim().toLowerCase() === id);
+      if (!records.length) throw new Error('Download no longer available');
+      for (const record of records) {
+        const reason = queueImportBlock(record.trackedDownloadState);
+        if (reason) throw new ImportProtectionError(`${reason}. No new import was requested.`);
+        if (!canManualImport({ title: active.download.title, downloadId: id,
+          status: typeof record.status === 'string' ? record.status : undefined,
+          trackedDownloadState: typeof record.trackedDownloadState === 'string' ? record.trackedDownloadState : undefined })) throw new Error('Download is not importable');
+      }
+      const reason = commandImportBlock(await request(active, 'command'), id);
+      if (reason) throw new ImportProtectionError(`${reason}. No new import was requested.`);
+      if (!current(active)) throw new Error('Import context changed');
+    } catch (cause) {
+      throw cause instanceof ImportProtectionError ? cause : new ImportProtectionError('Import status unavailable. No new import was requested.');
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
   function close() {
     controller?.abort();
     controller = null;
@@ -175,6 +203,7 @@ export function useManualImport(options: MediaServiceOptions) {
     }
     loading.value = true;
     try {
+      await verifyImportAvailable(active);
       // Sonarr's seriesId query scans the library instead of the download directory.
       const params = new URLSearchParams({ downloadId: download.downloadId!, filterExistingFiles: 'true' });
       if (download.outputPath) params.set('folder', download.outputPath);
@@ -203,8 +232,8 @@ export function useManualImport(options: MediaServiceOptions) {
         episodeIds: optionalList<Episode>(file.episodes, 'import episodes').map(episode => episode.id), selected: false,
       }));
       if (mediaType === 'series') await Promise.all([...new Set(files.value.map(file => file.mediaId).filter((id): id is number => id !== null))].map(loadEpisodes));
-    } catch {
-      if (current(active)) error.value = 'Unable to inspect this download. Check the service and download path, then reopen the import.';
+    } catch (cause) {
+      if (current(active)) error.value = cause instanceof ImportProtectionError ? cause.message : 'Unable to inspect this download. Check the service and download path, then reopen the import.';
     } finally {
       if (current(active)) loading.value = false;
     }
@@ -277,6 +306,8 @@ export function useManualImport(options: MediaServiceOptions) {
     try {
       if (JSON.stringify(selected.value.map(payload)) !== JSON.stringify(reviewed)) throw new Error('Selection changed. Review it again before importing.');
       if (manualReview.value && !canContinueManually.value) throw new Error('Selection changed. Review it again before importing.');
+      await verifyImportAvailable(active);
+      if (!current(active)) return false;
       submissionAttempted.value = true;
       const command = requireObject<{ id: number; status?: string; result?: string }>(await request(active, 'command', { name: 'ManualImport', files: reviewed, importMode: 'auto' }), 'import command');
       if (!current(active)) return false;
