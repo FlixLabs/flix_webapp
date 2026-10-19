@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { effectScope, ref } from 'vue';
 import { canManualImport, useManualImport } from '@/composables/useManualImport';
+import { trackedImports } from '@/composables/manualImportTracking';
 import type { MediaInstance } from '@/composables/useMediaService';
 
 const download = { title: 'Movie download', downloadId: 'download-token', outputPath: '/downloads/movie', status: 'completed' };
@@ -31,7 +32,7 @@ function setup(mediaType: 'movies' | 'series' = 'movies') {
   const actions = scope.run(() => useManualImport(options))!;
   return { actions, options, fetchMock, scope };
 }
-afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
+afterEach(() => { trackedImports.value = []; vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('manual download imports', () => {
   it('only offers import for completed downloads with a download identifier', () => {
@@ -132,6 +133,17 @@ describe('manual download imports', () => {
     expect(actions.files.value).toHaveLength(1);
     expect(fetchMock.mock.calls[0]![0]).toContain('http://standalone.test/api/v3/manualimport');
     expect(fetchMock.mock.calls[0]![1]?.headers).toMatchObject({ 'X-Api-Key': 'standalone-key' });
+    actions.files.value[0]!.selected = true;
+    await actions.review();
+    expect(await actions.submit()).toBe(true);
+    actions.close();
+    expect(actions.commandState.value).toBe('queued');
+    expect(await actions.submit()).toBe(false);
+    await actions.open('movies', download);
+    expect(actions.commandId.value).toBe(99);
+    expect(actions.files.value).toEqual([]);
+    expect(await actions.submit()).toBe(false);
+    expect(await actions.checkStatus()).toBe(true);
     scope.stop();
   });
   it('keeps a failed inspection recoverable without sending an import', async () => {

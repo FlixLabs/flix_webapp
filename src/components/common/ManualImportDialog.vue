@@ -3,6 +3,7 @@ import { t, decimal } from '@/i18n';
 import { onUnmounted, ref, watch } from 'vue';
 import { useDialogActivator, preserveNestedDialogFocus } from '@/composables/useDialogActivator';
 import { useManualImport } from '@/composables/useManualImport';
+import ManualImportStatus from './ManualImportStatus.vue';
 import type { MediaServiceOptions } from '@/composables/useMediaService';
 
 const props = defineProps<{ options: MediaServiceOptions }>();
@@ -33,7 +34,7 @@ function changeMedia(file: typeof files.value[number], id: number | null) {
   file.episodeIds = [];
   if (type.value === 'series' && id !== null) void actions.loadEpisodes(id);
 }
-defineExpose({ open: actions.open, close: actions.close });
+defineExpose({ open: actions.open, close: actions.close, isOpen: dialog });
 </script>
 
 <template>
@@ -45,10 +46,7 @@ defineExpose({ open: actions.open, close: actions.close });
         <v-alert v-if="error" type="error" class="mb-4">{{ t(error) }}</v-alert>
         <v-progress-linear v-if="loading" indeterminate color="primary" :aria-label="t('Inspecting download')" />
         <template v-else-if="commandId !== null">
-          <v-alert :type="commandState === 'completed' ? 'success' : 'info'"> {{ t("Import command #") }}{{ commandId }}: {{ commandState }}.
-            <p v-if="commandState === 'completed'">{{ t("Check Downloads for any files that still need attention.") }}</p>
-            <p v-else>{{ t("Closing this window does not cancel the import.") }}</p>
-          </v-alert>
+          <ManualImportStatus :status="commandState" :command-id="commandId" />
         </template>
         <template v-else>
           <v-alert type="warning" class="mb-4">{{ t("Manual import can replace an existing file, even when its quality is higher. Verify the selected files, their media association and quality before confirming.") }}</v-alert>

@@ -22,8 +22,10 @@ import Loading from '@/components/common/Loading.vue';
 import SeriesSizeField from '@/components/common/SeriesSizeField.vue';
 import DownloadTitle from '@/components/common/DownloadTitle.vue';
 import ManualImportDialog from '@/components/common/ManualImportDialog.vue';
+import ManualImportActivity from '@/components/common/ManualImportActivity.vue';
 import DownloadClientsDialog from '@/components/common/DownloadClientsDialog.vue';
 import { canManualImport } from '@/composables/useManualImport';
+import { latestTrackedImport, importStatusLabel, importStatusColor } from '@/composables/manualImportTracking';
 import MediaTypeToggle from '@/components/common/MediaTypeToggle.vue';
 import PageNavigation from '@/components/common/PageNavigation.vue';
 import { usePersistentPreference, isMediaType } from '@/composables/usePersistentPreference';
@@ -39,6 +41,9 @@ const { getConfig, serviceContext } = useMediaService({ useAPI, selectedInstance
 const importDialog = ref<InstanceType<typeof ManualImportDialog> | null>(null);
 const importType = ref<'movies' | 'series'>('movies');
 const importOptions = { useAPI, selectedInstanceData };
+function importStatus(record: { downloadId?: unknown }) {
+  return latestTrackedImport(mediaType.value, getConfig(mediaType.value), record.downloadId);
+}
 const mediaSheet = useDownloadMediaSheet(importOptions);
 const { dialog: mediaDialog, type: detailType, item: detailItem, activator: detailActivator } = mediaSheet;
 const detailSeriesSize = computed(() => {
@@ -433,6 +438,7 @@ watch(serviceContext, () => {
       </div>
     </PageNavigation>
     <ReadFeedback :state="activeRead" :label="`${mediaType === 'movies' ? t('Movie') : t('Series')} ${view === 'queue' ? 'downloads' : 'history'}`" :disabled="isRemoving" @retry="refreshActive" />
+    <ManualImportActivity :options="importOptions" :paused="importDialog?.isOpen" @finished="type => { getDownload(type); getHistory(type); }" />
     <v-card class="mt-4">
       <v-card-title class="d-flex flex-wrap align-center justify-space-between ga-3">
         <span>{{ mediaType === 'movies' ? t("Movie") : t("Series") }} {{ view === 'queue' ? 'downloads' : 'history' }}</span>
@@ -465,6 +471,9 @@ watch(serviceContext, () => {
           <template #item.status="{ item }">
             <template v-if="view === 'queue'">
               <v-chip size="small" :color="item.diagnosis?.color">{{ t(item.diagnosis?.label) }}</v-chip>
+              <template v-for="tracked in [importStatus(item)]" :key="tracked?.key">
+                <div v-if="tracked" class="mt-2"><v-chip size="small" variant="tonal" :color="tracked.error ? 'warning' : importStatusColor(tracked.status)" prepend-icon="mdi-file-import-outline">{{ t('Manual import: {p0}', { p0: tracked.error ? t('Status unavailable') : t(importStatusLabel(tracked.status)) }) }}</v-chip></div>
+              </template>
               <div v-if="showRawDownloadStatus(item.status, item.diagnosis?.label)" class="text-caption text-medium-emphasis mt-1 text-capitalize">{{ t(item.status) }}</div>
               <p v-if="item.blocked" class="download-warning text-caption mt-2"><v-icon icon="mdi-alert-circle-outline" size="16" class="mr-1" />{{ t(item.messages?.[0]) || t("No details provided by the service.") }}</p>
             </template>

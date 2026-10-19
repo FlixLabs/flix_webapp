@@ -7,7 +7,7 @@ const candidate = { id: 8, path: `/downloads/example/${filename}`, relativePath:
   quality: { quality: { id: 4, name: 'HDTV-720p' }, revision: { version: 1, real: 0, isRepack: 0 } },
   languages: [{ id: 1, name: 'English' }], rejections: [{ reason: 'Not an upgrade for existing file' }],
 };
-async function mockImport(page: Page, mutations: { method: string; path: string; body: unknown }[], reviewStatus = 200) {
+async function mockImport(page: Page, mutations: { method: string; path: string; body: unknown }[], reviewStatus = 200, command = { status: 'completed' }) {
   await page.route(/\/api\/v3\/queue\?/, route => route.fulfill({ json: { records: [{ id: 101, title: 'Completed download',
     downloadId: 'download-1', outputPath: '/downloads/example', status: 'completed', trackedDownloadState: 'importBlocked',
     size: 2e9, sizeleft: 0, languages: [], statusMessages: [{ title: 'Unable to import automatically', messages: ['Not an upgrade for existing file'] }],
@@ -25,7 +25,7 @@ async function mockImport(page: Page, mutations: { method: string; path: string;
       mutations.push({ method: 'POST', path: '/api/v3/command', body: route.request().postDataJSON() });
       return route.fulfill({ json: { id: 99, status: 'queued' } });
     }
-    return route.fulfill({ json: { id: 99, status: 'completed' } });
+    return route.fulfill({ json: { id: 99, status: command.status } });
   });
 }
 
@@ -47,7 +47,7 @@ test('manual import reviews rejected files and requires explicit confirmation be
   expect(mutations.some(item => item.path === '/api/v3/command')).toBe(false);
   await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
   await page.getByRole('button', { name: 'Confirm Import', exact: true }).click();
-  await expect(page.getByText('Import command #99: completed.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Import completed', { exact: true })).toBeVisible();
   const commands = mutations.filter(item => item.path === '/api/v3/command');
   expect(commands).toHaveLength(1);
   expect(commands[0]!.body).toMatchObject({ name: 'ManualImport', importMode: 'auto', files: [{ path: candidate.path, movieId: movie.id, downloadId: 'download-1' }] });
@@ -81,7 +81,43 @@ test('Sonarr imports only the selected episode associations', async ({ page, mut
   await page.getByRole('checkbox', { name: `Select ${filename}`, exact: true }).check();
   await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
   await page.getByRole('button', { name: 'Confirm Import', exact: true }).click();
-  await expect(page.getByText('Import command #99: completed.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Import completed', { exact: true })).toBeVisible();
   const command = mutations.find(item => item.path === '/api/v3/command');
   expect(command?.body).toMatchObject({ files: [{ seriesId: series.id, episodeIds: [21] }] });
+});
+
+test('accepted imports remain visible after closing and reloading without resubmission', async ({ page, mutations }, testInfo) => {
+  const command = { status: 'started' };
+  await mockImport(page, mutations, 200, command);
+  await page.goto('/downloads');
+  await page.getByRole('button', { name: 'Manual import Completed download', exact: true }).click();
+  await page.getByRole('checkbox', { name: `Select ${filename}`, exact: true }).check();
+  await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirm Import', exact: true }).click();
+  await expect(page.getByText('Import launched', { exact: true })).toBeVisible();
+  await page.getByRole('dialog', { name: 'Manual Import - Completed download', exact: true }).getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Manual Import - Completed download', exact: true })).not.toBeVisible();
+  const activity = page.locator('.v-card').filter({ has: page.getByText('Manual imports', { exact: true }) });
+  await expect(activity.getByText('Importing', { exact: true })).toBeVisible();
+  await expect(page.getByText('Manual import: Importing', { exact: true })).toBeVisible();
+  await activity.screenshot({ path: testInfo.outputPath('manual-import-tracking.png') });
+  const stored = await page.evaluate(() => sessionStorage.getItem('flix:manual-imports:v1'));
+  expect(stored).not.toContain('/downloads/example');
+  expect(stored).not.toContain('test-only');
+  await page.reload();
+  await expect(activity.getByText('Importing', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Manual import Completed download', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Manual Import - Completed download', exact: true });
+  await expect(dialog.getByText('Import launched', { exact: true })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: /Review Import/ })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  command.status = 'failed';
+  await activity.getByRole('button', { name: 'Check import status for Completed download', exact: true }).click();
+  await expect(activity.getByText('Failed', { exact: true })).toBeVisible();
+  command.status = 'completed';
+  await activity.getByRole('button', { name: 'Check import status for Completed download', exact: true }).click();
+  await expect(activity.getByText('Completed', { exact: true })).toBeVisible();
+  expect(mutations.filter(item => item.path === '/api/v3/command')).toHaveLength(1);
+  await activity.getByRole('button', { name: 'Dismiss import status for Completed download', exact: true }).click();
+  await expect(activity).not.toBeVisible();
 });
