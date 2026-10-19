@@ -883,5 +883,7 @@
   "Failed": "Failed",
   "Aborted": "Aborted",
   "Cancelled": "Cancelled",
-  "Manual import: {p0}": "Manual import: {p0}"
+  "Manual import: {p0}": "Manual import: {p0}",
+  "Unable to review the selected files (HTTP {p0}). Check the media, quality and languages. No import was requested.": "Unable to review the selected files (HTTP {p0}). Check the media, quality and languages. No import was requested.",
+  "Unable to parse file": "Unable to parse file"
 }

@@ -12,6 +12,10 @@ export interface ImportDownload {
 }
 interface Media { id: number; title: string; year?: number }
 interface Quality { id: number; name: string }
+interface Language { id: number; name: string }
+class ImportRequestError extends Error {
+  constructor(public status: number) { super(`Service request failed (${status}).`); }
+}
 interface Episode { id: number; seasonNumber: number; episodeNumber: number; title: string }
 export interface ImportFile {
   id: number;
@@ -23,8 +27,8 @@ export interface ImportFile {
   movie?: Media;
   series?: Media;
   episodes?: Episode[];
-  quality?: { quality?: Quality; revision?: Record<string, number> };
-  languages?: { id: number; name: string }[];
+  quality?: { quality?: Quality; revision?: Record<string, number | boolean> };
+  languages?: Language[];
   releaseGroup?: string;
   indexerFlags?: number;
   releaseType?: string;
@@ -53,6 +57,7 @@ export function useManualImport(options: MediaServiceOptions) {
   const files = ref<ImportFile[]>([]);
   const media = ref<Media[]>([]);
   const qualities = ref<Quality[]>([]);
+  const languages = ref<Language[]>([]);
   const episodes = ref<Record<number, Episode[]>>({});
   const loadingEpisodes = ref<Record<number, boolean>>({});
   const loading = ref(false);
@@ -78,7 +83,7 @@ export function useManualImport(options: MediaServiceOptions) {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: controller?.signal,
     });
-    if (!response.ok) throw new Error(`Service request failed (${response.status}).`);
+    if (!response.ok) throw new ImportRequestError(response.status);
     return readApiJson(response);
   }
   function validFile(file: ImportFile) {
@@ -101,6 +106,7 @@ export function useManualImport(options: MediaServiceOptions) {
     files.value = [];
     media.value = [];
     qualities.value = [];
+    languages.value = [];
     episodes.value = {};
     loadingEpisodes.value = {};
     loading.value = false;
@@ -150,10 +156,11 @@ export function useManualImport(options: MediaServiceOptions) {
       // Sonarr's seriesId query scans the library instead of the download directory.
       const params = new URLSearchParams({ downloadId: download.downloadId!, filterExistingFiles: 'true' });
       if (download.outputPath) params.set('folder', download.outputPath);
-      const [candidates, library, definitions] = await Promise.all([
+      const [candidates, library, definitions, languageData] = await Promise.all([
         request(active, `manualimport?${params}`),
         request(active, mediaType === 'movies' ? 'movie' : 'series'),
         request(active, 'qualitydefinition'),
+        request(active, 'language'),
       ]);
       const importFiles = requireList<ImportFile>(candidates, 'import files');
       for (const file of importFiles) {
@@ -162,9 +169,12 @@ export function useManualImport(options: MediaServiceOptions) {
       }
       const importMedia = requireList<Media>(library, 'import media');
       const qualityDefinitions = requireList<{ quality: Quality }>(definitions, 'quality definitions');
+      const availableLanguages = requireList<Language>(languageData, 'languages', ['name']);
+      if (availableLanguages.some(language => !Number.isInteger(language.id))) throw new Error('Invalid languages.');
       if (!current(active)) return;
       media.value = importMedia;
       qualities.value = qualityDefinitions.map(definition => definition.quality).filter(quality => quality?.id > 0);
+      languages.value = availableLanguages.filter(language => language.id > 0);
       files.value = importFiles.filter(file => typeof file.path === 'string' && file.path.length > 0).map(file => ({
         ...file, mediaId: (mediaType === 'movies' ? file.movie?.id : file.series?.id) ?? null,
         qualityId: file.quality?.quality?.id ?? null,
@@ -178,10 +188,15 @@ export function useManualImport(options: MediaServiceOptions) {
     }
   }
   function payload(file: ImportFile) {
+    const revision = file.quality?.revision;
     return {
       id: file.id, path: file.path, folderName: file.folderName,
       downloadId: context!.download.downloadId,
-      quality: { ...file.quality, quality: qualities.value.find(quality => quality.id === file.qualityId) },
+      quality: { ...file.quality, quality: qualities.value.find(quality => quality.id === file.qualityId), revision: {
+        version: typeof revision?.version === 'number' && Number.isInteger(revision.version) && revision.version > 0 ? revision.version : 1,
+        real: typeof revision?.real === 'number' && Number.isInteger(revision.real) && revision.real >= 0 ? revision.real : 0,
+        isRepack: revision?.isRepack === true || revision?.isRepack === 1,
+      } },
       languages: file.languages ?? [], releaseGroup: file.releaseGroup, indexerFlags: file.indexerFlags,
       ...(type.value === 'movies' ? { movieId: file.mediaId } : {
         seriesId: file.mediaId, episodeIds: [...file.episodeIds], releaseType: file.releaseType,
@@ -209,8 +224,10 @@ export function useManualImport(options: MediaServiceOptions) {
       }
       reviewed = selected.value.map(payload);
       confirming.value = true;
-    } catch {
-      if (current(active)) error.value = 'Unable to review the selected files. No import was requested.';
+    } catch (cause) {
+      if (current(active)) error.value = cause instanceof ImportRequestError
+        ? `Unable to review the selected files (HTTP ${cause.status}). Check the media, quality and languages. No import was requested.`
+        : 'Unable to review the selected files. No import was requested.';
     } finally {
       if (current(active)) busy.value = false;
     }
@@ -261,6 +278,6 @@ export function useManualImport(options: MediaServiceOptions) {
   }
   watch(() => [options.useAPI.value, options.selectedInstanceData.value], close, { flush: 'sync' });
   if (getCurrentScope()) onScopeDispose(close);
-  return { dialog, confirming, type, title, files, media, qualities, episodes, loadingEpisodes, loading, busy, error,
+  return { dialog, confirming, type, title, files, media, qualities, languages, episodes, loadingEpisodes, loading, busy, error,
     commandId, commandState, selected, canReview, open, close, loadEpisodes, review, submit, checkStatus };
 }

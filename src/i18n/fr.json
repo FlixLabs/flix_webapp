@@ -883,5 +883,7 @@
   "Failed": "Échec",
   "Aborted": "Interrompu",
   "Cancelled": "Annulé",
-  "Manual import: {p0}": "Import manuel : {p0}"
+  "Manual import: {p0}": "Import manuel : {p0}",
+  "Unable to review the selected files (HTTP {p0}). Check the media, quality and languages. No import was requested.": "Impossible de vérifier les fichiers sélectionnés (HTTP {p0}). Vérifiez le média, la qualité et les langues. Aucun import n’a été demandé.",
+  "Unable to parse file": "Impossible d’analyser le fichier"
 }

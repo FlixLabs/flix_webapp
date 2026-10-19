@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 const filename = 'Example.Movie.2025.720p.mkv';
 const candidate = { id: 8, path: `/downloads/example/${filename}`, relativePath: filename, size: 2e9,
   movie, series, episodes: [{ id: 21, seasonNumber: 1, episodeNumber: 1, title: 'Pilot' }],
-  quality: { quality: { id: 4, name: 'HDTV-720p' }, revision: { version: 1, real: 0, isRepack: 0 } },
+  quality: { quality: { id: 4, name: 'HDTV-720p' }, revision: { version: 1, real: 0, isRepack: false } },
   languages: [{ id: 1, name: 'English' }], rejections: [{ reason: 'Not an upgrade for existing file' }],
 };
 async function mockImport(page: Page, mutations: { method: string; path: string; body: unknown }[], reviewStatus = 200, command = { status: 'completed' }) {
@@ -20,6 +20,7 @@ async function mockImport(page: Page, mutations: { method: string; path: string;
     return route.fulfill({ json: [candidate] });
   });
   await page.route(/\/api\/v3\/qualitydefinition$/, route => route.fulfill({ json: [{ quality: candidate.quality.quality }] }));
+  await page.route(/\/api\/v3\/language$/, route => route.fulfill({ json: [{ id: 1, name: 'English' }, { id: 2, name: 'French' }] }));
   await page.route(/\/api\/v3\/command(?:\/99)?$/, route => {
     if (route.request().method() === 'POST') {
       mutations.push({ method: 'POST', path: '/api/v3/command', body: route.request().postDataJSON() });
@@ -67,7 +68,7 @@ test('a failed review never sends an import command', async ({ page, mutations }
   await page.getByRole('button', { name: 'Manual import Completed download', exact: true }).click();
   await page.getByRole('checkbox', { name: `Select ${filename}`, exact: true }).check();
   await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
-  await expect(page.getByText('Unable to review the selected files. No import was requested.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Unable to review the selected files (HTTP 500). Check the media, quality and languages. No import was requested.', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Confirm Import', exact: true })).toHaveCount(0);
   expect(mutations.map(item => item.path)).toEqual(['/api/v3/manualimport']);
 });
@@ -120,4 +121,38 @@ test('accepted imports remain visible after closing and reloading without resubm
   expect(mutations.filter(item => item.path === '/api/v3/command')).toHaveLength(1);
   await activity.getByRole('button', { name: 'Dismiss import status for Completed download', exact: true }).click();
   await expect(activity).not.toBeVisible();
+});
+
+test('unparseable filenames can be reviewed with explicit quality and multiple languages', async ({ page, mutations }) => {
+  await mockImport(page, mutations);
+  const name = '[ OxTorrent.com ] Mad Max 2 -1080p.MULTI.x264 ac3 mHDgz.mkv';
+  const path = `/downloads/example/${name}`;
+  await page.route(/\/api\/v3\/qualitydefinition$/, route => route.fulfill({ json: [{ quality: { id: 7, name: 'Bluray-1080p' } }] }));
+  await page.route(/\/api\/v3\/manualimport(?:\?|$)/, route => {
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON();
+      expect(body[0]).toMatchObject({ path, movieId: movie.id, quality: { quality: { id: 7 }, revision: { version: 1, real: 0, isRepack: false } }, languages: [{ id: 2, name: 'French' }, { id: 1, name: 'English' }] });
+      mutations.push({ method: 'POST', path: '/api/v3/manualimport', body });
+      return route.fulfill({ json: body.map((item: object) => ({ ...item, rejections: [] })) });
+    }
+    return route.fulfill({ json: [{ ...candidate, path, relativePath: name, quality: null, languages: [], rejections: [{ reason: 'Unable to parse file' }] }] });
+  });
+  await page.goto('/downloads');
+  await page.getByRole('button', { name: 'Manual import Completed download', exact: true }).click();
+  await expect(page.getByText('Unable to parse file', { exact: true })).toBeVisible();
+  await page.getByRole('checkbox', { name: `Select ${name}`, exact: true }).check();
+  await expect(page.getByRole('button', { name: 'Review Import (1)', exact: true })).toBeDisabled();
+  await page.getByRole('combobox', { name: 'Quality', exact: true }).locator('..').click();
+  await page.getByRole('option', { name: 'Bluray-1080p', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Languages', exact: true }).locator('..').click();
+  await page.getByRole('option', { name: 'French', exact: true }).click();
+  await page.getByRole('option', { name: 'English', exact: true }).click();
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
+  const confirmation = page.getByRole('dialog', { name: 'Confirm Manual Import', exact: true });
+  await expect(confirmation).toContainText('French, English');
+  expect(mutations.some(item => item.path === '/api/v3/command')).toBe(false);
+  await confirmation.getByRole('button', { name: 'Confirm Import', exact: true }).click();
+  const command = mutations.find(item => item.path === '/api/v3/command');
+  expect(command?.body).toMatchObject({ name: 'ManualImport', files: [{ path, quality: { quality: { id: 7 } }, languages: [{ id: 2 }, { id: 1 }] }] });
 });

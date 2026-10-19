@@ -9,7 +9,7 @@ import type { MediaServiceOptions } from '@/composables/useMediaService';
 const props = defineProps<{ options: MediaServiceOptions }>();
 const emit = defineEmits<{ requested: []; finished: [] }>();
 const actions = useManualImport(props.options);
-const { dialog, confirming, type, title, files, media, qualities, episodes, loadingEpisodes, loading,
+const { dialog, confirming, type, title, files, media, qualities, languages, episodes, loadingEpisodes, loading,
   busy, error, selected, canReview, commandId, commandState } = actions;
 const dialogActivator = useDialogActivator(() => dialog.value);
 const confirmationActivator = useDialogActivator(() => confirming.value);
@@ -64,11 +64,14 @@ defineExpose({ open: actions.open, close: actions.close, isOpen: dialog });
                 <v-col cols="12" sm="6">
                   <v-select v-model="file.qualityId" :items="qualities" item-title="name" item-value="id" :label="t('Quality')" variant="outlined" hide-details :disabled="busy" />
                 </v-col>
+                <v-col cols="12">
+                  <v-select v-model="file.languages" :items="languages" :item-title="language => t(language.name)" item-value="id" :label="t('Languages')" variant="outlined" multiple chips closable-chips return-object hide-details :disabled="busy" />
+                </v-col>
                 <v-col v-if="type === 'series'" cols="12">
                   <v-select v-model="file.episodeIds" :items="episodes[file.mediaId ?? 0] ?? []" :item-title="episode => `S${episode.seasonNumber} E${episode.episodeNumber} · ${episode.title}`" item-value="id" :label="t('Episodes')" variant="outlined" multiple chips hide-details :loading="loadingEpisodes[file.mediaId ?? 0]" :disabled="busy || !file.mediaId" />
                 </v-col>
               </v-row>
-              <p class="text-caption mt-3">{{ t("{p0} GB · Languages: {p1}", { p0: decimal(((file.size ?? 0) / 1e9)), p1: file.languages?.map(language => language.name).join(', ') || t("Unknown") }) }}</p>
+              <p class="text-caption mt-3">{{ t('Size (GB)') }}: {{ decimal(((file.size ?? 0) / 1e9)) }}</p>
               <v-alert v-if="file.rejections?.length" type="warning" variant="tonal" class="mt-3">
                 <ul class="pl-4"><li v-for="rejection in file.rejections" :key="rejection.reason">{{ rejection.reason }}</li></ul>
               </v-alert>
@@ -91,6 +94,7 @@ defineExpose({ open: actions.open, close: actions.close, isOpen: dialog });
         <v-alert type="warning" class="mb-4">{{ t("Existing files may be replaced. Importing manually can bypass quality rejection rules. This cannot be undone from Flix.") }}</v-alert>
         <p v-for="file in selected" :key="file.path" class="text-break mb-2">
           {{ file.relativePath || file.name || file.path }} → {{ media.find(item => item.id === file.mediaId)?.title }} · {{ qualities.find(item => item.id === file.qualityId)?.name }}
+          <span class="d-block text-caption text-medium-emphasis">{{ t('Languages') }}: {{ file.languages?.map(language => t(language.name)).join(', ') || t('Unknown') }}</span>
         </p>
         <ul class="pl-4 text-warning"><li v-for="(reason, index) in selected.flatMap(file => file.rejections ?? [])" :key="index">{{ reason.reason }}</li></ul>
         <v-alert v-if="error" type="error" class="mt-4">{{ t(error) }}</v-alert>
