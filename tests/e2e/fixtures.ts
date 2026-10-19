@@ -43,7 +43,8 @@ export const test = base.extend<{ mutations: { method: string; path: string; bod
       else if (path === '/api/v3/series' || path === '/api/v3/series/lookup') json = [series];
       else if (path === '/api/v3/episode') json = [{ id: 21, seriesId: 2, seasonNumber: 1, episodeNumber: 1, title: 'Pilot', hasFile: false }, { id: 31, seriesId: 2, seasonNumber: 2, episodeNumber: 1, title: 'Second season', hasFile: false }];
       else if (path === '/api/v3/release') json = [{ guid: 'selected', indexerId: 7, title: releaseTitle, size: 4e9, quality: { quality: { name: 'Bluray-1080p' } }, seeders: 20, indexer: 'Test indexer', protocol: 'torrent', downloadAllowed: true }];
-      else if (path === '/api/v3/queue') json = { totalRecords: 1, records: [{ id: 101, title: 'Download example', size: 1e9, sizeleft: 5e8, timeleft: '00:10:00', status: 'downloading', trackedDownloadStatus: 'warning', errorMessage: 'Not enough space', added: '2026-01-01', languages: [] }] };
+      else if (path === '/api/v3/queue') json = { totalRecords: 1, records: [{ id: 101, downloadId: 'test-download', trackedDownloadState: 'downloading', title: 'Download example', size: 1e9, sizeleft: 5e8, timeleft: '00:10:00', status: 'downloading', trackedDownloadStatus: 'warning', errorMessage: 'Not enough space', added: '2026-01-01', languages: [] }] };
+      else if (path === '/api/v3/command') json = [];
       else if (path === '/api/v3/history') json = { records: [] };
       else if (path.toLowerCase() === '/api/v3/qualityprofile') json = [{ id: 1, name: 'Any' }];
       else if (path === '/api/v3/calendar') {

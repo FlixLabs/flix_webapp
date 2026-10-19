@@ -15,6 +15,7 @@ import Alert from '@/components/common/Alert.vue';
 import DeleteConfirmationDialog from '@/components/common/DeleteConfirmationDialog.vue';
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation';
 import { useDownloadActions } from '@/composables/useDownloadActions';
+import { queueImportBlock } from '@/composables/queueImportProtection';
 import { downloadDetails, showRawDownloadStatus } from '@/composables/useDownloadDetails';
 import { downloadMediaId, downloadMediaTitle, useDownloadMediaSheet } from '@/composables/useDownloadMediaSheet';
 import MediaDialog from '@/components/common/MediaDialog.vue';
@@ -510,10 +511,11 @@ watch(serviceContext, () => {
               variant="text"
               size="small"
               prepend-icon="mdi-trash-can-outline"
-              :disabled="isRemoving || actionsDisabled || !Number.isInteger(item.id)"
+              :disabled="isRemoving || actionsDisabled || !Number.isInteger(item.id) || !item.downloadId || !!queueImportBlock(item.trackedDownloadState)"
               :aria-label="t('Remove {p0}', { p0: item.title })"
               @click="openDeleteConfirmationDialog(mediaType, item)"
             >{{ t("Remove") }}</v-btn>
+            <span v-if="queueImportBlock(item.trackedDownloadState)" class="text-caption text-warning">{{ t(queueImportBlock(item.trackedDownloadState)) }}</span>
             </div>
           </template>
         </v-data-table>

@@ -890,5 +890,15 @@
   "Use suggested media {p0}": "Utiliser le média suggéré {p0}",
   "Radarr could not parse this filename. No import was requested.": "Radarr n’a pas pu analyser ce nom de fichier. Aucun import n’a été demandé.",
   "Continue with manual information": "Continuer avec les informations manuelles",
+  "Import in progress": "Import en cours",
+  "Import queued": "Import en attente",
+  "Import in progress. Removal is blocked, including forced removal. Refresh before another removal. No automatic retry was made.": "Import en cours. La suppression est bloquée, même forcée. Actualisez avant une autre suppression. Aucune nouvelle tentative automatique n’a été effectuée.",
+  "Import queued. Removal is blocked, including forced removal. Refresh before another removal. No automatic retry was made.": "Import en attente. La suppression est bloquée, même forcée. Actualisez avant une autre suppression. Aucune nouvelle tentative automatique n’a été effectuée.",
+  "Import status unavailable. Removal is blocked, including forced removal. Refresh before another removal. No automatic retry was made.": "Statut de l’import indisponible. La suppression est bloquée, même forcée. Actualisez avant une autre suppression. Aucune nouvelle tentative automatique n’a été effectuée.",
+  "Inspect completed torrents before cleanup. Seeding torrents are not necessarily leftovers. Active or queued imports block removal, including forced removal.": "Examinez les torrents terminés avant le nettoyage. Les torrents en partage ne sont pas forcément résiduels. Un import en cours ou en attente bloque la suppression, même forcée.",
+  "Radarr or Sonarr still tracks this torrent. Removal is allowed only if no active or queued import is detected. This does not remove the media from your library or clear its Radarr/Sonarr queue entry.": "Radarr ou Sonarr suit encore ce torrent. La suppression est autorisée seulement si aucun import en cours ou en attente n’est détecté. Cela ne supprime ni le média de votre bibliothèque ni son entrée dans la file Radarr/Sonarr.",
+  "Import in progress. Removal is blocked, including forced removal.": "Import en cours. La suppression est bloquée, même forcée.",
+  "Import queued. Removal is blocked, including forced removal.": "Import en attente. La suppression est bloquée, même forcée.",
+  "Import status unavailable. Removal is blocked, including forced removal.": "Statut de l’import indisponible. La suppression est bloquée, même forcée.",
   "Radarr could not verify this filename. Confirming requests an import using the movie, quality and languages you selected. The file is not renamed and the import may still fail.": "Radarr n’a pas pu vérifier ce nom de fichier. La confirmation demande un import avec le film, la qualité et les langues sélectionnés. Le fichier n’est pas renommé et l’import peut encore échouer."
 }

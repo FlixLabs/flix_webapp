@@ -105,10 +105,21 @@ browser restarts for up to 30 days. Sign out revokes it on the API. Its browser
 storage is scoped to the configured API URL. Use HTTPS and a trusted browser profile.
 
 Completed torrents still tracked by Radarr/Sonarr require explicit **Force removal**
-consent. Forcing can interrupt import and does not clear the Radarr/Sonarr queue or
-remove media from the library. Files are kept by default; deleting data remains a
+consent. Flix API 2.2.1+ blocks active/queued imports even when forcing removal;
+the panel shows the reason and disables the action. Unknown import status also
+blocks cleanup. Upgrade the API first: older APIs without protection metadata
+show "Import status unavailable" and cannot remove torrents from this webapp.
+Forcing does not clear the Radarr/Sonarr queue or remove media from the library.
+Files are kept by default; deleting data remains a
 separate opt-in allowed by server configuration. Incomplete torrents, unavailable
 queue verification and uncertain writes remain protected. No automatic cleanup occurs.
+
+The regular Downloads **Remove** action also rereads both configured service queues
+and their import commands before its direct Radarr/Sonarr DELETE, in API and
+standalone modes. Active/queued imports, missing download identities, incomplete
+verification and configuration changes block the request. This is a browser-side
+preflight, not server enforcement or an atomic filesystem lock; only configured
+services can be checked, and a service can start work after verification.
 
 Deploy API and webapp together. Existing Flix accounts require the one-time server
 migration documented in the API README (AUTH_LEGACY_CRYPT_KEY). Without Flix
