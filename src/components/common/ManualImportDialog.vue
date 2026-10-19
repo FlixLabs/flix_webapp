@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { t, decimal } from '@/i18n';
-import { onUnmounted, ref, watch } from 'vue';
+import { computed, onUnmounted, ref, watch } from 'vue';
 import { useDialogActivator, preserveNestedDialogFocus } from '@/composables/useDialogActivator';
 import { useManualImport } from '@/composables/useManualImport';
 import ManualImportStatus from './ManualImportStatus.vue';
+import { suggestImportMedia } from '@/composables/importMediaSuggestions';
 import type { MediaServiceOptions } from '@/composables/useMediaService';
 
 const props = defineProps<{ options: MediaServiceOptions }>();
@@ -11,6 +12,7 @@ const emit = defineEmits<{ requested: []; finished: [] }>();
 const actions = useManualImport(props.options);
 const { dialog, confirming, type, title, files, media, qualities, languages, episodes, loadingEpisodes, loading,
   busy, error, selected, canReview, commandId, commandState } = actions;
+const mediaSuggestions = computed(() => new Map(files.value.map(file => [file.path, suggestImportMedia(file, media.value)])));
 const dialogActivator = useDialogActivator(() => dialog.value);
 const confirmationActivator = useDialogActivator(() => confirming.value);
 const cancelButton = ref<{ $el: HTMLElement } | null>(null);
@@ -60,6 +62,10 @@ defineExpose({ open: actions.open, close: actions.close, isOpen: dialog });
               <v-row>
                 <v-col cols="12" sm="6">
                   <v-autocomplete :model-value="file.mediaId" :items="media" :item-title="item => `${item.title}${item.year ? ` (${item.year})` : ''}`" item-value="id" :label="type === 'movies' ? t('Movie') : t('Series')" variant="outlined" hide-details :disabled="busy" @update:model-value="id => changeMedia(file, id)" />
+                  <div v-if="file.mediaId === null && mediaSuggestions.get(file.path)?.length" class="d-flex flex-wrap align-center ga-2 mt-2">
+                    <span class="text-caption text-medium-emphasis">{{ t('Suggested from the filename') }}</span>
+                    <v-btn v-for="suggestion in mediaSuggestions.get(file.path)" :key="suggestion.id" size="small" variant="outlined" color="primary" prepend-icon="mdi-lightbulb-outline" class="suggested-media" :disabled="busy" :aria-label="t('Use suggested media {p0}', { p0: `${suggestion.title}${suggestion.year ? ` (${suggestion.year})` : ''}` })" @click="changeMedia(file, suggestion.id)">{{ suggestion.title }}{{ suggestion.year ? ` (${suggestion.year})` : '' }}</v-btn>
+                  </div>
                 </v-col>
                 <v-col cols="12" sm="6">
                   <v-select v-model="file.qualityId" :items="qualities" item-title="name" item-value="id" :label="t('Quality')" variant="outlined" hide-details :disabled="busy" />
@@ -107,3 +113,8 @@ defineExpose({ open: actions.open, close: actions.close, isOpen: dialog });
     </v-card>
   </v-dialog>
 </template>
+
+<style scoped>
+.suggested-media { max-width: 100%; height: auto; min-height: 32px; }
+.suggested-media :deep(.v-btn__content) { white-space: normal; overflow-wrap: anywhere; text-align: start; padding-block: 6px; }
+</style>

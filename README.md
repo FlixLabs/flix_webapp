@@ -38,6 +38,11 @@ before reviewing a file, including filenames Radarr or Sonarr cannot parse.
 The review and explicit confirmation remain required; Flix does not rename the
 file or start an import while you edit these values.
 
+For files without an identified movie/series, Flix can suggest matching media
+already in the library after removing recognized advertising prefixes (currently
+`[OxTorrent.com]`, including spacing/case/`www` variants). Suggestions require an
+explicit selection and never rename the file or infer its quality/languages.
+
 Downloads confirms when Radarr or Sonarr accepts a manual import and shows its
 command status after the import window is closed. Tracking survives navigation
 and reloads in the same browser tab, in API and standalone modes. It is scoped to
