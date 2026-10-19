@@ -48,29 +48,33 @@ export function useDownloadClients(instance: Ref<string | null>) {
   const removing = ref(false);
   const error = ref('');
   const message = ref('');
+  const warning = ref('');
   const uncertain = ref(false);
   let generation = 0;
   let controller: AbortController | null = null;
   const endpoint = () => `${import.meta.env.VITE_FLIX_API_URL}/download-clients/${encodeURIComponent(instance.value ?? '')}`;
   function reset() {
     generation++; controller?.abort(); controller = null;
-    clients.value = []; error.value = ''; message.value = '';
+    clients.value = []; error.value = ''; message.value = ''; warning.value = '';
     loading.value = false; removing.value = false; uncertain.value = false;
   }
   async function responseError(response: Response) {
     const data = await response.json().catch(() => null);
     return typeof data?.error === 'string' ? data.error : `Client request failed (${response.status}).`;
   }
+  async function readClients(signal: AbortSignal) {
+    const response = await apiFetch(endpoint(), { signal, cache: 'no-store' });
+    if (!response.ok) throw new Error(await responseError(response));
+    return parseDownloadClients(await response.json());
+  }
   async function load() {
     if (loading.value || removing.value || !instance.value) return;
     const active = ++generation;
     controller?.abort(); const abort = new AbortController(); controller = abort;
     const timer = setTimeout(() => abort.abort(), 60000);
-    loading.value = true; error.value = ''; clients.value = [];
+    loading.value = true; error.value = ''; message.value = ''; warning.value = ''; clients.value = [];
     try {
-      const response = await apiFetch(endpoint(), { signal: controller.signal, cache: 'no-store' });
-      if (!response.ok) throw new Error(await responseError(response));
-      const data = parseDownloadClients(await response.json());
+      const data = await readClients(abort.signal);
       if (active !== generation) return;
       clients.value = data; uncertain.value = false;
     } catch (cause) {
@@ -82,7 +86,8 @@ export function useDownloadClients(instance: Ref<string | null>) {
     const active = generation;
     const abort = new AbortController(); controller = abort;
     const timer = setTimeout(() => abort.abort(), 60000);
-    removing.value = true; error.value = ''; message.value = '';
+    removing.value = true; error.value = ''; message.value = ''; warning.value = '';
+    let accepted = false;
     try {
       const response = await apiFetch(`${endpoint()}/${encodeURIComponent(client.id)}/${encodeURIComponent(item.id)}`, {
         method: 'DELETE', headers: { 'Content-Type': 'application/json' },
@@ -90,18 +95,29 @@ export function useDownloadClients(instance: Ref<string | null>) {
       });
       if (!response.ok) throw new Error(await responseError(response));
       if (active !== generation) return false;
-      client.torrents = client.torrents.filter(torrent => torrent.id !== item.id);
+      accepted = true;
+      const refreshed = await readClients(abort.signal);
+      if (active !== generation) return false;
+      clients.value = refreshed;
+      const refreshedClient = refreshed.find(value => value.id === client.id);
+      if (!refreshedClient) throw new Error('Client no longer available');
+      if (refreshedClient.torrents.some(torrent => torrent.id === item.id)) {
+        uncertain.value = true;
+        warning.value = 'Removal was accepted, but the torrent is still listed by the client. Refresh before another removal. No automatic retry was made.';
+        return false;
+      }
       message.value = deleteData ? 'Torrent removed. Data deletion requested.' : 'Torrent removed. Its data was kept.';
       return true;
     } catch (cause) {
       if (active === generation) {
         uncertain.value = true;
-        error.value = `${cause instanceof Error ? cause.message : 'Removal could not be confirmed.'} Refresh before another removal. No automatic retry was made.`;
+        if (accepted) warning.value = 'Removal was accepted, but the client list could not be verified. Refresh before another removal. No automatic retry was made.';
+        else error.value = `${cause instanceof Error ? cause.message : 'Removal could not be confirmed.'} Refresh before another removal. No automatic retry was made.`;
       }
       return false;
     } finally { clearTimeout(timer); if (active === generation) removing.value = false; }
   }
   watch(instance, reset, { flush: 'sync' });
   onScopeDispose(reset);
-  return { clients, loading, removing, error, message, uncertain, load, remove, reset };
+  return { clients, loading, removing, error, message, warning, uncertain, load, remove, reset };
 }
