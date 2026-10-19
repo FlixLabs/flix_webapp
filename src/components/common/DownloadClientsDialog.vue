@@ -9,7 +9,7 @@ const visible = defineModel<boolean>({ required: true });
 const props = defineProps<{ instance: string | null }>();
 const instance = computed(() => props.instance);
 const actions = useDownloadClients(instance);
-const { clients, loading, removing, error, message, uncertain } = actions;
+const { clients, loading, removing, error, message, warning, uncertain } = actions;
 const clientId = ref<string | null>(null);
 const client = computed(() => clients.value.find(item => item.id === clientId.value));
 const completed = computed(() => client.value?.torrents.filter(item => item.completed) ?? []);
@@ -46,12 +46,14 @@ async function confirm() {
     <p class="mb-3">{{ t("Inspect completed torrents before cleanup. Seeding torrents are not necessarily leftovers. Active or queued imports block removal, including forced removal.") }}</p>
 
     <v-alert v-if="error" type="error" variant="tonal" class="mt-3" role="alert">{{ t(error) }}</v-alert>
+    <v-alert v-if="warning" type="warning" variant="tonal" class="mt-3" role="alert">{{ t(warning) }}</v-alert>
     <v-alert v-if="message" type="success" variant="tonal" class="mt-3" role="status">{{ t(message) }}</v-alert>
     <v-progress-linear v-if="loading" indeterminate color="primary" :aria-label="t('Loading download clients')" class="mt-3" />
     <template v-if="clients.length">
       <v-select v-model="clientId" :items="clients" item-value="id" item-title="name" :label="t('Download client')" variant="outlined" class="mt-4" :disabled="removing || confirming" hide-details />
       <p class="text-caption text-medium-emphasis my-3">{{ t("{p0} completed torrents. Active downloads are excluded. Untracked does not guarantee a file has been imported or is safe to delete.", { p0: completed.length }) }}</p>
       <v-alert v-if="!completed.length" type="info" variant="tonal">{{ t("No completed torrents.") }}</v-alert>
+      <v-alert v-else-if="!filtered.length" type="info" variant="tonal" class="mb-3">{{ t('No completed torrents match this search. Clear the search to see the remaining torrents.') }}</v-alert>
       <v-text-field v-if="completed.length" :model-value="search" :label="t('Search completed torrents')" prepend-inner-icon="mdi-magnify" variant="outlined" clearable @update:model-value="search = $event ?? ''" hide-details class="mb-3" />
       <v-list :aria-label="t('Completed torrents')" class="client-torrents">
         <v-list-item v-for="item in visibleTorrents" :key="item.id">

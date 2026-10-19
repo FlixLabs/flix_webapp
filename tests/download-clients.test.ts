@@ -57,7 +57,8 @@ describe('download clients', () => {
     expect(JSON.parse(fetch.mock.calls[0]![1].body)).toEqual({ name: item.name, deleteData: false });
   });
   it('forces only completed tracked torrents when the API supports it', async () => {
-    const fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 })); vi.stubGlobal('fetch', fetch);
+    const fetch = vi.fn().mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(Response.json({ clients: [{ ...client, torrents: [] }] })); vi.stubGlobal('fetch', fetch);
     const { actions } = setup();
     const tracked = { ...item, tracked: true, removable: false };
     expect(await actions.remove(client, tracked, false, true)).toBe(false);
@@ -65,6 +66,45 @@ describe('download clients', () => {
     expect(fetch).not.toHaveBeenCalled();
     expect(await actions.remove({ ...client, allowForceRemoval: true }, tracked, false, true)).toBe(true);
     expect(JSON.parse(fetch.mock.calls[0]![1].body)).toEqual({ name: item.name, deleteData: false, force: true });
+  });
+  it('reloads the client after removal and includes newly completed torrents', async () => {
+    const next = { ...item, id: 'b'.repeat(40), name: 'New completed torrent' };
+    const fetch = vi.fn().mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(Response.json({ clients: [{ ...client, torrents: [next] }] }));
+    vi.stubGlobal('fetch', fetch);
+    const { actions } = setup();
+    expect(await actions.remove(client, item, false)).toBe(true);
+    expect(actions.clients.value[0]!.torrents.map(value => value.id)).toEqual([next.id]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch.mock.calls[1]![1].cache).toBe('no-store');
+    expect(actions.message.value).toContain('Torrent removed');
+  });
+  it('does not hide a torrent still reported by the client or retry its removal', async () => {
+    const fetch = vi.fn().mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(Response.json({ clients: [client] }));
+    vi.stubGlobal('fetch', fetch);
+    const { actions } = setup();
+    expect(await actions.remove(client, item, false)).toBe(false);
+    expect(actions.warning.value).toContain('still listed');
+    expect(actions.message.value).toBe('');
+    expect(actions.uncertain.value).toBe(true);
+    expect(actions.clients.value[0]!.torrents).toHaveLength(1);
+    await actions.remove(client, item, false);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+  it('distinguishes accepted removal from an unavailable verification and recovers with refresh', async () => {
+    const fetch = vi.fn().mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(Response.json({}, { status: 503 }))
+      .mockResolvedValueOnce(Response.json({ clients: [{ ...client, torrents: [] }] }));
+    vi.stubGlobal('fetch', fetch);
+    const { actions } = setup();
+    expect(await actions.remove(client, item, false)).toBe(false);
+    expect(actions.warning.value).toContain('could not be verified');
+    expect(actions.message.value).toBe('');
+    await actions.load();
+    expect(actions.warning.value).toBe('');
+    expect(actions.uncertain.value).toBe(false);
+    expect(fetch.mock.calls.filter(([, init]) => init.method === 'DELETE')).toHaveLength(1);
   });
   it('ignores a late response from a previously selected instance', async () => {
     let finish!: (response: Response) => void;

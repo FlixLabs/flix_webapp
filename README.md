@@ -114,6 +114,12 @@ Files are kept by default; deleting data remains a
 separate opt-in allowed by server configuration. Incomplete torrents, unavailable
 queue verification and uncertain writes remain protected. No automatic cleanup occurs.
 
+After each accepted client removal the panel rereads the client list, including
+newly completed torrents. It only confirms removal if the torrent is absent from
+that response. A still-listed torrent or failed verification remains explicitly
+uncertain, with refresh required and no automatic destructive retry. An empty
+search result is distinct from a client with no completed torrents left.
+
 The regular Downloads **Remove** action also rereads both configured service queues
 and their import commands before its direct Radarr/Sonarr DELETE, in API and
 standalone modes. Active/queued imports, missing download identities, incomplete
