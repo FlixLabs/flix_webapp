@@ -11,7 +11,7 @@ const props = defineProps<{ options: MediaServiceOptions }>();
 const emit = defineEmits<{ requested: []; finished: [] }>();
 const actions = useManualImport(props.options);
 const { dialog, confirming, type, title, files, media, qualities, languages, episodes, loadingEpisodes, loading,
-  busy, error, selected, canReview, commandId, commandState } = actions;
+  busy, error, selected, canReview, canContinueManually, manualReview, commandId, commandState } = actions;
 const mediaSuggestions = computed(() => new Map(files.value.map(file => [file.path, suggestImportMedia(file, media.value)])));
 const dialogActivator = useDialogActivator(() => dialog.value);
 const confirmationActivator = useDialogActivator(() => confirming.value);
@@ -88,6 +88,7 @@ defineExpose({ open: actions.open, close: actions.close, isOpen: dialog });
       <v-card-actions class="flex-wrap">
         <v-spacer />
         <v-btn color="on-surface" :disabled="busy" @click="actions.close">{{ t("Close") }}</v-btn>
+        <v-btn v-if="canContinueManually && commandId === null" color="warning" :disabled="busy || loading" @click="actions.continueManually">{{ t('Continue with manual information') }}</v-btn>
         <v-btn v-if="commandId !== null" color="on-surface" :loading="busy" @click="check">{{ t("Check status") }}</v-btn>
         <v-btn v-else color="primary" :loading="busy" :disabled="loading || !canReview" @click="actions.review">{{ t("Review Import ({p0})", { p0: selected.length }) }}</v-btn>
       </v-card-actions>
@@ -98,6 +99,7 @@ defineExpose({ open: actions.open, close: actions.close, isOpen: dialog });
       <v-card-title>{{ t("Confirm Manual Import") }}</v-card-title>
       <v-card-text>
         <v-alert type="warning" class="mb-4">{{ t("Existing files may be replaced. Importing manually can bypass quality rejection rules. This cannot be undone from Flix.") }}</v-alert>
+        <v-alert v-if="manualReview" type="warning" variant="tonal" class="mb-4">{{ t('Radarr could not verify this filename. Confirming requests an import using the movie, quality and languages you selected. The file is not renamed and the import may still fail.') }}</v-alert>
         <p v-for="file in selected" :key="file.path" class="text-break mb-2">
           {{ file.relativePath || file.name || file.path }} → {{ media.find(item => item.id === file.mediaId)?.title }} · {{ qualities.find(item => item.id === file.qualityId)?.name }}
           <span class="d-block text-caption text-medium-emphasis">{{ t('Languages') }}: {{ file.languages?.map(language => t(language.name)).join(', ') || t('Unknown') }}</span>

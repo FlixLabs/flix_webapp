@@ -43,6 +43,14 @@ already in the library after removing recognized advertising prefixes (currently
 `[OxTorrent.com]`, including spacing/case/`www` variants). Suggestions require an
 explicit selection and never rename the file or infer its quality/languages.
 
+For Radarr's specific `AugmentingFailedException` / `Unable to parse movie info
+from path` review error, a single selected movie file can continue with manual
+information. A known movie, quality and non-empty known languages are required.
+This opens an explicit confirmation warning that Radarr could not verify the
+filename; it does not claim a successful review or rename the file. Changing the
+selection requires another review. Other errors and Sonarr remain blocking, and
+the requested import may still fail in Radarr.
+
 Downloads confirms when Radarr or Sonarr accepts a manual import and shows its
 command status after the import window is closed. Tracking survives navigation
 and reloads in the same browser tab, in API and standalone modes. It is scoped to

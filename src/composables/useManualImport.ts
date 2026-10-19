@@ -14,7 +14,7 @@ interface Media { id: number; title: string; year?: number }
 interface Quality { id: number; name: string }
 interface Language { id: number; name: string }
 class ImportRequestError extends Error {
-  constructor(public status: number) { super(`Service request failed (${status}).`); }
+  constructor(public status: number, public unparsedMoviePath?: string) { super(`Service request failed (${status}).`); }
 }
 interface Episode { id: number; seasonNumber: number; episodeNumber: number; title: string }
 export interface ImportFile {
@@ -63,6 +63,8 @@ export function useManualImport(options: MediaServiceOptions) {
   const loading = ref(false);
   const busy = ref(false);
   const error = ref('');
+  const parsingFailureSelection = ref('');
+  const manualReview = ref(false);
   const commandId = ref<number | null>(null);
   const commandState = ref('');
   let trackingKey = '';
@@ -71,6 +73,10 @@ export function useManualImport(options: MediaServiceOptions) {
   const canReview = computed(() => !submissionAttempted.value && selected.value.length > 0 && selected.value.every(validFile));
   let context: { type: MediaType; download: ImportDownload; config: MediaServiceConfig } | null = null;
   let controller: AbortController | null = null;
+  const canContinueManually = computed(() => dialog.value && type.value === 'movies' && !!context && current(context)
+    && canReview.value && selected.value.length === 1 && selected.value.every(file =>
+      !!file.languages?.length && file.languages.every(language => languages.value.some(item => item.id === language.id)))
+    && !!parsingFailureSelection.value && JSON.stringify(selected.value.map(payload)) === parsingFailureSelection.value);
 
   function current(active: NonNullable<typeof context>) {
     const config = getConfig(active.type);
@@ -83,7 +89,21 @@ export function useManualImport(options: MediaServiceOptions) {
       ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: controller?.signal,
     });
-    if (!response.ok) throw new ImportRequestError(response.status);
+    if (!response.ok) {
+      let unparsedMoviePath: string | undefined;
+      if (response.status === 500 && path === 'manualimport' && body !== undefined && active.type === 'movies') {
+        try {
+          const failure = await response.json();
+          const prefix = 'Unable to parse movie info from path: ';
+          if (typeof failure?.message === 'string' && failure.message.startsWith(prefix)
+            && typeof failure.description === 'string'
+            && failure.description.startsWith('NzbDrone.Core.MediaFiles.MovieImport.Aggregation.AugmentingFailedException:')) {
+            unparsedMoviePath = failure.message.slice(prefix.length);
+          }
+        } catch { /* An unknown service error must never enable manual continuation. */ }
+      }
+      throw new ImportRequestError(response.status, unparsedMoviePath);
+    }
     return readApiJson(response);
   }
   function validFile(file: ImportFile) {
@@ -116,6 +136,8 @@ export function useManualImport(options: MediaServiceOptions) {
     trackingKey = '';
     submissionAttempted.value = false;
     error.value = '';
+    parsingFailureSelection.value = '';
+    manualReview.value = false;
   }
   async function loadEpisodes(seriesId: number) {
     const active = context;
@@ -209,8 +231,10 @@ export function useManualImport(options: MediaServiceOptions) {
     if (!active || !current(active) || !canReview.value || busy.value || commandId.value !== null) return;
     busy.value = true;
     error.value = '';
+    parsingFailureSelection.value = '';
+    manualReview.value = false;
+    const selection = selected.value.map(payload);
     try {
-      const selection = selected.value.map(payload);
       const result = requireList<ImportFile>(await request(active, 'manualimport', selection), 'import review');
       if (!current(active)) return;
       if (result.length !== selection.length) throw new Error('Invalid review response.');
@@ -225,12 +249,25 @@ export function useManualImport(options: MediaServiceOptions) {
       reviewed = selected.value.map(payload);
       confirming.value = true;
     } catch (cause) {
-      if (current(active)) error.value = cause instanceof ImportRequestError
-        ? `Unable to review the selected files (HTTP ${cause.status}). Check the media, quality and languages. No import was requested.`
-        : 'Unable to review the selected files. No import was requested.';
+      if (current(active)) {
+        if (cause instanceof ImportRequestError && selection.length === 1
+          && cause.unparsedMoviePath === selection[0]!.path) {
+          parsingFailureSelection.value = JSON.stringify(selection);
+          error.value = 'Radarr could not parse this filename. No import was requested.';
+        } else error.value = cause instanceof ImportRequestError
+          ? `Unable to review the selected files (HTTP ${cause.status}). Check the media, quality and languages. No import was requested.`
+          : 'Unable to review the selected files. No import was requested.';
+      }
     } finally {
       if (current(active)) busy.value = false;
     }
+  }
+  function continueManually() {
+    if (!canContinueManually.value || busy.value || commandId.value !== null) return;
+    reviewed = selected.value.map(payload);
+    manualReview.value = true;
+    error.value = '';
+    confirming.value = true;
   }
   async function submit(): Promise<boolean> {
     const active = context;
@@ -239,6 +276,7 @@ export function useManualImport(options: MediaServiceOptions) {
     error.value = '';
     try {
       if (JSON.stringify(selected.value.map(payload)) !== JSON.stringify(reviewed)) throw new Error('Selection changed. Review it again before importing.');
+      if (manualReview.value && !canContinueManually.value) throw new Error('Selection changed. Review it again before importing.');
       submissionAttempted.value = true;
       const command = requireObject<{ id: number; status?: string; result?: string }>(await request(active, 'command', { name: 'ManualImport', files: reviewed, importMode: 'auto' }), 'import command');
       if (!current(active)) return false;
@@ -279,5 +317,5 @@ export function useManualImport(options: MediaServiceOptions) {
   watch(() => [options.useAPI.value, options.selectedInstanceData.value], close, { flush: 'sync' });
   if (getCurrentScope()) onScopeDispose(close);
   return { dialog, confirming, type, title, files, media, qualities, languages, episodes, loadingEpisodes, loading, busy, error,
-    commandId, commandState, selected, canReview, open, close, loadEpisodes, review, submit, checkStatus };
+    commandId, commandState, selected, canReview, canContinueManually, manualReview, continueManually, open, close, loadEpisodes, review, submit, checkStatus };
 }
