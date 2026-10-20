@@ -26,13 +26,13 @@ export function downloadDetails(item: QueueDetails) {
     || ['failed', 'error'].includes(status) || !!text(item.errorMessage)
     || ['importblocked', 'importfailed', 'downloadfailed'].includes(state);
   const diagnosis = blocked
-    ? { kind: 'attention', label: ['importblocked', 'importfailed'].includes(state) ? 'Import needs attention' : 'Needs attention', color: 'warning', hint: 'Review the service messages. If the download is complete, use Manual Import to review its files before importing.' }
+    ? { kind: 'attention', label: ['importblocked', 'importfailed'].includes(state) ? 'Import needs attention' : 'Needs attention', color: 'warning', hint: 'Review the service messages. Manual Import is available only after an automatic import failure or rejection.' }
     : state === 'importing'
       ? { kind: 'waiting', label: 'Importing', color: 'info', hint: 'The service is importing the files. Wait for completion; do not remove the download during import.' }
       : status === 'paused'
         ? { kind: 'paused', label: 'Paused', color: 'info', hint: 'Resume this download in its download client. Flix does not control client pause/resume.' }
         : status === 'completed' || state === 'importpending'
-          ? { kind: 'ready', label: state === 'imported' ? 'Imported' : 'Download complete', color: 'success', hint: state === 'imported' ? 'The files have been imported. The service is waiting for queue cleanup.' : 'Waiting for automatic import. Manual Import can review the downloaded files when available.' }
+          ? { kind: 'ready', label: state === 'imported' ? 'Imported' : 'Download complete', color: 'success', hint: state === 'imported' ? 'The files have been imported. The service is waiting for queue cleanup.' : 'Waiting for automatic import. Manual Import remains unavailable until automatic import fails or rejects the files.' }
           : status === 'downloading'
             ? { kind: 'downloading', label: 'Downloading', color: 'primary', hint: '' }
             : { kind: 'waiting', label: 'Waiting', color: 'default', hint: 'Check the reported status and download client for more details.' };

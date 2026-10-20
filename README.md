@@ -58,10 +58,10 @@ already in the library after removing recognized advertising prefixes (currently
 `[OxTorrent.com]`, including spacing/case/`www` variants). Suggestions require an
 explicit selection and never rename the file or infer its quality/languages.
 
-Manual Import stays available for completed downloads without an active import.
-Importing items do not offer a new import. The queue's `importPending` state alone
-does not prove an active command and still permits manual review; removal remains
-protected. Flix also rereads the
+Manual Import is available only after the service reports an automatic import
+failure or rejection (`importFailed` or `importBlocked`). A completed download,
+an `importPending` state or a warning alone does not enable manual import.
+Flix also rereads the
 selected service's queue and commands at opening and immediately before submission;
 active, queued or unverifiable imports prevent a new command. This applies in API
 and standalone modes, but remains a browser preflight rather than an atomic
