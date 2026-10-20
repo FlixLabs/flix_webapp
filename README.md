@@ -161,6 +161,15 @@ for Library, Outings and Collections, including collection totals.
 
 ### Download Media Sheets
 
+For movie releases rejected only with `Unable to parse release`, **Associate with
+this movie** opens an explicit confirmation of the selected film and original
+release. It uses Radarr's cached release GUID/indexer and explicit `movieId`,
+without renaming the release or overriding quality/languages. Other download
+prohibitions and Sonarr remain blocked. Requires a Radarr version supporting the
+explicit movie association on `POST /api/v3/release`; cache expiry requires a new
+search. Downloading may still fail and manual import may be needed afterwards.
+This works with and without Flix API.
+
 Downloads also show **Source page** when Radarr/Sonarr retain the release details
 URL in their grab history, including downloads that need attention. Source lookups
 use the download ID (never the title), are cached in memory for the current instance,
