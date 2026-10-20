@@ -31,6 +31,7 @@ const requestsError = ref('');
 const review = ref<MediaRequest | null>(null);
 const checking = ref('');
 const selected = ref<RequestMedia | null>(null);
+const detailOpen = ref(false);
 const detail = ref<RequestDetail | null>(null);
 const detailLoading = ref(false);
 const detailError = ref('');
@@ -40,7 +41,7 @@ const seasons = ref<number[]>([]);
 const submitted = ref(false);
 const scopeSeasons = computed(() => selected.value?.type === 'movies' || scope.value === 'all' ? null : [...seasons.value].sort((a, b) => a - b));
 const related = computed(() => detail.value?.requests.find(item => JSON.stringify(item.seasons) === JSON.stringify(scopeSeasons.value)));
-const canSubmit = computed(() => !!detail.value && !detailLoading.value && !detailError.value && !submitting.value && !related.value?.following && !(detail.value.type === 'movies' && detail.value.availability === 'available') && (detail.value.type === 'movies' || !!detail.value.tvdbId && (scope.value === 'all' || seasons.value.length > 0)));
+const canSubmit = computed(() => detailOpen.value && !!detail.value && !detailLoading.value && !detailError.value && !submitting.value && !related.value?.following && !(detail.value.type === 'movies' && detail.value.availability === 'available') && (detail.value.type === 'movies' || !!detail.value.tvdbId && (scope.value === 'all' || seasons.value.length > 0)));
 const seasonChoices = computed(() => detail.value?.seasons?.map(season => {
   const label = t('Season {p0}', { p0: season.number });
   return { title: !season.name || /^(season|saison)\s+\d+$/i.test(season.name.trim()) ? label : `${label} · ${season.name}`, value: season.number };
@@ -78,6 +79,7 @@ let detailController: AbortController | null = null;
 async function open(item: RequestMedia) {
   detailController?.abort();
   const controller = new AbortController(); detailController = controller;
+  detailOpen.value = true;
   selected.value = item; detail.value = null; detailError.value = ''; detailLoading.value = true;
   scope.value = 'all'; seasons.value = []; submitted.value = false;
   try {
@@ -88,7 +90,7 @@ async function open(item: RequestMedia) {
   } catch (cause) { if (!controller.signal.aborted) detailError.value = cause instanceof Error ? cause.message : 'Requests unavailable.'; }
   finally { if (detailController === controller) detailLoading.value = false; }
 }
-function closeDetail() { if (submitting.value) return; detailController?.abort(); selected.value = null; }
+function closeDetail() { if (submitting.value) return; detailController?.abort(); detailController = null; detailOpen.value = false; }
 async function submit() {
   if (!canSubmit.value || !detail.value) return;
   submitting.value = true; detailError.value = '';
@@ -109,7 +111,7 @@ async function check(item: MediaRequest) {
   finally { checking.value = ''; }
 }
 watch(type, () => { closeDetail(); searchPage.value = 1; void search(); });
-watch([contentLanguage, region], () => { if (selected.value) void open(selected.value); if (searched.value) void search(); });
+watch([contentLanguage, region], () => { if (detailOpen.value && selected.value) void open(selected.value); if (searched.value) void search(); });
 watch(section, value => { if (value === 'requests') void loadRequests(); });
 onMounted(loadRequests);
 useSheetRefreshSchedule({ context: () => section.value, enabled: () => section.value === 'requests', refresh: async () => {
@@ -176,7 +178,7 @@ onScopeDispose(() => { searchController?.abort(); listController?.abort(); detai
         </v-card-actions>
       </v-card>
     </template>
-    <DialogSheet :model-value="!!selected" :title="selected?.title ?? t('Request media')" :label="t('Request media')" :close-label="t('Close')" :context="selected?.tmdbId" :close-disabled="submitting" @update:model-value="!$event && closeDetail()">
+    <DialogSheet :model-value="detailOpen" :title="selected?.title ?? t('Request media')" :label="t('Request media')" :close-label="t('Close')" :context="selected?.tmdbId" :close-disabled="submitting" @update:model-value="!$event && closeDetail()" @closed="!detailOpen && (selected = null)">
       <v-progress-linear v-if="detailLoading" color="primary" indeterminate :aria-label="t('Loading data...')" class="mb-4" />
       <v-alert v-if="detailError" type="error" variant="tonal" class="mb-4">{{ t(detailError) }}<v-btn v-if="!submitted && selected" variant="text" @click="open(selected)">{{ t('Retry') }}</v-btn></v-alert>
       <v-alert v-if="submitted" type="success" variant="tonal" class="mb-4">{{ t('Your request has been saved.') }}</v-alert>

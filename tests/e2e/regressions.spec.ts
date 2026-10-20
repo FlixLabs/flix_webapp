@@ -39,7 +39,15 @@ test('changing a series season searches again without downloading', async ({ pag
 test('download deletion can be cancelled and only deletes the queue item', async ({ page, mutations }) => {
   await page.goto('/downloads');
   await page.getByRole('button', { name: 'Remove Download example', exact: true }).first().click();
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  const retained = await page.getByRole('button', { name: 'Cancel', exact: true }).evaluate(async button => {
+    const overlay = button.closest('.v-dialog')!;
+    const before = overlay.querySelector('.v-card-text')!.textContent;
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    return overlay.querySelector('.v-card-text')!.textContent === before;
+  });
+  expect(retained).toBe(true);
+  await expect(page.getByRole('dialog', { name: 'Confirm deletion', exact: true })).not.toBeVisible();
   expect(mutations).toEqual([]);
   await page.getByRole('button', { name: 'Remove Download example', exact: true }).first().click();
   await page.getByRole('button', { name: 'Confirm', exact: true }).click();

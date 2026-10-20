@@ -41,7 +41,8 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'release-grabbed', 'navigate', 'refreshed']);
 const releaseDialog = ref(false);
-const localizedItem = useLocalizedMedia(() => props.modelValue ? props.item : null, () => props.mediaType === 'Movie' ? 'movies' : 'series');
+const renderDetails = ref(props.modelValue);
+const localizedItem = useLocalizedMedia(() => renderDetails.value ? props.item : null, () => props.mediaType === 'Movie' ? 'movies' : 'series');
 const dialogActivator = useDialogActivator(() => props.modelValue);
 const monitoringPending = ref(false);
 const settingsPending = ref(false);
@@ -71,7 +72,6 @@ function releaseGrabbed() {
   emit('update:modelValue', false);
 }
 
-const renderDetails = ref(props.modelValue);
 watch(() => props.modelValue, value => { if (value) renderDetails.value = true; }, { flush: "sync" });
 const slots = useSlots();
 const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episodes
@@ -80,7 +80,7 @@ const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episode
 </script>
 
 <template>
-  <DialogSheet v-if="item" :model-value="modelValue" :title="mediaType === 'Movie' ? t('Movie') : t('Serie')" :label="`${mediaType === 'Movie' ? t('Movie') : t('Serie')}: ${localizedItem?.title ?? item.title}`" :context="item" :activator="activator ?? dialogActivator" @update:model-value="emit('update:modelValue', $event)" @closed="renderDetails = false">
+  <DialogSheet v-if="item" :model-value="modelValue" :title="mediaType === 'Movie' ? t('Movie') : t('Serie')" :label="`${mediaType === 'Movie' ? t('Movie') : t('Serie')}: ${localizedItem?.title ?? item.title}`" :context="item" :activator="activator ?? dialogActivator" @update:model-value="emit('update:modelValue', $event)" @closed="!modelValue && (renderDetails = false)">
     <template #header-actions>
       <div v-if="neighbors.index >= 0 && neighbors.total > 1" class="d-flex align-center ga-1" role="group" :aria-label="t('Media navigation')">
         <v-btn icon="mdi-chevron-left" variant="text" size="small" :aria-label="t('Previous media')" :disabled="navigationDisabled || !neighbors.previous" @click="navigate('previous')" />

@@ -21,11 +21,23 @@ const visibleTorrents = computed(() => filtered.value.slice((page.value - 1) * 1
 watch([clientId, search], () => { page.value = 1; });
 watch(pageCount, count => { page.value = Math.min(page.value, count); });
 const target = ref<{ client: DownloadClient; item: ClientTorrent } | null>(null);
+const displayedTarget = ref<typeof target.value>(null);
+watch(target, value => { if (value) displayedTarget.value = value; }, { flush: 'sync' });
 const confirming = computed({ get: () => target.value !== null, set: value => { if (!value && !removing.value) target.value = null; } });
 const activator = useDialogActivator(() => confirming.value);
 const deleteData = ref(false);
 const force = ref(false);
-watch(visible, value => { if (value) { void actions.load(); } else if (!value) { actions.reset(); target.value = null; clientId.value = null; search.value = ''; } });
+function resetView() {
+  actions.reset(); target.value = null; clientId.value = null; search.value = ''; page.value = 1;
+}
+function closed() {
+  if (!visible.value) resetView();
+}
+watch(visible, value => {
+  if (value) { resetView(); void actions.load(); }
+  // Freeze the rendered list during the fade, but reject late network responses immediately.
+  else actions.cancel();
+});
 watch(instance, () => { visible.value = false; target.value = null; });
 watch(clients, value => { if (!value.some(item => item.id === clientId.value)) clientId.value = value[0]?.id ?? null; });
 function choose(item: ClientTorrent) {
@@ -42,7 +54,7 @@ async function confirm() {
 </script>
 
 <template>
-  <DialogSheet :model-value="visible" :title="t('Download clients')" :label="t('Download clients')" :context="instance" :close-disabled="removing || confirming" @update:model-value="visible = $event">
+  <DialogSheet :model-value="visible" :title="t('Download clients')" :label="t('Download clients')" :context="instance" :close-disabled="removing || confirming" @update:model-value="visible = $event" @closed="closed">
     <p class="mb-3">{{ t("Inspect completed torrents before cleanup. Seeding torrents are not necessarily leftovers. Active or queued imports block removal, including forced removal.") }}</p>
 
     <v-alert v-if="error" type="error" variant="tonal" class="mt-3" role="alert">{{ t(error) }}</v-alert>
@@ -71,12 +83,12 @@ async function confirm() {
     </template>
     <template #actions><v-btn color="on-surface" :loading="loading" :disabled="removing || confirming" @click="actions.load">{{ clients.length || uncertain ? t("Refresh clients") : t("Load clients") }}</v-btn></template>
   </DialogSheet>
-  <DialogSheet :model-value="confirming" :activator="activator" :title="t('Remove torrent?')" :label="t('Remove torrent?')" :context="instance" :close-label="t('Cancel')" :close-disabled="removing" @update:model-value="confirming = $event">
-    <p class="text-break mb-3">{{ target?.item.name }}</p>
-    <p>{{ t("Client: {p0}", { p0: target?.client.name }) }}</p>
-    <v-alert v-if="target?.item.tracked" type="warning" variant="tonal" class="mt-3">{{ t("Radarr or Sonarr still tracks this torrent. Removal is allowed only if no active or queued import is detected. This does not remove the media from your library or clear its Radarr/Sonarr queue entry.") }}</v-alert>
-    <v-checkbox v-if="target?.item.tracked" v-model="force" :label="t('Force removal despite Radarr/Sonarr tracking')" :disabled="removing" hide-details class="mt-3" />
-    <v-checkbox v-if="target?.client.allowDeleteData" v-model="deleteData" :label="t('Also delete torrent data from disk')" :disabled="removing" hide-details class="mt-3" />
+  <DialogSheet :model-value="confirming" :activator="activator" :title="t('Remove torrent?')" :label="t('Remove torrent?')" :context="instance" :close-label="t('Cancel')" :close-disabled="removing" @update:model-value="confirming = $event" @closed="!confirming && (displayedTarget = null)">
+    <p class="text-break mb-3">{{ displayedTarget?.item.name }}</p>
+    <p>{{ t("Client: {p0}", { p0: displayedTarget?.client.name }) }}</p>
+    <v-alert v-if="displayedTarget?.item.tracked" type="warning" variant="tonal" class="mt-3">{{ t("Radarr or Sonarr still tracks this torrent. Removal is allowed only if no active or queued import is detected. This does not remove the media from your library or clear its Radarr/Sonarr queue entry.") }}</v-alert>
+    <v-checkbox v-if="displayedTarget?.item.tracked" v-model="force" :label="t('Force removal despite Radarr/Sonarr tracking')" :disabled="removing" hide-details class="mt-3" />
+    <v-checkbox v-if="displayedTarget?.client.allowDeleteData" v-model="deleteData" :label="t('Also delete torrent data from disk')" :disabled="removing" hide-details class="mt-3" />
     <v-alert class="mt-3" variant="tonal" :type="deleteData ? 'warning' : 'info'">{{ deleteData ? t("This permanently deletes the torrent data. Imported files may share this location. Verify the paths in your client before continuing. Flix cannot undo this.") : t("Only the torrent will be removed from the client. Files will remain on disk. Seeding will stop.") }}</v-alert>
     <template #actions><v-btn color="error" :loading="removing" :disabled="removing || (!!target?.item.tracked && !force)" @click="confirm">{{ deleteData ? t("Remove torrent and data") : t("Remove torrent only") }}</v-btn></template>
   </DialogSheet>

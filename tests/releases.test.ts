@@ -270,6 +270,26 @@ describe('interactive release search', () => {
     expect(actions.releases.value).toEqual([]);
     expect(actions.dialog.value).toBe(false);
   });
+  it('can preserve a closing view while invalidating requests until the transition ends', async () => {
+    let finish!: (response: Response) => void;
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json([candidate]))
+      .mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve; }));
+    vi.stubGlobal('fetch', fetchMock);
+    const actions = useReleaseSearch(createOptions());
+    await actions.open('movies', { id: 42, title: 'Movie' });
+    actions.close(true);
+    expect(actions.releases.value).toEqual([candidate]);
+    expect(actions.hasSearched.value).toBe(true);
+    expect(await actions.grab(candidate)).toBe(false);
+    const pending = actions.open('movies', { id: 42, title: 'Movie' });
+    actions.close(true);
+    expect(fetchMock.mock.calls[1]![1].signal.aborted).toBe(true);
+    finish(Response.json([candidate]));
+    await pending;
+    expect(actions.releases.value).toEqual([]);
+    actions.close();
+    expect(actions.hasSearched.value).toBe(false);
+  });
 
   it('clears selection on instance change and never downloads on the new instance', async () => {
     const options = createOptions();

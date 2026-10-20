@@ -14,6 +14,8 @@ const props = withDefaults(defineProps<{
 const emits = defineEmits(['update:modelValue', 'cancel', 'confirm']);
 
 const internalVisible = ref(props.modelValue);
+const displayedMessage = ref(props.message);
+watch(() => props.message, value => { if (internalVisible.value) displayedMessage.value = value; });
 const dialogActivator = useDialogActivator(() => internalVisible.value);
 const cancelButton = ref<{ $el: HTMLElement } | null>(null);
 
@@ -22,6 +24,7 @@ watch(() => props.modelValue, (newVal) => {
 });
 
 watch(internalVisible, (newVal) => {
+  if (newVal) displayedMessage.value = props.message;
   emits('update:modelValue', newVal);
 });
 
@@ -49,7 +52,7 @@ function confirm() {
     <v-card>
       <v-card-title>{{ t("Confirm deletion") }}</v-card-title>
       <v-card-text>
-        {{ t(message) }}
+        {{ t(displayedMessage) }}
       </v-card-text>
       <v-card-actions>
         <v-btn

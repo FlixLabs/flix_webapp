@@ -12,16 +12,20 @@ const model = defineModel<boolean>({ required: true });
 const props = defineProps<{ mediaType: MediaType; item: MediaActionItem | null }>();
 const emit = defineEmits<{ grabbed: [] }>();
 const store = useFlixStore();
+const renderDetails = ref(model.value);
+watch(model, value => { if (value) renderDetails.value = true; }, { flush: 'sync' });
 const actions = useReleaseSearch({
   useAPI: ref(import.meta.env.VITE_FLIX_API_USE === 'true'),
   selectedInstanceData: computed(() => store.selectedInstanceData),
 });
 const { releases, seasons, seasonEpisodes, season, episodeId, isSearching, isLoadingEpisodes, isGrabbing, hasSearched, error } = actions;
-const localizedItem = useLocalizedMedia(() => model.value ? props.item : null, () => props.mediaType);
+const localizedItem = useLocalizedMedia(() => renderDetails.value ? props.item : null, () => props.mediaType);
 useLocalizedEpisode(() => model.value && props.mediaType === 'series' && props.item && season.value !== null
   ? { ...props.item, season: season.value, episode: 0 } : { season: -1, episode: -1 });
 const filter = ref('');
 const selectedRelease = shallowRef<Release | null>(null);
+const displayedRelease = shallowRef<Release | null>(null);
+watch(selectedRelease, value => { if (value) displayedRelease.value = value; }, { flush: 'sync' });
 const confirming = computed({ get: () => !!selectedRelease.value, set: value => { if (!value) selectedRelease.value = null; } });
 const dialogActivator = useDialogActivator(() => model.value);
 const confirmationActivator = useDialogActivator(() => confirming.value);
@@ -49,10 +53,9 @@ const headers = [
 ];
 
 watch(() => [model.value, props.mediaType, props.item?.id], () => {
-  filter.value = '';
   selectedRelease.value = null;
-  if (model.value && props.item) void actions.open(props.mediaType, props.item);
-  else actions.close();
+  if (model.value && props.item) { filter.value = ''; void actions.open(props.mediaType, props.item); }
+  else actions.close(true);
 });
 watch(actions.dialog, value => { if (!value) model.value = false; });
 watch(releases, () => { selectedRelease.value = null; });
@@ -67,11 +70,16 @@ async function download() {
     emit('grabbed');
   }
 }
+function closed() {
+  if (model.value) return;
+  renderDetails.value = false;
+  actions.close();
+}
 </script>
 
 <template>
   <!-- Keep select-menu measurements stable while the dialog opens. -->
-  <v-dialog v-model="model" :activator="dialogActivator" :open-on-click="false" :aria-label="t('Choose Release - {p0}', { p0: localizedItem?.title ?? item?.title ?? '' })" max-width="1200" transition="fade-transition" scrollable :persistent="isGrabbing" @after-enter="preserveNestedDialogFocus(releaseCard?.$el)">
+  <v-dialog v-model="model" :activator="dialogActivator" :open-on-click="false" :aria-label="t('Choose Release - {p0}', { p0: localizedItem?.title ?? item?.title ?? '' })" max-width="1200" transition="fade-transition" scrollable :persistent="isGrabbing" @after-enter="preserveNestedDialogFocus(releaseCard?.$el)" @after-leave="closed">
     <v-card ref="releaseCard">
       <v-card-title class="text-wrap">{{ t("Choose Release - {p0}", { p0: item?.title }) }}</v-card-title>
       <v-card-text>
@@ -128,22 +136,22 @@ async function download() {
       <v-card-actions><v-spacer /><v-btn color="on-surface" :disabled="isGrabbing" @click="model = false">{{ t("Close") }}</v-btn></v-card-actions>
     </v-card>
   </v-dialog>
-  <v-dialog v-model="confirming" :activator="confirmationActivator" :open-on-click="false" :aria-label="t('Download this release?')" max-width="600" :persistent="isGrabbing" @after-enter="cancelButton?.$el.focus({ preventScroll: true })">
+  <v-dialog v-model="confirming" :activator="confirmationActivator" :open-on-click="false" :aria-label="t('Download this release?')" max-width="600" :persistent="isGrabbing" @after-enter="cancelButton?.$el.focus({ preventScroll: true })" @after-leave="!confirming && (displayedRelease = null)">
     <v-card>
       <v-card-title>{{ t("Download this release?") }}</v-card-title>
       <v-card-text>
-        <p class="text-break mb-4">{{ selectedRelease?.title }}</p>
-        <v-alert v-if="selectedRelease && canAssociateMovieRelease(mediaType, selectedRelease)" type="warning" variant="tonal" class="mb-4">
+        <p class="text-break mb-4">{{ displayedRelease?.title }}</p>
+        <v-alert v-if="displayedRelease && canAssociateMovieRelease(mediaType, displayedRelease)" type="warning" variant="tonal" class="mb-4">
           {{ t('Radarr could not identify this release. Confirm that it belongs to {p0}. The original release title is preserved; manual import may be required after downloading.', { p0: `${localizedItem?.title ?? item?.title ?? ''}${item?.year ? ` (${item.year})` : ''}` }) }}
         </v-alert>
-        <v-alert v-if="selectedRelease && !canAssociateMovieRelease(mediaType, selectedRelease) && (selectedRelease.rejected || selectedRelease.temporarilyRejected || selectedRelease.rejections?.length)" type="warning" class="mb-4"> {{ t("This release was rejected by") }} {{ mediaType === 'movies' ? t("Radarr") : t("Sonarr") }}{{ t(". Downloading it manually may bypass your quality preferences.") }} <ul class="pl-4 mt-2"><li v-for="reason in selectedRelease?.rejections" :key="reason">{{ reason }}</li></ul>
+        <v-alert v-if="displayedRelease && !canAssociateMovieRelease(mediaType, displayedRelease) && (displayedRelease.rejected || displayedRelease.temporarilyRejected || displayedRelease.rejections?.length)" type="warning" class="mb-4"> {{ t("This release was rejected by") }} {{ mediaType === 'movies' ? t("Radarr") : t("Sonarr") }}{{ t(". Downloading it manually may bypass your quality preferences.") }} <ul class="pl-4 mt-2"><li v-for="reason in displayedRelease?.rejections" :key="reason">{{ reason }}</li></ul>
         </v-alert>
         <v-alert v-if="error" type="error">{{ t(error) }}</v-alert>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn color="on-surface" ref="cancelButton" :disabled="isGrabbing" @click="selectedRelease = null">{{ t("Cancel") }}</v-btn>
-        <v-btn color="primary" :loading="isGrabbing" @click="download">{{ selectedRelease && canAssociateMovieRelease(mediaType, selectedRelease) ? t('Associate and download') : t('Download') }}</v-btn>
+        <v-btn color="primary" :loading="isGrabbing" @click="download">{{ displayedRelease && canAssociateMovieRelease(mediaType, displayedRelease) ? t('Associate and download') : t('Download') }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>

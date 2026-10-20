@@ -89,6 +89,14 @@ test("localizes movie metadata without mutating native identifiers or settings",
   ).toBeEnabled();
   expect(requests).toHaveLength(1);
   expect(requests[0]!.searchParams.get("language")).toBe("fr-FR");
+  const retained = await dialog.getByRole('button', { name: 'Close', exact: true }).evaluate(async button => {
+    const overlay = button.closest('.v-dialog')!;
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    return overlay.textContent?.includes('Un résumé en français.');
+  });
+  expect(retained).toBe(true);
+  await expect(dialog).not.toBeVisible();
   expect(mutations).toEqual([]);
 });
 
@@ -286,6 +294,17 @@ test("localizes collection members and keeps French confirmation actions inside 
       exact: true,
     }),
   ).toBeVisible();
+  await confirmation.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(confirmation).not.toBeVisible();
+  const retained = await sheet.getByRole('button', { name: 'Fermer la collection', exact: true }).evaluate(async button => {
+    const overlay = button.closest('.v-dialog')!;
+    const before = overlay.getAttribute('aria-label');
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    return overlay.getAttribute('aria-label') === before;
+  });
+  expect(retained).toBe(true);
+  await expect(sheet).not.toBeVisible();
   expect(mutations).toEqual([]);
 });
 
