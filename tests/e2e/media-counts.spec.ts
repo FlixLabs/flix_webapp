@@ -4,10 +4,10 @@ for (const path of ['/library', '/dashboard', '/outings', '/downloads', '/calend
   test(`${path} shows unknown counts while loading and zero only after an empty response`, async ({ page, mutations }) => {
     let release!: () => void;
     const held = new Promise<void>(resolve => { release = resolve; });
-    await page.route(/\/api\/v3\/(movie|series|collection)(\/lookup)?\?|\/api\/v3\/(queue|calendar)\?|\/(upcoming|on_the_air)\?/, async route => {
+    await page.route(/\/api\/v3\/(movie|series|collection)(\/lookup)?\?|\/api\/v3\/(queue|calendar)\?|\/discover\/(movie|tv)\?/, async route => {
       await held;
       const url = new URL(route.request().url());
-      const json = /\/(upcoming|on_the_air)$/.test(url.pathname) ? { results: [], total_pages: 1 }
+      const json = /\/discover\/(movie|tv)$/.test(url.pathname) ? { results: [], total_pages: 1 }
         : url.pathname.endsWith('/queue') ? { records: [], totalRecords: 0 } : [];
       await route.fulfill({ json }).catch(() => {});
     });

@@ -8,7 +8,7 @@ for (const path of ['/library', '/outings']) {
       release_date: '2026-10-01', first_air_date: '2026-10-01', name: `Example ${i + 1}`,
     }));
     await page.route(/\/api\/v3\/movie\?/, route => route.fulfill({ json: items }));
-    await page.route(/\/(upcoming|on_the_air)\?/, route => route.fulfill({ json: { results: items, total_pages: 1 } }));
+    await page.route(/\/discover\/(movie|tv)\?/, route => route.fulfill({ json: { results: items, total_pages: 1 } }));
     await page.goto(path);
     await expect(page.locator('.media-card')).toHaveCount(12);
     await expect(page.getByRole('button', { name: 'Movies (25)', exact: true })).toBeVisible();

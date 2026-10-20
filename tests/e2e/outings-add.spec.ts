@@ -3,8 +3,8 @@ import { test, expect } from './fixtures';
 for (const media of ['movies', 'series'] as const) {
   test(`outings can add ${media} with a previously selected instance`, async ({ page, mutations }) => {
     await page.addInitScript(() => localStorage.setItem('flix.preferences.instance', JSON.stringify('Test instance')));
-    await page.route(/\/(upcoming|on_the_air)\?/, route => {
-      const isMovie = new URL(route.request().url()).pathname.endsWith('/upcoming');
+    await page.route(/\/discover\/(movie|tv)\?/, route => {
+      const isMovie = new URL(route.request().url()).pathname.endsWith('/movie');
       return route.fulfill({ json: { results: [{
         id: isMovie ? 100 : 200, title: 'Upcoming movie', name: 'Upcoming series',
         release_date: '2026-10-20', first_air_date: '2026-10-20',

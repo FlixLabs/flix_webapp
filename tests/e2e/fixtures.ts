@@ -37,6 +37,7 @@ export const test = base.extend<{ mutations: { method: string; path: string; bod
       else if (path === '/requests') json = { items: [], total: 0, page: 1 };
       else if (path === '/auth' || path === '/color') json = {};
       else if (path === '/search/movie' || path === '/search/tv') json = { results: [] };
+      else if (path === '/discover/movie' || path === '/discover/tv') json = { results: [], total_pages: 1 };
       else if (path === '/api/v3/config/host' || path === '/api/v3/system/status') json = {};
       else if (path === '/api/v3/log') json = { records: [] };
       else if (path === '/api/v3/movie' || path === '/api/v3/movie/lookup') json = [movie];

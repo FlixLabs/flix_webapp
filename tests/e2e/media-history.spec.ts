@@ -7,7 +7,7 @@ for (const view of ['library', 'dashboard', 'outings']) {
       reads.push(route.request().url());
       return route.fulfill({ json: { totalRecords: 1, records: [{ id: 1, movieId: movie.id, eventType: 'downloadFailed', sourceTitle: 'Example.release', date: '2026-10-12T10:00:00Z', data: { message: 'Not enough disk space' } }] } });
     });
-    await page.route(/\/upcoming\?/, route => route.fulfill({ json: { results: [{ id: movie.tmdbId, title: movie.title, release_date: '2026-10-20' }], total_pages: 1 } }));
+    await page.route(/\/discover\/movie\?/, route => route.fulfill({ json: { results: [{ id: movie.tmdbId, title: movie.title, release_date: '2026-10-20' }], total_pages: 1 } }));
     await page.goto(`/${view}`);
     if (view === 'dashboard') {
       await page.getByRole('textbox', { name: 'Search', exact: true }).fill('Example');

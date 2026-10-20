@@ -12,7 +12,7 @@ for (const view of ['library', 'dashboard', 'outings']) {
       }
       return route.fulfill({ json: resource });
     });
-    await page.route(/\/(upcoming|on_the_air)\?/, route => route.fulfill({ json: { results: [{ id: 10, title: movie.title, release_date: '2026-10-20' }], total_pages: 1 } }));
+    await page.route(/\/discover\/(movie|tv)\?/, route => route.fulfill({ json: { results: [{ id: 10, title: movie.title, release_date: '2026-10-20' }], total_pages: 1 } }));
     await page.goto(`/${view}`);
     if (view === 'dashboard') {
       await page.getByRole('textbox', { name: 'Search', exact: true }).fill('Example');

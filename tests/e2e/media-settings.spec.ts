@@ -32,7 +32,7 @@ for (const view of ['library', 'dashboard', 'outings']) {
     });
     await page.route(/\/api\/v3\/qualityprofile(?:\?|$)/i, route => route.fulfill({ json: [{ id: 1, name: 'Any' }, { id: 2, name: 'HD' }] }));
     await page.route('**/api/v3/tag', route => route.fulfill({ json: [{ id: 3, label: 'Original' }, { id: 7, label: 'Family' }] }));
-    await page.route(/\/upcoming\?/, route => route.fulfill({ json: { results: [{ id: movie.tmdbId, title: movie.title, release_date: '2026-10-20' }], total_pages: 1 } }));
+    await page.route(/\/discover\/movie\?/, route => route.fulfill({ json: { results: [{ id: movie.tmdbId, title: movie.title, release_date: '2026-10-20' }], total_pages: 1 } }));
     await page.goto(`/${view}`);
     if (view === 'dashboard') {
       await page.getByRole('textbox', { name: 'Search', exact: true }).fill('Example');
