@@ -3,9 +3,9 @@ import { test, expect } from './fixtures';
 for (const failure of ['invalid first page', 'invalid second page', 'HTTP 429']) {
   test(`outings handles ${failure} and recovers after reload`, async ({ page, mutations }) => {
     let fail = true;
-    await page.route(/\/(upcoming|on_the_air)\?/, route => {
+    await page.route(/\/discover\/(movie|tv)\?/, route => {
       const url = new URL(route.request().url());
-      if (url.pathname.endsWith('/on_the_air')) return route.fulfill({ json: { results: [], total_pages: 1 } });
+      if (url.pathname.endsWith('/tv')) return route.fulfill({ json: { results: [], total_pages: 1 } });
       if (fail && failure === 'HTTP 429') return route.fulfill({ status: 429, json: { status_message: 'Rate limited' } });
       if (fail && (failure === 'invalid first page' || url.searchParams.get('page') === '2')) {
         return route.fulfill({ json: null });

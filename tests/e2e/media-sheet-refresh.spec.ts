@@ -8,7 +8,7 @@ for (const view of ['library', 'dashboard', 'outings', 'downloads']) {
       reads++;
       return route.fulfill({ json: updated ? { ...movie, movieFile: { ...movie.movieFile, relativePath: 'Updated.mkv' } } : movie });
     });
-    await page.route(/\/upcoming\?/, route => route.fulfill({ json: { results: [{ id: movie.tmdbId, title: movie.title, release_date: '2026-10-20' }], total_pages: 1 } }));
+    await page.route(/\/discover\/movie\?/, route => route.fulfill({ json: { results: [{ id: movie.tmdbId, title: movie.title, release_date: '2026-10-20' }], total_pages: 1 } }));
     await page.route('**/api/v3/queue?*', route => route.fulfill({ json: { records: [{ id: 101, movieId: movie.id, title: 'Release', status: 'downloading', size: 100, sizeleft: 50 }] } }));
     await page.goto(`/${view}`);
     if (view === 'dashboard') {

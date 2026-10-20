@@ -12,7 +12,7 @@ for (const view of ['library', 'dashboard', 'outings']) {
       if (request.url().includes('/api/v3/')) reads.push(request.url());
     });
     await page.route(/\/api\/v3\/movie\?/, route => route.fulfill({ json: [{ ...movie, statistics: undefined, movieFile: file }] }));
-    await page.route(/\/(upcoming|on_the_air)\?/, route => route.fulfill({ json: { results: [{ id: 10, title: movie.title, release_date: '2026-10-20' }], total_pages: 1 } }));
+    await page.route(/\/discover\/(movie|tv)\?/, route => route.fulfill({ json: { results: [{ id: 10, title: movie.title, release_date: '2026-10-20' }], total_pages: 1 } }));
     await page.goto(`/${view}`);
     let readsBeforeOpening = 0;
     if (view === 'dashboard') {

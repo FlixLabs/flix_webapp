@@ -30,8 +30,11 @@ import MediaBrowserToolbar from '@/components/common/MediaBrowserToolbar.vue';
 import MediaBrowserResults from '@/components/common/MediaBrowserResults.vue';
 import SeriesSizeField from '@/components/common/SeriesSizeField.vue';
 import { useEpisodeSummary } from '@/composables/useEpisodeSummary';
-import { fetchTmdbPage, localizedTmdbUrl } from '@/composables/fetchTmdbPage';
+import { localizedTmdbUrl } from '@/composables/fetchTmdbPage';
 
+import { loadOutings, outingsUrl, outingsWindow } from '@/composables/outingsDiscovery';
+
+const discoveryWindow = ref(outingsWindow());
 const store = useFlixStore();
 
 const selectedInstanceData = computed(() => store.selectedInstanceData);
@@ -121,141 +124,34 @@ const { deleteConfirmationDialog, resetDeleteConfirmationDialog, openDeleteConfi
   onConfirm: () => { resetMovieDialog(); resetSerieDialog(); },
 });
 
-function getContent(type: 'movies' | 'series') {
+async function getContent(type: 'movies' | 'series') {
   const read = reads[type].begin();
-  const base_url = import.meta.env.VITE_TMDB_BASE_URL;
-  const api_key = import.meta.env.VITE_TMDB_API_KEY;
-  let url_type = '';
-  let url_request = '';
-
-  if (type == 'movies') {
-    isLoadingMovie.value = true;
-    url_type = 'movie';
-    url_request = 'upcoming';
-  }
-  if (type == 'series') {
-    isLoadingSerie.value = true;
-    url_type = 'tv';
-    url_request = 'on_the_air';
-  }
-
-  return fetchTmdbPage(base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key, { signal: read.signal })
-    .then(async (json_data) => {
-      if (!read.isCurrent()) return;
-
-      let items = [];
-      for (const item of json_data.results) {
-        let tmdbId = null;
-        let tvdbId = null;
-        let alreadyInLibrary = null;
-        let release_date = null;
-        let title = null;
-        let hasFile = null;
-        let status = null;
-        let runTime = null;
-        let quality = null;
-        let relativePath = null;
-        let statistics = null;
-
-        let poster_full = 'https://placehold.co/100x150?text=No+Image&font=roboto';
-        if (item.poster_path) {
-          poster_full = 'https://image.tmdb.org/t/p/w500' + item.poster_path;
-        }
-
-        if (type == 'movies') {
-          release_date = item.release_date;
-          title = item.title;
-        }
-        if (type == 'series') {
-          release_date = item.first_air_date;
-          title = item.name;
-        }
-
-        items.push({
-          tmdbId: item.id,
-          tvdbId: tvdbId,
-          poster: poster_full,
-          title: title,
-          release_date: release_date,
-          overview: item.overview,
-          hasFile: hasFile,
-          status: status,
-          relativePath: relativePath,
-          statistics: statistics
-        });
-      }
-
-      let total_pages = json_data.total_pages || 1;
-      let promises = [];
-
-      for (let page = 2; page <= total_pages; page++) {
-        let url = base_url + '/' + url_type + '/' + url_request + '?api_key=' + api_key + '&page=' + page;
-        promises.push(
-          fetchTmdbPage(url, { signal: read.signal })
-            .then((page_data) => {
-              if (!read.isCurrent()) return;
-
-              for (const item of page_data.results) {
-                let tmdbId = null;
-                let tvdbId = null;
-                let alreadyInLibrary = null;
-                let release_date = null;
-                let title = null;
-                let hasFile = null;
-                let status = null;
-                let relativePath = null;
-                let statistics = null;
-
-                let poster_full = "https://placehold.co/100x150?text=No+Image&font=roboto";
-                if (item.poster_path) {
-                  poster_full = `https://image.tmdb.org/t/p/w500${item.poster_path}`;
-                }
-
-                if (type == 'movies') {
-                  release_date = item.release_date;
-                  title = item.title;
-                }
-                if (type == 'series') {
-                  release_date = item.first_air_date;
-                  title = item.name;
-                }
-
-                items.push({
-                  tmdbId: item.id,
-                  tvdbId: tvdbId,
-                  poster: poster_full,
-                  title: title,
-                  release_date: release_date,
-                  overview: item.overview,
-                  hasFile: hasFile,
-                  status: status,
-                  relativePath: relativePath,
-                  statistics: statistics
-                });
-              }
-            })
-        );
-      }
-
-      return Promise.all(promises).then(() => {
-        if (!read.isCurrent()) return;
-        if (type == 'movies') {
-          movieItems.value = items;
-          checkMovies();
-        }
-        if (type == 'series') {
-          serieItems.value = items;
-          checkSeries();
-        }
-        read.success();
-      });
-    })
-    .catch((error) => {
-      read.fail(error);
-    })
-    .finally(() => {
-      read.finish();
-    });
+  const window = outingsWindow();
+  discoveryWindow.value = window;
+  try {
+    const url = outingsUrl(import.meta.env.VITE_TMDB_BASE_URL, import.meta.env.VITE_TMDB_API_KEY, type, window);
+    const results = await loadOutings(url, type, window, read.signal);
+    if (!read.isCurrent()) return;
+    const items = results.map(item => ({
+      tmdbId: item.id,
+      tvdbId: null,
+      title: (type === 'movies' ? item.title : item.name) ?? '',
+      release_date: type === 'movies' ? item.release_date : item.first_air_date,
+      poster: item.poster_path ? 'https://image.tmdb.org/t/p/w500' + item.poster_path
+        : 'https://placehold.co/100x150?text=No+Image&font=roboto',
+      overview: item.overview,
+      hasFile: null, status: null, relativePath: null, statistics: null,
+    }));
+    if (type === 'movies') {
+      movieItems.value = items;
+      checkMovies();
+    } else {
+      serieItems.value = items;
+      checkSeries();
+    }
+    read.success();
+  } catch (error) { read.fail(error); }
+  finally { read.finish(); }
 }
 
 function getSerieEpisodes(serie_id: number) {
@@ -481,6 +377,7 @@ watch([serviceContext, metadataContext], () => {
       :total-series="reads.series.state.hasData ? total_series : undefined"
     >
     </MediaBrowserToolbar>
+    <p class="text-caption text-medium-emphasis mb-3">{{ t('Releases from {from} to {to}', discoveryWindow) }}</p>
     <ReadFeedback :state="reads[selected_view].state" :label="t('Upcoming media')" @retry="getContent(selected_view)" />
     <ReadFeedback :state="selected_view === 'movies' ? movieLibraryRead : seriesLibraryRead" :label="t('Library status')" @retry="selected_view === 'movies' ? checkMovies() : checkSeries()" />
     <ReadFeedback :state="qualityReads[selected_view].state" :label="t('Quality profiles')" @retry="getQualityProfileList(selected_view)" />

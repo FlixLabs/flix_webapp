@@ -20,7 +20,7 @@ test('Library sheets support Back and Forward without losing search or page', as
 
 for (const view of ['library', 'dashboard', 'outings']) {
   test(`${view} shares a canonical instance-specific link`, async ({ page, mutations }) => {
-    await page.route(/\/upcoming\?/, route => route.fulfill({ json: { results: [{ id: movie.tmdbId, title: movie.title, release_date: '2026-10-20' }], total_pages: 1 } }));
+    await page.route(/\/discover\/movie\?/, route => route.fulfill({ json: { results: [{ id: movie.tmdbId, title: movie.title, release_date: '2026-10-20' }], total_pages: 1 } }));
     await page.goto(`/${view}`);
     if (view === 'dashboard') {
       await page.getByRole('textbox', { name: 'Search', exact: true }).fill('Example');

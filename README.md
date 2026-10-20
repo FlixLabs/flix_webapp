@@ -1,5 +1,20 @@
 # flix_webapp
 
+## Outings
+
+Outings shows recent and upcoming releases, from 30 days ago through 90 days
+ahead (calendar days), ordered by the displayed release date, oldest first.
+Movies use TMDB Discover's regional theatrical dates (wide release, then limited
+release); these are not promises of digital or download availability. Series use
+their first-ever air date: new episodes of older series belong in Calendar, not
+this discovery list. The selected content language and movie release region are
+preserved, in both API and standalone modes.
+
+TMDB pages are fetched with at most four simultaneous requests per media type,
+assembled by page number, deduplicated by TMDB ID and sorted by date then ID.
+Undated and out-of-window entries are excluded. A failed page fails the read
+instead of displaying a misleading partial list. No Flix API update is required.
+
 ## Invited Accounts
 
 With Flix API 2.1.0 or newer, administrators can manage **Users** from the main

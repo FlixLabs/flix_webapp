@@ -145,7 +145,7 @@ test("uses the selected content locale and region for upcoming releases", async 
   mutations,
 }) => {
   const requests: URL[] = [];
-  await page.route("**/upcoming?*", (route) => {
+  await page.route("**/discover/movie?*", (route) => {
     requests.push(new URL(route.request().url()));
     return route.fulfill({ json: { results: [], total_pages: 1 } });
   });

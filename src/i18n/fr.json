@@ -911,5 +911,7 @@
   "Import in progress. Removal is blocked, including forced removal.": "Import en cours. La suppression est bloquée, même forcée.",
   "Import queued. Removal is blocked, including forced removal.": "Import en attente. La suppression est bloquée, même forcée.",
   "Import status unavailable. Removal is blocked, including forced removal.": "Statut de l’import indisponible. La suppression est bloquée, même forcée.",
-  "Radarr could not verify this filename. Confirming requests an import using the movie, quality and languages you selected. The file is not renamed and the import may still fail.": "Radarr n’a pas pu vérifier ce nom de fichier. La confirmation demande un import avec le film, la qualité et les langues sélectionnés. Le fichier n’est pas renommé et l’import peut encore échouer."
+  "Radarr could not verify this filename. Confirming requests an import using the movie, quality and languages you selected. The file is not renamed and the import may still fail.": "Radarr n’a pas pu vérifier ce nom de fichier. La confirmation demande un import avec le film, la qualité et les langues sélectionnés. Le fichier n’est pas renommé et l’import peut encore échouer.",
+  "Releases from {from} to {to}": "Sorties du {from} au {to}",
+  "Too many upcoming media results. Please try again later.": "Trop de résultats de sorties. Réessayez plus tard."
 }

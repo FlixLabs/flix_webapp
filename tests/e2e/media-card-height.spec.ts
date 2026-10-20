@@ -9,8 +9,8 @@ for (const path of ['/outings', '/library']) {
       { ...movie, id: 102, tmdbId: 102, title: longTitle },
     ];
     await page.route(/\/api\/v3\/movie\?/, route => route.fulfill({ json: items }));
-    await page.route(/\/(upcoming|on_the_air)\?/, route => route.fulfill({ json: {
-      results: new URL(route.request().url()).pathname.endsWith('/upcoming')
+    await page.route(/\/discover\/(movie|tv)\?/, route => route.fulfill({ json: {
+      results: new URL(route.request().url()).pathname.endsWith('/movie')
         ? items.map(item => ({ ...item, id: item.tmdbId, release_date: '2026-10-09' })) : [],
       total_pages: 1,
     } }));
