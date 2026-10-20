@@ -4,7 +4,7 @@ import { canManualImport, useManualImport } from '@/composables/useManualImport'
 import { trackedImports } from '@/composables/manualImportTracking';
 import type { MediaInstance } from '@/composables/useMediaService';
 
-const download = { title: 'Movie download', downloadId: 'download-token', outputPath: '/downloads/movie', status: 'completed' };
+const download = { title: 'Movie download', downloadId: 'download-token', outputPath: '/downloads/movie', status: 'completed', trackedDownloadState: 'importBlocked' };
 const movie = { id: 42, title: 'Movie' };
 const series = { id: 7, title: 'Series' };
 const episode = { id: 12, seasonNumber: 1, episodeNumber: 2, title: 'Second' };
@@ -43,23 +43,22 @@ function setup(mediaType: 'movies' | 'series' = 'movies') {
 afterEach(() => { trackedImports.value = []; vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('manual download imports', () => {
-  it.each(['movies', 'series'] as const)('allows %s importPending without an active native command', async type => {
+  it.each(['movies', 'series'] as const)('blocks %s importPending even without an active native command', async type => {
     const { actions, checks, scope } = setup(type);
     checks.mockImplementation(async url => Response.json(new URL(url).pathname.endsWith('/queue')
       ? { totalRecords: 1, records: [{ id: 101, downloadId: download.downloadId, status: 'completed', trackedDownloadState: 'importPending' }] } : []));
     await actions.open(type, { ...download, trackedDownloadState: 'importPending' });
-    expect(actions.files.value).toHaveLength(1);
-    actions.files.value[0]!.selected = true;
-    await actions.review();
-    expect(await actions.submit()).toBe(true);
+    expect(actions.files.value).toEqual([]);
+    expect(actions.error.value).toContain('failed or rejected automatic import');
+    expect(checks).not.toHaveBeenCalled();
     scope.stop();
   });
-  it('still blocks an actual queued command when the queue is importPending', async () => {
+  it('blocks a stale eligible download when its fresh queue state is importPending', async () => {
     const { actions, checks, scope } = setup();
     checks.mockImplementation(async url => Response.json(new URL(url).pathname.endsWith('/queue')
       ? { totalRecords: 1, records: [{ id: 101, downloadId: download.downloadId, status: 'completed', trackedDownloadState: 'importPending' }] }
       : [{ name: 'ManualImport', status: 'queued', body: { files: [{ downloadId: download.downloadId }] } }]));
-    await actions.open('movies', { ...download, trackedDownloadState: 'importPending' });
+    await actions.open('movies', download);
     expect(actions.files.value).toEqual([]);
     expect(actions.error.value).toContain('Import queued');
     scope.stop();
@@ -92,7 +91,7 @@ describe('manual download imports', () => {
     await actions.open('movies', download);
     expect(actions.error.value).toContain('Import status unavailable');
     expect(fetchMock).not.toHaveBeenCalled();
-    expect(canManualImport({ ...download, trackedDownloadState: 'importPending' })).toBe(true);
+    expect(canManualImport({ ...download, trackedDownloadState: 'importPending' })).toBe(false);
     scope.stop();
   });
   it('offers manual continuation only after the exact parser failure, then requires explicit confirmation', async () => {
@@ -221,12 +220,28 @@ describe('manual download imports', () => {
     expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/command'))).toBe(false);
     scope.stop();
   });
-  it('only offers import for completed downloads with a download identifier', () => {
+  it('only offers import after an explicit automatic import failure or rejection', () => {
     expect(canManualImport(download)).toBe(true);
     expect(canManualImport({ ...download, status: 'downloading' })).toBe(false);
     expect(canManualImport({ ...download, downloadId: undefined })).toBe(false);
     expect(canManualImport({ ...download, trackedDownloadState: 'imported' })).toBe(false);
     expect(canManualImport({ ...download, status: 'warning', trackedDownloadState: 'importBlocked' })).toBe(true);
+    expect(canManualImport({ ...download, trackedDownloadState: 'importFailed' })).toBe(true);
+    for (const trackedDownloadState of [undefined, '', 'unknown', 'downloading', 'importPending', 'importing', 'imported']) {
+      expect(canManualImport({ ...download, trackedDownloadState })).toBe(false);
+    }
+  });
+  it.each(['movies', 'series'] as const)('blocks %s submission if automatic import eligibility disappears during review', async type => {
+    const { actions, fetchMock, checks, scope } = setup(type);
+    await actions.open(type, download);
+    actions.files.value[0]!.selected = true;
+    await actions.review();
+    checks.mockResolvedValueOnce(Response.json({ totalRecords: 1, records: [{ id: 101,
+      downloadId: download.downloadId, status: 'completed', trackedDownloadState: 'importPending' }] }));
+    expect(await actions.submit()).toBe(false);
+    expect(actions.error.value).toContain('Import queued');
+    expect(fetchMock.mock.calls.some(([url, init]) => url.endsWith('/command') && init?.method === 'POST')).toBe(false);
+    scope.stop();
   });
   it('inspects the download but never auto-selects files or issues a command', async () => {
     const { actions, fetchMock, scope } = setup();

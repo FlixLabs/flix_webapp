@@ -43,11 +43,8 @@ export interface ImportFile {
 
 export function canManualImport(download: ImportDownload) {
   return typeof download.downloadId === 'string' && !!download.downloadId.trim()
-    && !['importing', 'imported'].includes(download.trackedDownloadState?.toLowerCase() ?? '') && (
-    download.status?.toLowerCase() === 'completed'
-    || ['importpending', 'importblocked', 'importfailed']
-      .includes(download.trackedDownloadState?.toLowerCase() ?? '')
-  );
+    && !['downloading', 'paused'].includes(download.status?.toLowerCase() ?? '')
+    && ['importblocked', 'importfailed'].includes(download.trackedDownloadState?.toLowerCase() ?? '');
 }
 
 export function useManualImport(options: MediaServiceOptions) {
@@ -125,9 +122,7 @@ export function useManualImport(options: MediaServiceOptions) {
       const records = queue.filter(record => typeof record.downloadId === 'string' && record.downloadId.trim().toLowerCase() === id);
       if (!records.length) throw new Error('Download no longer available');
       for (const record of records) {
-        // ImportPending alone is not an active command; it also follows unsuccessful automatic attempts.
-        const reason = String(record.trackedDownloadState).toLowerCase() === 'importpending'
-          ? null : queueImportBlock(record.trackedDownloadState);
+        const reason = queueImportBlock(record.trackedDownloadState);
         if (reason) throw new ImportProtectionError(`${reason}. No new import was requested.`);
         if (!canManualImport({ title: active.download.title, downloadId: id,
           status: typeof record.status === 'string' ? record.status : undefined,
@@ -190,7 +185,7 @@ export function useManualImport(options: MediaServiceOptions) {
     dialog.value = true;
     const config = getConfig(mediaType);
     if (!canManualImport(download) || !config.base_url || !config.api_key) {
-      error.value = 'Manual import requires a completed download and a configured service.';
+      error.value = 'Manual import requires a failed or rejected automatic import and a configured service.';
       return;
     }
     const active = { type: mediaType, download: { ...download }, config: { ...config } };
