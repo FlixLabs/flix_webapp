@@ -13,11 +13,18 @@ for (const locale of ['en-US', 'fr-FR']) {
       await page.getByRole('button', { name: locale === 'fr-FR' ? 'Séries (1)' : 'Series (1)', exact: true }).click();
       await page.locator('.media-card').click();
       const dialog = page.locator('.v-dialog');
-      const body = dialog.locator('.dialog-flex-text');
-      await expect(dialog.locator('.v-expansion-panel')).toHaveCount(2);
-      await body.evaluate(el => { el.scrollTop = el.scrollHeight; });
-      const first = dialog.locator('.v-expansion-panel-title').filter({ hasText: locale === 'fr-FR' ? 'Saison 1' : 'Season 1' });
-      const second = dialog.locator('.v-expansion-panel-title').filter({ hasText: locale === 'fr-FR' ? 'Saison 2' : 'Season 2' });
+      const seasons = dialog.locator('.v-expansion-panel-title').filter({ hasText: locale === 'fr-FR' ? /Saison \d+/ : /Season \d+/ });
+      await expect(seasons).toHaveCount(2);
+      const first = seasons.filter({ hasText: locale === 'fr-FR' ? 'Saison 1' : 'Season 1' });
+      const second = seasons.filter({ hasText: locale === 'fr-FR' ? 'Saison 2' : 'Season 2' });
+      await dialog.evaluate(async el => {
+        await Promise.all(el.getAnimations({ subtree: true })
+          .filter(animation => animation.effect?.getComputedTiming().iterations !== Infinity)
+          .map(animation => animation.finished.catch(() => {})));
+      });
+      await dialog.locator('.dialog-flex-text').evaluate(el => { el.scrollTop = 1; });
+      await expect(first).toBeVisible();
+      await first.scrollIntoViewIfNeeded();
       await expect(first).toContainText(locale === 'fr-FR' ? '2 épisodes' : '2 episodes');
       await expect(first.getByRole('textbox', { name: locale === 'fr-FR' ? 'Taille (Go)' : 'Size (GB)', exact: true })).toHaveValue(locale === 'fr-FR' ? '2,00' : '2.00');
       await expect(second).toContainText(locale === 'fr-FR' ? '1 épisode' : '1 episode');

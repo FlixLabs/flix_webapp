@@ -122,7 +122,7 @@ esac
 
 test('quality is independent from production secrets and image publishing', () => {
   const ci = readFileSync(join(root, '.gitlab-ci.yml'), 'utf8');
-  const quality = ci.split('\nquality:\n')[1].split('\ncreate_release_tag:')[0];
+  const quality = ci.split('\nquality:\n')[1].split('\ne2e:')[0];
   assert.match(quality, /sh scripts\/build-quality\.sh/);
   assert.doesNotMatch(quality, /extends:|VITE_|docker login|docker push/);
   const dockerfile = readFileSync(join(root, 'Dockerfile.quality'), 'utf8');

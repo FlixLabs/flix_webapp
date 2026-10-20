@@ -1,0 +1,12 @@
+FROM node:24-bookworm-slim
+
+WORKDIR /app
+
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile
+RUN yarn playwright install --with-deps chromium && rm -rf /var/lib/apt/lists/*
+
+COPY . .
+RUN mkdir -p playwright-report test-results
+
+CMD ["yarn", "test:e2e"]

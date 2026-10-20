@@ -7,3 +7,5 @@ dist
 repo-mirror
 deploy-agent/*
 !deploy-agent/deploy.sh
+playwright-report
+test-results

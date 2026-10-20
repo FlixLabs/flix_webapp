@@ -58,7 +58,8 @@ test('refresh reloads only the selected service and view', async ({ page, mutati
   const reads: string[] = [];
   page.on('request', request => {
     const url = new URL(request.url());
-    if (/\/api\/v3\/(queue|history)$/.test(url.pathname)) reads.push(`${url.hostname}${url.pathname}`);
+    // Per-download source lookups are not queue/history refreshes.
+    if (/\/api\/v3\/(queue|history)$/.test(url.pathname) && !url.searchParams.has('downloadId')) reads.push(`${url.hostname}${url.pathname}`);
   });
   await page.goto('/downloads');
   await expect.poll(() => reads.length).toBe(4);
