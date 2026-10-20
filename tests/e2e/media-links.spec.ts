@@ -98,10 +98,19 @@ test('successful copying writes the canonical link to the clipboard', async ({ p
 });
 
 test('signing in returns to the requested media sheet', async ({ page, mutations }) => {
+  let signedIn = false;
+  let verifications = 0;
   await page.addInitScript(() => sessionStorage.removeItem('flix_webapp_is_authenticated'));
-  await page.route('**/session', route => route.fulfill({ json: route.request().method() === 'POST'
-    ? { enabled: true, authenticated: true, token: 'a'.repeat(64), expiresIn: 2592000 }
-    : { enabled: true, authenticated: false } }));
+  await page.route('**/session', route => {
+    if (route.request().method() === 'POST') {
+      expect(route.request().postDataJSON()).toEqual({ username: 'test-user', password: 'test-password' });
+      signedIn = true;
+      return route.fulfill({ json: { enabled: true, authenticated: true, role: 'admin', token: 'a'.repeat(64), expiresIn: 2592000 } });
+    }
+    const authenticated = signedIn && route.request().headers().authorization === `Bearer ${'a'.repeat(64)}`;
+    if (authenticated) verifications++;
+    return route.fulfill({ json: { enabled: true, authenticated, ...(authenticated ? { role: 'admin' } : {}) } });
+  });
   await page.goto('/library?media=movies&id=1&instance=Test%20instance');
   await expect(page).toHaveURL(/\/login\?redirect=/);
   await page.getByRole('textbox', { name: 'Username', exact: true }).fill('test-user');
@@ -109,5 +118,32 @@ test('signing in returns to the requested media sheet', async ({ page, mutations
   await page.getByRole('button', { name: 'Sign In', exact: true }).click();
   await expect(page).toHaveURL(/\/library\?media=movies&id=1/);
   await expect(page.locator('.v-dialog .title-line')).toHaveText(movie.title);
+  expect(verifications).toBeGreaterThan(0);
+  const beforeReload = verifications;
+  await page.reload();
+  await expect(page.locator('.v-dialog .title-line')).toHaveText(movie.title);
+  expect(verifications).toBeGreaterThan(beforeReload);
+  expect(mutations).toEqual([]);
+});
+
+test('rejects a sign-in session the API cannot revalidate', async ({ page, mutations }) => {
+  let rejectedVerifications = 0;
+  await page.addInitScript(() => sessionStorage.removeItem('flix_webapp_is_authenticated'));
+  await page.route('**/session', route => {
+    if (route.request().method() === 'POST') return route.fulfill({ json: {
+      enabled: true, authenticated: true, role: 'admin', token: 'a'.repeat(64), expiresIn: 2592000,
+    } });
+    if (route.request().headers().authorization) rejectedVerifications++;
+    return route.fulfill({ json: { enabled: true, authenticated: false } });
+  });
+  await page.goto('/library?media=movies&id=1&instance=Test%20instance');
+  await page.getByRole('textbox', { name: 'Username', exact: true }).fill('test-user');
+  await page.getByLabel('Password', { exact: true }).fill('test-password');
+  await page.getByRole('button', { name: 'Sign In', exact: true }).click();
+  await expect.poll(() => rejectedVerifications).toBeGreaterThan(0);
+  await expect(page).toHaveURL(/\/login\?redirect=/);
+  await expect(page.getByRole('textbox', { name: 'Username', exact: true })).toBeVisible();
+  await expect(page.locator('.v-dialog')).toHaveCount(0);
+  expect(await page.evaluate(() => Object.keys(localStorage).filter(key => key.startsWith('flix-session:')))).toEqual([]);
   expect(mutations).toEqual([]);
 });
