@@ -112,7 +112,7 @@ test('collection posters retain portrait proportions and Close matches the movie
   const ratio = await card.locator('.v-img').evaluate(el => { const r = el.getBoundingClientRect(); return r.width / r.height; });
   expect(ratio).toBeCloseTo(2 / 3, 2);
   const close = sheet.getByRole('button', { name: 'Close collection', exact: true });
-  await expect(close).toHaveClass(/text-secondary/);
+  await expect(close).toHaveClass(/text-on-surface/);
   expect(await close.evaluate(el => !!el.closest('.v-card-actions'))).toBe(true);
   const filter = await sheet.locator('.v-overlay__scrim').evaluate(el => getComputedStyle(el).backdropFilter);
   expect(filter).toBe('blur(5px)');
@@ -120,7 +120,7 @@ test('collection posters retain portrait proportions and Close matches the movie
   await page.getByRole('button', { name: 'Movies (1)', exact: true }).click();
   await page.getByRole('button', { name: `Open ${movie.title}`, exact: true }).click();
   const media = page.getByRole('dialog', { name: `Movie: ${movie.title}`, exact: true });
-  await expect(media.getByRole('button', { name: 'Close', exact: true })).toHaveClass(/text-secondary/);
+  await expect(media.getByRole('button', { name: 'Close', exact: true })).toHaveClass(/text-on-surface/);
   expect(mutations).toEqual([]);
 });
 

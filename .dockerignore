@@ -6,3 +6,5 @@ dist
 !.env.dist
 repo-mirror
 deploy-agent
+playwright-report
+test-results

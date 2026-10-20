@@ -497,9 +497,20 @@ has its own version; the webapp and API do not need matching versions.
   without production variables or registry authentication.
   The quality script temporarily applies its ignore file at the context root
   for compatibility with both BuildKit and the legacy Docker builder.
+- `e2e` follows successful `quality` validation as a separate blocking job on
+  merge requests, default-branch commits and release tags. It runs all desktop/mobile Chromium browser tests
+  in Docker on the Shell runner, with mocked services and no production secrets.
+  Chromium and its Linux dependencies are installed from the locked Playwright
+  version. CI uses two workers, two retries, and a 30-minute test-run limit.
+  HTML reports, failure screenshots/traces and GitLab JUnit results are retained
+  for seven days, including on failure. Reports are copied out of the container,
+  not bind-mounted through a possibly remote Docker daemon. No runner-side Node
+  or browser installation and no extra CI variables are required.
 - After successful default-branch validation, `create_release_tag` creates an
   annotated `vX.Y.Z` tag and triggers its pipeline. An existing release tag is
   never moved; bump `package.json` to release another version.
+  Both `quality` and `e2e` must pass before tagging or building a release image.
+  Release/build jobs wait for E2E without downloading the browser reports.
 - Tag pipelines build the production image with the configured variables, publish
   it as `vX.Y.Z` and `latest`, then deploy the exact version using the `X-Deploy-Version` webhook header.
 - Mirrors remain independent and run on the default branch and release tags.
