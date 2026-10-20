@@ -36,25 +36,35 @@ test('expires a hung library request and retries it without a hard refresh', asy
   expect(mutations).toEqual([]);
 });
 
-test('marks stale downloads and blocks changes until an explicit read succeeds', async ({ page, mutations }) => {
-  let calls = 0; let recovered = false;
-  await page.route(/\/api\/v3\/queue\?/, route => {
-    if (new URL(route.request().url()).hostname !== 'radarr.test') return route.fallback();
-    calls++;
-    if (calls === 1) return route.fallback();
-    return recovered ? route.fulfill({ json: { records: [{ id: 101, title: 'Recovered download', size: 1e9, sizeleft: 0, status: 'completed', languages: [] }] } }) : route.fulfill({ status: 503, json: {} });
+for (const trackedDownloadState of ['importBlocked', undefined]) {
+  test(`stale downloads recover with ${trackedDownloadState ? 'verified' : 'unknown'} import state`, async ({ page, mutations }) => {
+    let calls = 0; let recovered = false;
+    await page.route(/\/api\/v3\/queue\?/, route => {
+      if (new URL(route.request().url()).hostname !== 'radarr.test') return route.fallback();
+      calls++;
+      if (calls === 1) return route.fallback();
+      return recovered ? route.fulfill({ json: { totalRecords: 1, records: [{
+        id: 101, downloadId: 'test-download', title: 'Recovered download', size: 1e9,
+        sizeleft: 0, status: 'completed', trackedDownloadState, languages: [],
+      }] } }) : route.fulfill({ status: 503, json: {} });
+    });
+    await page.goto('/downloads');
+    await expect(page.getByRole('button', { name: 'Remove Download example', exact: true })).toBeEnabled();
+    await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+    await expect(page.getByText('Showing last successful data.', { exact: false })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Remove Download example', exact: true })).toBeDisabled();
+    recovered = true;
+    await page.getByRole('button', { name: 'Retry Movie downloads', exact: true }).click();
+    const remove = page.getByRole('button', { name: 'Remove Recovered download', exact: true });
+    if (trackedDownloadState) await expect(remove).toBeEnabled();
+    else {
+      await expect(remove).toBeDisabled();
+      await expect(page.getByText('Import status unavailable', { exact: true })).toBeVisible();
+    }
+    await expect(page.getByText('Showing last successful data.', { exact: false })).not.toBeVisible();
+    expect(mutations).toEqual([]);
   });
-  await page.goto('/downloads');
-  await expect(page.getByRole('button', { name: 'Remove Download example', exact: true })).toBeEnabled();
-  await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-  await expect(page.getByText('Showing last successful data.', { exact: false })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Remove Download example', exact: true })).toBeDisabled();
-  recovered = true;
-  await page.getByRole('button', { name: 'Retry Movie downloads', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Remove Recovered download', exact: true })).toBeEnabled();
-  await expect(page.getByText('Showing last successful data.', { exact: false })).not.toBeVisible();
-  expect(mutations).toEqual([]);
-});
+}
 
 test('distinguishes an unavailable history from a successful empty history', async ({ page, mutations }) => {
   let available = false;
