@@ -3,7 +3,7 @@ import { t, translatedChoices, decimal } from '@/i18n';
 import { useLocalizedMedia, useLocalizedEpisode, localizedEpisodeTitle } from '@/composables/useLocalizedMedia';
 import { computed, ref, shallowRef, watch } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
-import { useReleaseSearch, releaseSourceUrl, type Release } from '@/composables/useReleaseSearch';
+import { useReleaseSearch, releaseSourceUrl, canAssociateMovieRelease, type Release } from '@/composables/useReleaseSearch';
 import type { MediaActionItem } from '@/composables/useMediaActions';
 import type { MediaType } from '@/composables/useMediaService';
 import { useDialogActivator, preserveNestedDialogFocus } from '@/composables/useDialogActivator';
@@ -61,7 +61,7 @@ watch(selectedRelease, release => {
 }, { flush: 'sync' });
 
 async function download() {
-  if (selectedRelease.value && await actions.grab(selectedRelease.value)) {
+  if (selectedRelease.value && await actions.grab(selectedRelease.value, canAssociateMovieRelease(props.mediaType, selectedRelease.value))) {
     selectedRelease.value = null;
     model.value = false;
     emit('grabbed');
@@ -117,8 +117,11 @@ async function download() {
             <span v-else :class="release.rejected || release.temporarilyRejected ? 'text-warning' : 'text-success'">{{ release.rejected || release.temporarilyRejected ? t('Rejected') : t('Accepted') }}</span>
           </template>
           <template #[slots.actions]="{ item: release }">
-            <v-btn color="primary" variant="text" size="small" prepend-icon="mdi-download" :disabled="isSearching || isGrabbing || release.downloadAllowed === false" :aria-label="t('Choose {p0}', { p0: release.title })" @click="selectedRelease = release">{{ t("Choose") }}</v-btn>
-            <div v-if="release.downloadAllowed === false" class="text-caption text-warning">{{ t("Cannot be downloaded") }}</div>
+            <v-btn v-if="canAssociateMovieRelease(mediaType, release)" color="primary" variant="text" size="small" prepend-icon="mdi-link-variant" class="release-associate" :disabled="isSearching || isGrabbing" :aria-label="t('Associate {p0} with this movie', { p0: release.title })" @click="selectedRelease = release">{{ t('Associate with this movie') }}</v-btn>
+            <template v-else>
+              <v-btn color="primary" variant="text" size="small" prepend-icon="mdi-download" :disabled="isSearching || isGrabbing || release.downloadAllowed === false" :aria-label="t('Choose {p0}', { p0: release.title })" @click="selectedRelease = release">{{ t("Choose") }}</v-btn>
+              <div v-if="release.downloadAllowed === false" class="text-caption text-warning">{{ t("Cannot be downloaded") }}</div>
+            </template>
           </template>
         </v-data-table>
       </v-card-text>
@@ -130,14 +133,17 @@ async function download() {
       <v-card-title>{{ t("Download this release?") }}</v-card-title>
       <v-card-text>
         <p class="text-break mb-4">{{ selectedRelease?.title }}</p>
-        <v-alert v-if="selectedRelease?.rejected || selectedRelease?.temporarilyRejected || selectedRelease?.rejections?.length" type="warning" class="mb-4"> {{ t("This release was rejected by") }} {{ mediaType === 'movies' ? t("Radarr") : t("Sonarr") }}{{ t(". Downloading it manually may bypass your quality preferences.") }} <ul class="pl-4 mt-2"><li v-for="reason in selectedRelease?.rejections" :key="reason">{{ reason }}</li></ul>
+        <v-alert v-if="selectedRelease && canAssociateMovieRelease(mediaType, selectedRelease)" type="warning" variant="tonal" class="mb-4">
+          {{ t('Radarr could not identify this release. Confirm that it belongs to {p0}. The original release title is preserved; manual import may be required after downloading.', { p0: `${localizedItem?.title ?? item?.title ?? ''}${item?.year ? ` (${item.year})` : ''}` }) }}
+        </v-alert>
+        <v-alert v-if="selectedRelease && !canAssociateMovieRelease(mediaType, selectedRelease) && (selectedRelease.rejected || selectedRelease.temporarilyRejected || selectedRelease.rejections?.length)" type="warning" class="mb-4"> {{ t("This release was rejected by") }} {{ mediaType === 'movies' ? t("Radarr") : t("Sonarr") }}{{ t(". Downloading it manually may bypass your quality preferences.") }} <ul class="pl-4 mt-2"><li v-for="reason in selectedRelease?.rejections" :key="reason">{{ reason }}</li></ul>
         </v-alert>
         <v-alert v-if="error" type="error">{{ t(error) }}</v-alert>
       </v-card-text>
       <v-card-actions>
         <v-spacer />
         <v-btn color="on-surface" ref="cancelButton" :disabled="isGrabbing" @click="selectedRelease = null">{{ t("Cancel") }}</v-btn>
-        <v-btn color="primary" :loading="isGrabbing" @click="download">{{ t("Download") }}</v-btn>
+        <v-btn color="primary" :loading="isGrabbing" @click="download">{{ selectedRelease && canAssociateMovieRelease(mediaType, selectedRelease) ? t('Associate and download') : t('Download') }}</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -149,4 +155,6 @@ async function download() {
 }
 .release-source { text-decoration: none; }
 .release-source:hover { text-decoration: underline; }
+.release-associate { max-width: 100%; height: auto; min-height: 32px; }
+.release-associate :deep(.v-btn__content) { white-space: normal; overflow-wrap: anywhere; padding-block: 6px; }
 </style>

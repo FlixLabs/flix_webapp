@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { effectScope, ref } from 'vue';
-import { useReleaseSearch, releaseSourceUrl, type Release } from '@/composables/useReleaseSearch';
+import { useReleaseSearch, releaseSourceUrl, canAssociateMovieRelease, type Release } from '@/composables/useReleaseSearch';
 import type { MediaInstance } from '@/composables/useMediaService';
 
 const candidate: Release = { guid: 'release-guid', indexerId: 7, title: 'Selected release', downloadAllowed: true };
@@ -23,6 +23,36 @@ function createOptions() {
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('release source links', () => {
+  it('limits explicit association to movies rejected only for parsing', () => {
+    const release = { ...candidate, downloadAllowed: false, rejections: ['Unable to parse release'] };
+    expect(canAssociateMovieRelease('movies', release)).toBe(true);
+    expect(canAssociateMovieRelease('series', release)).toBe(false);
+    for (const rejections of [[], ['Unknown Movie'], ['Unable to parse release', 'Other restriction']]) {
+      expect(canAssociateMovieRelease('movies', { ...release, rejections })).toBe(false);
+    }
+  });
+  it('requires explicit association and sends the selected movie ID without rewriting the cached release', async () => {
+    const release = { ...candidate, title: "Vol.au-dessus.d'un.nid.de.coucou.MULTI.1080p.AC3.x264-mHDgz", downloadAllowed: false, rejections: ['Unable to parse release'] };
+    const fetchMock = vi.fn().mockResolvedValueOnce(Response.json([release])).mockResolvedValueOnce(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const actions = useReleaseSearch(createOptions());
+    await actions.open('movies', { id: 42, title: "One Flew Over the Cuckoo's Nest" });
+    expect(await actions.grab(release)).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(await actions.grab(release, true)).toBe(true);
+    expect(JSON.parse(fetchMock.mock.calls[1]![1].body)).toEqual({ guid: release.guid, indexerId: 7, movieId: 42 });
+    expect(actions.releases.value[0]!.title).toBe(release.title);
+  });
+  it('does not trust a caller-modified rejection to bypass cached restrictions', async () => {
+    const release = { ...candidate, downloadAllowed: false, rejections: ['Other restriction'] };
+    const fetchMock = vi.fn().mockResolvedValue(Response.json([release]));
+    vi.stubGlobal('fetch', fetchMock);
+    const actions = useReleaseSearch(createOptions());
+    await actions.open('movies', { id: 42, title: 'Movie' });
+    expect(await actions.grab({ ...release, rejections: ['Unable to parse release'] }, true)).toBe(false);
+    expect(await actions.grab({ ...release, downloadAllowed: true })).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
   it.each(['https://indexer.test/details/42?id=42#comments', 'http://192.168.1.10:8080/details/42'])('accepts absolute source pages: %s', infoUrl => {
     expect(releaseSourceUrl({ infoUrl })).toBe(infoUrl);
   });

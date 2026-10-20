@@ -32,6 +32,11 @@ export function releaseSourceUrl(release: Pick<Release, 'infoUrl'>): string | un
   } catch { /* Indexers may omit or return an invalid details URL. */ }
 }
 
+export function canAssociateMovieRelease(type: MediaType, release: Release): boolean {
+  return type === 'movies' && release.downloadAllowed === false && release.rejections?.length === 1
+    && release.rejections[0] === 'Unable to parse release';
+}
+
 interface Episode {
   id: number;
   seasonNumber: number;
@@ -177,10 +182,13 @@ export function useReleaseSearch(options: MediaServiceOptions) {
     if (!isGrabbing.value) grabError.value = '';
   }
 
-  async function grab(release: Release): Promise<boolean> {
+  async function grab(release: Release, associateMovie = false): Promise<boolean> {
     const active = context;
     if (isGrabbing.value || !active || !validContext(active)) return false;
-    if (isSearching.value || !releases.value.some(r => r.guid === release.guid && r.indexerId === release.indexerId) || !release.guid || !Number.isInteger(release.indexerId) || release.indexerId <= 0 || release.downloadAllowed === false) {
+    const cached = releases.value.find(r => r.guid === release.guid && r.indexerId === release.indexerId);
+    if (isSearching.value || !cached || !release.guid || !Number.isInteger(release.indexerId) || release.indexerId <= 0
+      || (cached.downloadAllowed === false && !(associateMovie && canAssociateMovieRelease(active.type, cached)))
+      || (associateMovie && !canAssociateMovieRelease(active.type, cached))) {
       grabError.value = 'This release cannot be downloaded. Please search again.';
       return false;
     }
