@@ -4,9 +4,9 @@ WORKDIR /app
 
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
-RUN yarn playwright install --with-deps chromium && rm -rf /var/lib/apt/lists/*
+RUN yarn playwright install --with-deps --only-shell chromium && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 RUN mkdir -p playwright-report test-results
 
-CMD ["yarn", "test:e2e"]
+CMD ["node", "scripts/run-e2e-tests.mjs"]

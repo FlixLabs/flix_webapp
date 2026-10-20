@@ -27,6 +27,8 @@ test('movie details display the full synopsis and metadata without another reque
   await expect(page.getByRole('textbox', { name: 'Search', exact: true })).toHaveValue('Example');
   await row.getByRole('button', { name: 'Details for Example movie', exact: true }).press('Enter');
   await expect(dialog).toBeVisible();
+  // Visibility precedes Vuetify's after-enter focus and overlay-stack readiness.
+  await expect.poll(() => dialog.evaluate(el => el.contains(document.activeElement))).toBe(true);
   await page.keyboard.press('Escape');
   await expect(dialog).not.toBeVisible();
   await expect(row.getByRole('button', { name: 'Details for Example movie', exact: true })).toBeFocused();

@@ -4,6 +4,17 @@ set -eu
 id="${CI_JOB_ID:-local-$$}"
 image="flix-webapp-e2e:$id"
 container="flix-webapp-e2e-$id"
+scope=full
+changed_files=''
+if [ "${CI_PIPELINE_SOURCE:-}" = merge_request_event ]; then
+  base="${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}"
+  if [ -n "$base" ] && git cat-file -e "$base^{commit}" 2>/dev/null &&
+     changed_files=$(git -c core.quotePath=false diff --no-renames --name-only "$base" HEAD); then
+    scope=changed
+  else
+    echo "MR diff unavailable; running the full E2E suite rather than skipping coverage."
+  fi
+fi
 
 cleanup() {
   status=$?
@@ -24,5 +35,6 @@ trap 'exit 130' INT
 trap 'exit 143' HUP TERM
 
 docker build -f Dockerfile.e2e -t "$image" .
-# Copy reports back through Docker: runner and daemon may not share host paths.
-docker run --name "$container" --init --shm-size=1g --env CI=true "$image"
+# Only non-secret selection data enters the test container.
+docker run --name "$container" --init --shm-size=1g --env CI=true \
+  --env "FLIX_E2E_SCOPE=$scope" --env "FLIX_E2E_CHANGED_FILES=$changed_files" "$image"

@@ -14,6 +14,13 @@ function fixture(t) {
   mkdirSync(join(dir, 'bin'));
   copyFileSync(join(root, 'scripts/run-e2e.sh'), join(dir, 'scripts/run-e2e.sh'));
   writeFileSync(join(dir, '.dockerignore'), '.env\n');
+  writeFileSync(join(dir, 'bin/git'), [
+    '#!/bin/sh',
+    'if [ "$1" = cat-file ]; then exit "$DIFF_AVAILABLE"; fi',
+    'printf "%s\\n" "$TEST_CHANGED_FILES"',
+    'exit "$DIFF_EXIT"',
+    '',
+  ].join('\n'), { mode: 0o755 });
   writeFileSync(join(dir, 'bin/docker'), [
     '#!/bin/sh',
     'printf "%s\\n" "$*" >> docker.log',
@@ -34,7 +41,8 @@ function fixture(t) {
 function run(dir, overrides = {}) {
   return spawnSync('sh', ['scripts/run-e2e.sh'], { cwd: dir, encoding: 'utf8', env: {
     ...process.env, PATH: dir + '/bin:' + process.env.PATH, CI_JOB_ID: '1234',
-    BUILD_EXIT: '0', TEST_EXIT: '0', COPY_EXIT: '0', ...overrides,
+    BUILD_EXIT: '0', TEST_EXIT: '0', COPY_EXIT: '0', DIFF_AVAILABLE: '0', DIFF_EXIT: '0',
+    CI_PIPELINE_SOURCE: '', CI_MERGE_REQUEST_DIFF_BASE_SHA: '', TEST_CHANGED_FILES: '', ...overrides,
   } });
 }
 
@@ -45,7 +53,8 @@ for (const status of [0, 1, 137]) {
     assert.equal(result.status, status, result.stderr);
     const log = readFileSync(join(dir, 'docker.log'), 'utf8');
     assert.ok(log.includes('build -f Dockerfile.e2e -t flix-webapp-e2e:1234 .'));
-    assert.ok(log.includes('run --name flix-webapp-e2e-1234 --init --shm-size=1g --env CI=true flix-webapp-e2e:1234'));
+    assert.ok(log.includes('run --name flix-webapp-e2e-1234 --init --shm-size=1g --env CI=true'));
+    assert.ok(log.includes('--env FLIX_E2E_SCOPE=full'));
     assert.doesNotMatch(log, /--rm|--volume|--privileged|--env-file|VITE_|REGISTRY_|TOKEN|PASSWORD/);
     assert.ok(log.includes('cp flix-webapp-e2e-1234:/app/playwright-report/. playwright-report/'));
     assert.ok(log.includes('cp flix-webapp-e2e-1234:/app/test-results/. test-results/'));
@@ -70,30 +79,48 @@ test('E2E runner fails if reports cannot be extracted and preserves a test failu
   }
 });
 
-test('E2E gates releases and always publishes HTML, traces and JUnit without production secrets', () => {
+test('MR diff is passed as data, with full coverage if its base or diff is unavailable', t => {
+  const dir = fixture(t);
+  const env = { CI_PIPELINE_SOURCE: 'merge_request_event', CI_MERGE_REQUEST_DIFF_BASE_SHA: 'a'.repeat(40),
+    TEST_CHANGED_FILES: 'src/views/OutingsView.vue\ntests/e2e/dashboard-details.spec.ts' };
+  assert.equal(run(dir, env).status, 0);
+  assert.match(readFileSync(join(dir, 'docker.log'), 'utf8'), /FLIX_E2E_SCOPE=changed/);
+  assert.ok(readFileSync(join(dir, 'docker.log'), 'utf8').includes(env.TEST_CHANGED_FILES));
+  for (const overrides of [{ CI_MERGE_REQUEST_DIFF_BASE_SHA: '' }, { DIFF_AVAILABLE: '1' }, { DIFF_EXIT: '1' }]) {
+    writeFileSync(join(dir, 'docker.log'), '');
+    assert.equal(run(dir, { ...env, ...overrides }).status, 0);
+    assert.match(readFileSync(join(dir, 'docker.log'), 'utf8'), /FLIX_E2E_SCOPE=full/);
+  }
+});
+
+test('E2E gates tag builds without duplicating master validation and exports bounded reports', () => {
   const ci = readFileSync(join(root, '.gitlab-ci.yml'), 'utf8');
   const e2e = ci.split('\ne2e:\n')[1].split('\ncreate_release_tag:')[0];
   assert.match(e2e, /stage: quality/);
-  assert.ok(e2e.includes('needs: [quality]'));
+  assert.ok(e2e.includes('needs: []'));
   assert.ok(e2e.includes('sh scripts/run-e2e.sh'));
   assert.match(e2e, /when: always/);
   assert.match(e2e, /expire_in: 7 days/);
   assert.ok(e2e.includes('playwright-report/'));
   assert.ok(e2e.includes('junit: test-results/junit.xml'));
   assert.match(e2e, /merge_request_event/);
-  assert.match(e2e, /CI_DEFAULT_BRANCH/);
+  assert.doesNotMatch(e2e, /CI_DEFAULT_BRANCH/);
   assert.match(e2e, /CI_COMMIT_TAG/);
   assert.doesNotMatch(e2e, /allow_failure: true|when: manual|VITE_|docker login|docker push/);
-  for (const job of ['create_release_tag', 'build']) {
-    const section = ci.split('\n' + job + ':\n')[1].split(/\n\S/)[0];
-    assert.match(section, /job: quality/);
-    assert.match(section, /job: e2e/);
-    assert.equal(section.match(/artifacts: false/g)?.length, 2);
-  }
+  assert.ok(e2e.includes('test-results/.playwright-artifacts-*/**/*'));
+  const quality = ci.split('\nquality:\n')[1].split('\ne2e:')[0];
+  assert.doesNotMatch(quality, /CI_DEFAULT_BRANCH/);
+  const tag = ci.split('\ncreate_release_tag:\n')[1].split('\nbuild:')[0];
+  assert.match(tag, /needs: \[\]/);
+  assert.doesNotMatch(tag, /job: quality|job: e2e/);
+  const build = ci.split('\nbuild:\n')[1].split('\ndeploy:')[0];
+  assert.match(build, /job: quality/);
+  assert.match(build, /job: e2e/);
+  assert.equal(build.match(/artifacts: false/g)?.length, 2);
   const dockerfile = readFileSync(join(root, 'Dockerfile.e2e'), 'utf8');
   assert.match(dockerfile, /yarn install --frozen-lockfile/);
-  assert.match(dockerfile, /yarn playwright install --with-deps chromium/);
-  assert.ok(dockerfile.includes('CMD ["yarn", "test:e2e"]'));
+  assert.match(dockerfile, /yarn playwright install --with-deps --only-shell chromium/);
+  assert.ok(dockerfile.includes('CMD ["node", "scripts/run-e2e-tests.mjs"]'));
   assert.doesNotMatch(dockerfile, /ARG VITE_|ENV VITE_|COPY .*\.env/);
   const config = readFileSync(join(root, 'playwright.config.ts'), 'utf8');
   assert.ok(config.includes('forbidOnly: !!process.env.CI'));

@@ -9,14 +9,14 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   workers: process.env.CI ? 2 : undefined,
-  globalTimeout: process.env.CI ? 30 * 60 * 1000 : undefined,
-  retries: process.env.CI ? 2 : 0,
+  globalTimeout: process.env.CI ? (process.env.FLIX_E2E_SCOPE === 'changed' ? 15 : 45) * 60 * 1000 : undefined,
+  retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI
     ? [['list'], ['html', { open: 'never' }], ['junit', { outputFile: 'test-results/junit.xml' }]]
     : [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: `http://127.0.0.1:${port}`,
-    trace: 'retain-on-failure',
+    trace: 'retain-on-first-failure',
     screenshot: 'only-on-failure',
     launchOptions: process.env.PW_BROWSER_PATH ? { executablePath: process.env.PW_BROWSER_PATH } : {},
   },
