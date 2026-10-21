@@ -3,7 +3,14 @@ import { readApiJson, requireList, requireObject } from './apiResponse';
 import { releaseSourceUrl } from './useReleaseSearch';
 import { useMediaService, type MediaServiceOptions, type MediaType } from './useMediaService';
 
-export interface DownloadSourceRecord { downloadId?: unknown; infoUrl?: unknown; data?: unknown }
+export interface DownloadSourceRecord { downloadId?: unknown; infoUrl?: unknown; data?: unknown; indexer?: unknown }
+export interface DownloadSource { url?: string; indexer?: string }
+
+export function downloadSourceIndexer(record: DownloadSourceRecord): string | undefined {
+  const data = record.data && typeof record.data === 'object' ? record.data as Record<string, unknown> : {};
+  const value = Object.entries(data).find(([key]) => key.toLowerCase() === 'indexer')?.[1];
+  return [record.indexer, value].find(value => typeof value === 'string' && value.trim())?.toString().trim();
+}
 
 export function downloadSourceUrl(record: DownloadSourceRecord): string | undefined {
   const data = record.data && typeof record.data === 'object' ? record.data as Record<string, unknown> : {};
@@ -14,7 +21,7 @@ export function downloadSourceUrl(record: DownloadSourceRecord): string | undefi
 
 export function useDownloadSourceLinks(options: MediaServiceOptions) {
   const { getConfig, serviceContext } = useMediaService(options);
-  const cache = new Map<string, { expires: number; result: Promise<string | undefined> }>();
+  const cache = new Map<string, { expires: number; result: Promise<DownloadSource | undefined> }>();
   const controllers = new Set<AbortController>();
   function reset() {
     controllers.forEach(controller => controller.abort());
@@ -24,9 +31,9 @@ export function useDownloadSourceLinks(options: MediaServiceOptions) {
   watch(serviceContext, reset, { flush: 'sync' });
   onScopeDispose(reset);
 
-  function resolve(type: MediaType, record: DownloadSourceRecord): Promise<string | undefined> {
+  function resolveInfo(type: MediaType, record: DownloadSourceRecord): Promise<DownloadSource | undefined> {
     const direct = downloadSourceUrl(record);
-    if (direct) return Promise.resolve(direct);
+    if (direct) return Promise.resolve({ url: direct, indexer: downloadSourceIndexer(record) });
     const id = typeof record.downloadId === 'string' ? record.downloadId.trim() : '';
     const config = getConfig(type);
     if (!id || !config.base_url || !config.api_key) return Promise.resolve(undefined);
@@ -37,7 +44,7 @@ export function useDownloadSourceLinks(options: MediaServiceOptions) {
     controllers.add(controller);
     const timeout = setTimeout(() => controller.abort(), 15000);
     const params = new URLSearchParams({ downloadId: id, eventType: '1', page: '1', pageSize: '20' });
-    const entry = { expires: Date.now() + 60000, result: Promise.resolve<string | undefined>(undefined) };
+    const entry = { expires: Date.now() + 60000, result: Promise.resolve<DownloadSource | undefined>(undefined) };
     entry.result = (async () => {
       try {
         const response = await fetch(`${config.base_url}/api/v3/history?${params}`, {
@@ -50,7 +57,8 @@ export function useDownloadSourceLinks(options: MediaServiceOptions) {
         for (const item of records) {
           if (item.downloadId !== id || item.eventType !== 'grabbed') continue;
           const url = downloadSourceUrl(item);
-          if (url) return url;
+          const indexer = downloadSourceIndexer(item);
+          if (url || indexer) return { url, indexer };
         }
       } catch {
         // A missing source must not prevent reading or managing the download.
@@ -64,5 +72,8 @@ export function useDownloadSourceLinks(options: MediaServiceOptions) {
     if (cache.size > 200) cache.delete(cache.keys().next().value!);
     return entry.result;
   }
-  return { resolve };
+  async function resolve(type: MediaType, record: DownloadSourceRecord) {
+    return (await resolveInfo(type, record))?.url;
+  }
+  return { resolve, resolveInfo };
 }

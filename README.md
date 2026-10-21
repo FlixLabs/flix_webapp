@@ -1,5 +1,14 @@
 # flix_webapp
 
+## Download Origin
+
+Downloads and history display the indexer next to each release, without expanding
+its technical details. Source links remain available when supplied by the service.
+Missing queue metadata is resolved through the exact Radarr/Sonarr download ID,
+never by matching titles. If only a source URL is available, its hostname is shown;
+otherwise the origin is marked unknown. Lookup failures do not block download
+actions. No Flix API update is required; API and standalone modes are supported.
+
 ## Outings
 
 Outings shows recent and upcoming releases, from 30 days ago through 90 days
