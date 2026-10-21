@@ -1,4 +1,15 @@
 import { test, expect, movie, series } from './fixtures';
+import { closeWithoutCollapsing } from './dialog-transition';
+
+test('the calendar day window retains its events through the entire closing transition', async ({ page, mutations }) => {
+  await page.goto('/calendar');
+  await page.getByRole('button', { name: 'Calendar', exact: true }).click();
+  await page.getByText(/\d+ more/).first().click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toContainText('Calendar movie 7');
+  await closeWithoutCollapsing(dialog);
+  expect(mutations).toEqual([]);
+});
 import { calendarRange } from '../../src/composables/useCalendar';
 
 test.beforeEach(async ({ page }) => {

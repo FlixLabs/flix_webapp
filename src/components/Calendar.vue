@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useDialogSnapshot } from '@/composables/useDialogSnapshot';
 import { t, weekStart, weekdays, formatLocale, interfaceLanguage, translatedChoices, formatDate } from '@/i18n';
 import LocalizedCalendarEvent from '@/components/common/LocalizedCalendarEvent.vue';
 import { computed, ref, watch } from 'vue';
@@ -59,7 +60,8 @@ const title = computed(() => {
 const dayEventsDialog = ref(false); const selectedDay = ref('');
 const dialogActivator = useDialogActivator(() => dayEventsDialog.value);
 const selectedDayTitle = computed(() => selectedDay.value ? formatDate(calendarDate(selectedDay.value), { dateStyle: 'long' }) : '');
-const selectedDayEvents = computed(() => visibleEvents.value.filter(event => calendarDay(event.start) === selectedDay.value));
+const daySnapshot = useDialogSnapshot(() => dayEventsDialog.value, () => visibleEvents.value.filter(event => calendarDay(event.start) === selectedDay.value));
+const selectedDayEvents = computed(() => daySnapshot.displayed.value ?? []);
 function openDayEvents(_event: Event, day: { date: string }) { selectedDay.value = day.date; dayEventsDialog.value = true; }
 function mediaLink(event: CalendarEvent) { return { path: '/library', query: { media: event.type, id: String(event.mediaId) } }; }
 function openMedia(_event: Event, scope: { event: unknown }) {
@@ -139,7 +141,7 @@ watch([rangeKey, () => store.selectedInstance, () => getConfig('movies').base_ur
       <v-pagination v-if="agendaPages > 1" v-model="agendaPage" :length="agendaPages" :total-visible="3" :aria-label="t('Agenda pages')" />
     </div>
   </v-container>
-  <v-dialog v-model="dayEventsDialog" :activator="dialogActivator" :open-on-click="false" :aria-label="t('Events - {p0}', { p0: selectedDayTitle })" max-width="600" scrollable>
+  <v-dialog v-model="dayEventsDialog" :activator="dialogActivator" :open-on-click="false" :aria-label="t('Events - {p0}', { p0: selectedDayTitle })" max-width="600" scrollable @after-leave="daySnapshot.closed">
     <v-card>
       <v-card-title class="text-wrap">{{ selectedDayTitle }}</v-card-title>
       <v-card-subtitle>{{ selectedDayEvents.length }} {{ selectedDayEvents.length === 1 ? t("event") : t("events") }}</v-card-subtitle>

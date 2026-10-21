@@ -1,5 +1,6 @@
 import { test, expect, movie } from './fixtures';
 import type { Page } from '@playwright/test';
+import { closeWithoutCollapsing } from './dialog-transition';
 
 const existing = { ...movie, title: 'The Return of the Tall Blond Man with One Black Shoe', hasFile: false, movieFile: undefined };
 const available = { ...movie, id: 12, tmdbId: 12, title: 'Available film' };
@@ -55,8 +56,7 @@ test('collection downloads require selection, quality and confirmation before an
 
 test('closing the collection confirmation never requests a download', async ({ page, mutations }) => {
   const dialog = await open(page);
-  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
-  await expect(dialog).not.toBeVisible();
+  await closeWithoutCollapsing(dialog);
   await expect(page.getByRole('button', { name: 'Download missing (3)', exact: true })).toBeFocused();
   expect(mutations).toEqual([]);
 });

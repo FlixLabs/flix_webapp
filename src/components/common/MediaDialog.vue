@@ -17,6 +17,7 @@ import { useMediaSheetRefresh } from '@/composables/useMediaSheetRefresh';
 import ReadFeedback from './ReadFeedback.vue';
 import TrailerDialog from './TrailerDialog.vue';
 import { useMediaTrailer } from '@/composables/useMediaTrailer';
+import { useDialogSnapshot } from '@/composables/useDialogSnapshot';
 
 const props = withDefaults(defineProps<{
   modelValue: boolean;
@@ -47,6 +48,8 @@ const renderDetails = ref(props.modelValue);
 const localizedItem = useLocalizedMedia(() => renderDetails.value ? props.item : null, () => props.mediaType === 'Movie' ? 'movies' : 'series');
 const trailer = useMediaTrailer(() => props.modelValue, () => props.item, () => props.mediaType === 'Movie' ? 'movies' : 'series');
 const { video: trailerVideo, playerOpen: trailerOpen } = trailer;
+const trailerDisplay = useDialogSnapshot(() => props.modelValue, () => trailerVideo.value);
+const displayedTrailer = trailerDisplay.displayed;
 const dialogActivator = useDialogActivator(() => props.modelValue);
 const monitoringPending = ref(false);
 const settingsPending = ref(false);
@@ -84,7 +87,7 @@ const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episode
 </script>
 
 <template>
-  <DialogSheet v-if="item" :model-value="modelValue" :title="mediaType === 'Movie' ? t('Movie') : t('Serie')" :label="`${mediaType === 'Movie' ? t('Movie') : t('Serie')}: ${localizedItem?.title ?? item.title}`" :context="item" :activator="activator ?? dialogActivator" @update:model-value="emit('update:modelValue', $event)" @closed="!modelValue && (renderDetails = false)">
+  <DialogSheet v-if="item" :model-value="modelValue" :title="mediaType === 'Movie' ? t('Movie') : t('Serie')" :label="`${mediaType === 'Movie' ? t('Movie') : t('Serie')}: ${localizedItem?.title ?? item.title}`" :context="item" :activator="activator ?? dialogActivator" @update:model-value="emit('update:modelValue', $event)" @closed="trailerDisplay.closed(); !modelValue && (renderDetails = false)">
     <template #header-actions>
       <div v-if="neighbors.index >= 0 && neighbors.total > 1" class="d-flex align-center ga-1" role="group" :aria-label="t('Media navigation')">
         <v-btn icon="mdi-chevron-left" variant="text" size="small" :aria-label="t('Previous media')" :disabled="navigationDisabled || !neighbors.previous" @click="navigate('previous')" />
@@ -95,8 +98,8 @@ const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episode
     </template>
     <template #default="{ showScrollHint }">
       <slot name="status" />
-      <ReadFeedback :state="updates.state" :label="t('Media updates')" @retry="updates.refresh" />
-      <ReadFeedback :state="trailer.state" :label="t('Trailer')" @retry="trailer.refresh" />
+      <ReadFeedback :state="updates.state" :active="modelValue" :label="t('Media updates')" @retry="updates.refresh" />
+      <ReadFeedback :state="trailer.state" :active="modelValue" :label="t('Trailer')" @retry="trailer.refresh" />
       <MediaSummary :media-type="mediaType === 'Movie' ? 'movies' : 'series'" v-if="summaryVisible" :item="item" :announcement-name="announcementName"><slot name="metadata" /></MediaSummary>
       <p v-if="showSearch && searchDisabledReason" role="status" class="text-caption text-medium-emphasis my-3">{{ searchDisabledReason }}</p>
       <MediaMonitoring v-if="showRemove && renderDetails" :key="`${mediaType}-${item.id}`" :item="item" :type="mediaType === 'Movie' ? 'movies' : 'series'" :disabled="mediaBusy || actionPending || settingsPending" @busy="monitoringPending = $event" />
@@ -109,7 +112,7 @@ const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episode
       </div>
     </template>
     <template #actions>
-      <v-btn v-if="trailerVideo" color="primary" prepend-icon="mdi-play-circle-outline" @click="trailerOpen = true">{{ t('Trailer') }}</v-btn>
+      <v-btn v-if="displayedTrailer" color="primary" prepend-icon="mdi-play-circle-outline" @click="modelValue && (trailerOpen = true)">{{ t('Trailer') }}</v-btn>
       <v-btn v-if="showSearch" :disabled="mediaBusy || actionPending || !!searchDisabledReason" color="primary" @click="releaseDialog = true">{{ t("Choose Release") }}</v-btn>
       <v-btn v-if="showSearch" :disabled="mediaBusy || actionPending || !!searchDisabledReason" color="primary" @click="emit('search', item)">{{ item.hasFile || item.statistics?.sizeOnDisk > 0 ? t("Search Again") : t("Search") }}</v-btn>
       <v-btn v-if="showAdd" :loading="actionPending" :disabled="actionPending || mediaBusy || addDisabled" color="primary" @click="emit('add', item)">{{ t("Add") }}</v-btn>

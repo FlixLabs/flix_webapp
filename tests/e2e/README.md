@@ -1,5 +1,28 @@
 # Browser Regression Tests
 
+## Dialog Transition Contract
+
+Closing must invalidate requests and actions immediately, but must not clear
+rendered titles, lists, selected values, feedback or footer buttons before
+`closed` / `after-leave`. Use `useDialogSnapshot` for read-only presentation state
+that must survive close-time resets; keep editable form state separate. Guard
+after-leave cleanup against a dialog that has already reopened. Ignore late async
+results after closing, including clipboard results. Do not use the open flag to
+conditionally remove an entire dialog body during its transition.
+
+Embedded players are an exception for resource lifetime, not layout: remove the
+iframe immediately to stop playback, retain a fixed-size dark stage and the
+surrounding content until after-leave, and hide the iframe until it has loaded.
+`closeWithoutCollapsing` checks layout dimensions and text on every animation
+frame, rather than checking only the first frame or the final hidden state.
+
+Audit coverage includes trailers, media sheets/sharing and read-error feedback, release lists and their
+confirmations, quality/deletion confirmations, download-client cleanup and its
+confirmation, manual-import review/confirmation/status, collection sheets and
+download/removal confirmations, request catalog/review dialogs and calendar days.
+
+## Running
+
 Run `yarn install --frozen-lockfile`, `yarn playwright install chromium`, then `yarn test:e2e`.
 
 The suite starts a dedicated Vite server and intercepts API requests. No real downloads,

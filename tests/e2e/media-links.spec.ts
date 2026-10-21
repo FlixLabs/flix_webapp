@@ -1,4 +1,30 @@
 import { test, expect, movie } from './fixtures';
+import { closeWithoutCollapsing } from './dialog-transition';
+
+for (const failed of [false, true]) {
+  test(`a late clipboard ${failed ? 'failure' : 'success'} does not change a closing or reopened share dialog`, async ({ page, mutations }) => {
+    await page.addInitScript(failed => {
+      Object.defineProperty(navigator, 'clipboard', { configurable: true, value: {
+        writeText: () => new Promise<void>((resolve, reject) => {
+          (window as Window & { finishCopy?: () => void }).finishCopy = () => failed ? reject(new Error('Clipboard unavailable')) : resolve();
+        }),
+      } });
+    }, failed);
+    await page.goto('/library');
+    await page.getByRole('button', { name: `Open ${movie.title}`, exact: true }).click();
+    const share = page.getByRole('button', { name: 'Share media', exact: true });
+    await share.click();
+    const dialog = page.getByRole('dialog', { name: 'Share media link', exact: true });
+    await dialog.getByRole('button', { name: 'Copy link', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Close', exact: true }).evaluate(button => {
+      button.addEventListener('click', () => requestAnimationFrame(() => (window as Window & { finishCopy?: () => void }).finishCopy?.()), { once: true });
+    });
+    await closeWithoutCollapsing(dialog);
+    await share.click();
+    await expect(dialog.locator('.v-alert')).toHaveCount(0);
+    expect(mutations).toEqual([]);
+  });
+}
 
 test('Library sheets support Back and Forward without losing search or page', async ({ page, mutations }) => {
   await page.route(/\/api\/v3\/movie\?/, route => route.fulfill({ json: Array.from({ length: 15 }, (_, i) => ({ ...movie, id: i + 1, title: `Example ${String(i + 1).padStart(2, '0')}` })) }));
