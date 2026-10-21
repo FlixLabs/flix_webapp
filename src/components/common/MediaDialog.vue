@@ -15,6 +15,8 @@ import { useDialogActivator } from '@/composables/useDialogActivator';
 import { useFlixStore } from '@/stores/flixStore';
 import { useMediaSheetRefresh } from '@/composables/useMediaSheetRefresh';
 import ReadFeedback from './ReadFeedback.vue';
+import TrailerDialog from './TrailerDialog.vue';
+import { useMediaTrailer } from '@/composables/useMediaTrailer';
 
 const props = withDefaults(defineProps<{
   modelValue: boolean;
@@ -43,6 +45,8 @@ const emit = defineEmits(['update:modelValue', 'search', 'add', 'remove', 'relea
 const releaseDialog = ref(false);
 const renderDetails = ref(props.modelValue);
 const localizedItem = useLocalizedMedia(() => renderDetails.value ? props.item : null, () => props.mediaType === 'Movie' ? 'movies' : 'series');
+const trailer = useMediaTrailer(() => props.modelValue, () => props.item, () => props.mediaType === 'Movie' ? 'movies' : 'series');
+const { video: trailerVideo, playerOpen: trailerOpen } = trailer;
 const dialogActivator = useDialogActivator(() => props.modelValue);
 const monitoringPending = ref(false);
 const settingsPending = ref(false);
@@ -59,7 +63,7 @@ const updates = useMediaSheetRefresh({
 });
 const mediaBusy = computed(() => props.readOnly || monitoringPending.value || settingsPending.value || !!updates.state.error);
 const neighbors = computed(() => mediaNeighbors(props.navigationItems ?? [], props.item));
-const navigationDisabled = computed(() => props.actionPending || props.navigationPending || mediaBusy.value || releaseDialog.value);
+const navigationDisabled = computed(() => props.actionPending || props.navigationPending || mediaBusy.value || releaseDialog.value || trailerOpen.value);
 function navigate(direction: 'previous' | 'next') {
   const target = neighbors.value[direction];
   if (target && !navigationDisabled.value) emit('navigate', target);
@@ -92,6 +96,7 @@ const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episode
     <template #default="{ showScrollHint }">
       <slot name="status" />
       <ReadFeedback :state="updates.state" :label="t('Media updates')" @retry="updates.refresh" />
+      <ReadFeedback :state="trailer.state" :label="t('Trailer')" @retry="trailer.refresh" />
       <MediaSummary :media-type="mediaType === 'Movie' ? 'movies' : 'series'" v-if="summaryVisible" :item="item" :announcement-name="announcementName"><slot name="metadata" /></MediaSummary>
       <p v-if="showSearch && searchDisabledReason" role="status" class="text-caption text-medium-emphasis my-3">{{ searchDisabledReason }}</p>
       <MediaMonitoring v-if="showRemove && renderDetails" :key="`${mediaType}-${item.id}`" :item="item" :type="mediaType === 'Movie' ? 'movies' : 'series'" :disabled="mediaBusy || actionPending || settingsPending" @busy="monitoringPending = $event" />
@@ -104,6 +109,7 @@ const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episode
       </div>
     </template>
     <template #actions>
+      <v-btn v-if="trailerVideo" color="primary" prepend-icon="mdi-play-circle-outline" @click="trailerOpen = true">{{ t('Trailer') }}</v-btn>
       <v-btn v-if="showSearch" :disabled="mediaBusy || actionPending || !!searchDisabledReason" color="primary" @click="releaseDialog = true">{{ t("Choose Release") }}</v-btn>
       <v-btn v-if="showSearch" :disabled="mediaBusy || actionPending || !!searchDisabledReason" color="primary" @click="emit('search', item)">{{ item.hasFile || item.statistics?.sizeOnDisk > 0 ? t("Search Again") : t("Search") }}</v-btn>
       <v-btn v-if="showAdd" :loading="actionPending" :disabled="actionPending || mediaBusy || addDisabled" color="primary" @click="emit('add', item)">{{ t("Add") }}</v-btn>
@@ -111,6 +117,7 @@ const hasSupplementalDetails = computed(() => !!slots.details || !!slots.episode
     </template>
   </DialogSheet>
   <ReleaseSelectionDialog v-model="releaseDialog" :media-type="mediaType === 'Movie' ? 'movies' : 'series'" :item="item" @grabbed="releaseGrabbed" />
+  <TrailerDialog v-model="trailerOpen" :video="trailerVideo" :media-title="localizedItem?.title ?? item?.title ?? ''" />
 </template>
 
 <style scoped>

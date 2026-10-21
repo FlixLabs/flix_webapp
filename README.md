@@ -15,6 +15,19 @@ assembled by page number, deduplicated by TMDB ID and sorted by date then ID.
 Undated and out-of-window entries are excluded. A failed page fails the read
 instead of displaying a misleading partial list. No Flix API update is required.
 
+## Trailers
+
+Film and series sheets offer a **Trailer** button when TMDB lists a YouTube
+trailer. Flix prefers the content language (including the original language),
+then English, and prioritizes official trailers within each language. Series
+with only a TVDB identifier are resolved through TMDB without guessing titles.
+This works with or without Flix API, using the existing `VITE_TMDB_*` settings.
+
+Only trailer metadata is requested when a sheet opens. The YouTube player is
+loaded on click, without autoplay, and removed when closed. **Open on YouTube**
+is available if the publisher, browser or network prevents embedded playback.
+No YouTube API key is needed. Playback contacts YouTube in privacy-enhanced mode.
+
 ## Invited Accounts
 
 With Flix API 2.1.0 or newer, administrators can manage **Users** from the main
