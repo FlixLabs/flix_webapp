@@ -287,6 +287,8 @@ function getHistory(type: 'movies' | 'series') {
           title: item.sourceTitle,
           downloadId: item.downloadId,
           data: item.data,
+          infoUrl: item.infoUrl,
+          indexer: item.indexer,
           date: item.date,
           client: item.downloadClient,
           languages: languages.join(', '),
@@ -472,7 +474,7 @@ watch(serviceContext, () => {
           :no-data-text="activeRead.error ? t('Data unavailable. Retry to load this view.') : search || (view === 'queue' && queueFilter !== 'all') ? t('No matching items found') : view === 'queue' ? t('No download information found') : t('No history information found')"
         >
           <template #item.title="{ item }">
-            <DownloadTitle :media-type="mediaType" :key="`${mediaType}-${view}-${item.id}`" :record="item" :source-context="serviceContext()" :resolve-source="sourceLinks.resolve" :queue="view === 'queue'" @open="openDownloadMedia(item, $event)" />
+            <DownloadTitle :media-type="mediaType" :key="`${mediaType}-${view}-${item.id}`" :record="item" :source-context="serviceContext()" :resolve-source="sourceLinks.resolveInfo" :queue="view === 'queue'" @open="openDownloadMedia(item, $event)" />
           </template>
           <template #item.status="{ item }">
             <template v-if="view === 'queue'">

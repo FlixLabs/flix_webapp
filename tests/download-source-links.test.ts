@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { effectScope, ref } from 'vue';
-import { downloadSourceUrl, useDownloadSourceLinks } from '@/composables/useDownloadSourceLinks';
+import { downloadSourceUrl, downloadSourceIndexer, useDownloadSourceLinks } from '@/composables/useDownloadSourceLinks';
 import type { MediaInstance } from '@/composables/useMediaService';
 
 const source = 'https://indexer.test/details/42';
@@ -26,6 +26,31 @@ it('accepts only safe details URLs, never download URLs or GUIDs', () => {
     expect(downloadSourceUrl({ infoUrl })).toBeUndefined();
   }
   expect(downloadSourceUrl({ data: { downloadUrl: source, guid: source } })).toBeUndefined();
+});
+
+it('reads an explicit indexer name without guessing from titles or download URLs', () => {
+  expect(downloadSourceIndexer({ indexer: ' Ygg ', data: { indexer: 'Other' } })).toBe('Ygg');
+  expect(downloadSourceIndexer({ data: { Indexer: ' Torrent9 ' } })).toBe('Torrent9');
+  for (const indexer of [null, 42, {}, [], '   ']) expect(downloadSourceIndexer({ indexer })).toBeUndefined();
+  expect(downloadSourceIndexer({ data: { downloadUrl: source, title: 'Ygg release' } })).toBeUndefined();
+});
+
+it('resolves the indexer and URL together using a single cached exact-ID lookup', async () => {
+  const { links, fetchMock } = setup();
+  fetchMock.mockResolvedValueOnce(Response.json({ records: [
+    { ...grabbed, downloadId: 'other', data: { indexer: 'Wrong' } },
+    { ...grabbed, data: { indexer: 'Ygg', nzbInfoUrl: source } },
+  ] }));
+  expect(await links.resolveInfo('movies', { downloadId: 'abc' })).toEqual({ indexer: 'Ygg', url: source });
+  expect(await links.resolve('movies', { downloadId: 'abc' })).toBe(source);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+it('retains a verified indexer even when the source URL is missing or unsafe', async () => {
+  const { links, fetchMock } = setup();
+  fetchMock.mockResolvedValueOnce(Response.json({ records: [{ ...grabbed, data: { indexer: 'Ygg', nzbInfoUrl: 'javascript:alert(1)' } }] }));
+  expect(await links.resolveInfo('movies', { downloadId: 'abc' })).toEqual({ indexer: 'Ygg', url: undefined });
+  expect(await links.resolve('movies', { downloadId: 'abc' })).toBeUndefined();
 });
 
 it('looks up the exact grab by download ID for either service and deduplicates requests', async () => {
