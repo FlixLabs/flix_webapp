@@ -211,22 +211,33 @@ test('collection and movie sheets share the poster summary and Close button', as
   expect(mutations).toEqual([]);
 });
 
-test('closing a media sheet keeps its details and blur until the fade completes', async ({ page, mutations }) => {
+for (const method of ['button', 'escape', 'backdrop'] as const) {
+test(`closing a media sheet with ${method} keeps its details, share link and blur until the fade completes`, async ({ page, mutations }) => {
   await page.goto('/library');
   await page.getByRole('button', { name: `Open ${movie.title}`, exact: true }).click();
   const sheet = page.getByRole('dialog', { name: `Movie: ${movie.title}`, exact: true });
   const close = sheet.getByRole('button', { name: 'Close', exact: true });
   await expect(sheet.getByRole('button', { name: 'Media history', exact: true, includeHidden: true })).toBeAttached();
-  const state = await close.evaluate(async button => {
-    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  await expect(sheet.getByRole('button', { name: 'Share media', exact: true })).toBeVisible();
+  await sheet.evaluate(overlay => {
+    const share = overlay.querySelector('[aria-label="Share media"]')!;
+    share.setAttribute('data-closing-share', 'true');
+  });
+  if (method === 'escape') await page.keyboard.press('Escape');
+  if (method === 'backdrop') await page.mouse.click(5, 5);
+  const state = await close.evaluate(async (button, method) => {
+    if (method === 'button') button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
     const overlay = button.closest('.v-dialog')!;
     const scrim = overlay.querySelector('.v-overlay__scrim')!;
     return { rootBlur: getComputedStyle(overlay).backdropFilter, scrimBlur: getComputedStyle(scrim).backdropFilter,
       leaving: scrim.classList.contains('fade-transition-leave-active'),
-      history: !!overlay.querySelector('[aria-label="Media history"]') };
-  });
-  expect(state).toEqual({ rootBlur: 'none', scrimBlur: 'blur(5px)', leaving: true, history: true });
+      history: !!overlay.querySelector('[aria-label="Media history"]'),
+      share: !!overlay.querySelector('[data-closing-share="true"]') };
+  }, method);
+  expect(state).toEqual({ rootBlur: 'none', scrimBlur: 'blur(5px)', leaving: true, history: true, share: true });
   await expect(sheet).not.toBeVisible();
+  await expect(page.locator('[data-closing-share="true"]')).toHaveCount(0);
   expect(mutations).toEqual([]);
 });
+}
