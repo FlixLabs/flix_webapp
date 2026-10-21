@@ -913,5 +913,10 @@
   "Import status unavailable. Removal is blocked, including forced removal.": "Import status unavailable. Removal is blocked, including forced removal.",
   "Radarr could not verify this filename. Confirming requests an import using the movie, quality and languages you selected. The file is not renamed and the import may still fail.": "Radarr could not verify this filename. Confirming requests an import using the movie, quality and languages you selected. The file is not renamed and the import may still fail.",
   "Releases from {from} to {to}": "Releases from {from} to {to}",
-  "Too many upcoming media results. Please try again later.": "Too many upcoming media results. Please try again later."
+  "Too many upcoming media results. Please try again later.": "Too many upcoming media results. Please try again later.",
+  "Trailer": "Trailer",
+  "Trailer: {p0}": "Trailer: {p0}",
+  "Open on YouTube": "Open on YouTube",
+  "If playback is unavailable, open the trailer on YouTube.": "If playback is unavailable, open the trailer on YouTube.",
+  "Unable to load trailers. Check TMDB and retry.": "Unable to load trailers. Check TMDB and retry."
 }
