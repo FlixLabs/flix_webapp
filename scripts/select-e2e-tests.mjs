@@ -1,6 +1,17 @@
 // Keep a small cross-page safety net even for documentation and CI-only changes.
 export const smokeTests = ['api-session', 'login-loading', 'dashboard-actions', 'global-navigation'];
 
+export function selectMobileE2eTests(changedFiles, selectedFiles, available) {
+  const changed = new Set(changedFiles);
+  const selected = new Set(selectedFiles ?? available);
+  return available.filter(file => selected.has(file) && (
+    smokeTests.includes(file.slice('tests/e2e/'.length, -'.spec.ts'.length))
+    || file === 'tests/e2e/regressions.spec.ts'
+    || /(?:accessibility|layout|dialog-harmony|media-dialog-scroll|media-badges|media-card-height)\.spec\.ts$/.test(file)
+    || changed.has(file)
+  )).sort();
+}
+
 export function e2eTimeoutMs(files, availableCount) {
   const minutes = files && availableCount > 0
     ? Math.max(15, Math.min(45, Math.ceil(45 * files.length / availableCount)))

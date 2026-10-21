@@ -505,24 +505,31 @@ current results. These changes also support standalone Radarr/Sonarr mode.
 The version in `package.json` is the release source of truth. Each repository
 has its own version; the webapp and API do not need matching versions.
 
-- `quality` runs on merge requests, the default branch and stable `vX.Y.Z` tags.
+- `quality` runs on merge requests and stable `vX.Y.Z` tags.
   It runs tests, type checking and compilation in a dedicated Docker image,
   without production variables or registry authentication.
   The quality script temporarily applies its ignore file at the context root
   for compatibility with both BuildKit and the legacy Docker builder.
-- `e2e` follows successful `quality` validation as a separate blocking job on
-  merge requests, default-branch commits and release tags. It runs all desktop/mobile Chromium browser tests
-  in Docker on the Shell runner, with mocked services and no production secrets.
-  Chromium and its Linux dependencies are installed from the locked Playwright
-  version. CI uses two workers, two retries, and a 30-minute test-run limit.
+- `e2e` runs alongside `quality` as a separate blocking job on merge requests
+  and release tags, in Docker on the Shell runner, with mocked services and no
+  production secrets. Merge requests run affected scenarios on desktop; mobile
+  keeps the cross-page safety net, selected accessibility/layout scenarios and
+  every modified E2E spec. Shared/unmapped changes run all desktop scenarios with
+  that same mobile policy. An unavailable MR diff and release tags run the full
+  desktop/mobile suite.
+  Chromium and its Linux dependencies use the locked Playwright version in a
+  separate Docker layer, reusable across application dependency/version changes
+  on the same Docker daemon. The first build or a Playwright update still installs
+  the browser. CI uses two workers, one retry and a coverage-scaled 15-45 minute
+  test-run limit.
   HTML reports, failure screenshots/traces and GitLab JUnit results are retained
   for seven days, including on failure. Reports are copied out of the container,
   not bind-mounted through a possibly remote Docker daemon. No runner-side Node
   or browser installation and no extra CI variables are required.
-- After successful default-branch validation, `create_release_tag` creates an
+- On the default branch, `create_release_tag` creates an
   annotated `vX.Y.Z` tag and triggers its pipeline. An existing release tag is
   never moved; bump `package.json` to release another version.
-  Both `quality` and `e2e` must pass before tagging or building a release image.
+  Both `quality` and full `e2e` must pass in the tag pipeline before building a release image.
   Release/build jobs wait for E2E without downloading the browser reports.
 - Tag pipelines build the production image with the configured variables, publish
   it as `vX.Y.Z` and `latest`, then deploy the exact version using the `X-Deploy-Version` webhook header.

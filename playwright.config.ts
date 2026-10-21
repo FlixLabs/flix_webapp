@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url';
 const root = resolve(process.env.FLIX_E2E_ROOT || '.');
 const suiteRoot = fileURLToPath(new URL('.', import.meta.url));
 const port = Number(process.env.FLIX_E2E_PORT || 5180);
+const mobileFiles: string[] | undefined = process.env.FLIX_E2E_MOBILE_FILES
+  ? JSON.parse(process.env.FLIX_E2E_MOBILE_FILES) : undefined;
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: true,
@@ -23,7 +25,9 @@ export default defineConfig({
   },
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 1200 } } },
-    { name: 'mobile', use: { ...devices['Pixel 7'], browserName: 'chromium' } },
+    { name: 'mobile', ...(mobileFiles ? { testMatch: mobileFiles.length
+      ? mobileFiles.map(file => '**/' + file) : /$a/ } : {}),
+      use: { ...devices['Pixel 7'], browserName: 'chromium' } },
   ],
   webServer: {
     command: `yarn --cwd "${root}" dev --config "${suiteRoot}/e2e.vite.config.ts" --mode e2e --host 127.0.0.1 --port ${port} --strictPort`,

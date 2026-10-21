@@ -34,7 +34,12 @@ trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' HUP TERM
 
-docker build -f Dockerfile.e2e -t "$image" .
+playwright_version=$(awk '/^playwright@/ { found=1; next } found && /^  version / { gsub(/"/, "", $2); print $2; exit }' yarn.lock)
+if ! printf '%s\n' "$playwright_version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+  echo "Cannot resolve a stable Playwright version from yarn.lock."
+  exit 1
+fi
+docker build -f Dockerfile.e2e --build-arg "PLAYWRIGHT_VERSION=$playwright_version" -t "$image" .
 # Only non-secret selection data enters the test container.
 docker run --name "$container" --init --shm-size=1g --env CI=true \
   --env "FLIX_E2E_SCOPE=$scope" --env "FLIX_E2E_CHANGED_FILES=$changed_files" "$image"
