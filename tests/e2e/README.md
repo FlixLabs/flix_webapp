@@ -20,8 +20,12 @@ Do not point this suite at production. All remote requests are mocked.
 
 The blocking GitLab `e2e` job runs a cross-page safety net and affected feature
 specs on merge requests. Selection uses the complete MR diff, not just the last
-commit. Changed E2E specs are always included. Shared runtime/fixture changes,
-unmapped application changes, lockfile changes or an unavailable diff trigger the full suite.
+commit. Desktop runs all selected specs. Mobile keeps the cross-page safety net,
+selected accessibility/layout checks and every changed E2E spec. Shared
+runtime/fixture changes, unmapped application changes or lockfile changes trigger
+all desktop scenarios with the same bounded mobile policy. An unavailable diff
+and release tags still run the full desktop/mobile suite. Direct local Playwright
+commands remain full desktop/mobile unless explicitly filtered.
 Package metadata/version bumps alone keep the safety net; dependency resolution
 changes are detected through `yarn.lock` and frozen installation remains required.
 The component-to-scenario mappings and fallback feature groups are maintained in

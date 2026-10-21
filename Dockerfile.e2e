@@ -1,10 +1,14 @@
 FROM node:24-bookworm-slim
 
+ARG PLAYWRIGHT_VERSION
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+RUN test -n "$PLAYWRIGHT_VERSION" && npm exec --yes --package="playwright@$PLAYWRIGHT_VERSION" -- playwright install --with-deps --only-shell chromium \
+    && rm -rf /var/lib/apt/lists/* /root/.npm
+
 WORKDIR /app
 
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile
-RUN yarn playwright install --with-deps --only-shell chromium && rm -rf /var/lib/apt/lists/*
 
 COPY . .
 RUN mkdir -p playwright-report test-results

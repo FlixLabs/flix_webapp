@@ -14,6 +14,7 @@ function fixture(t) {
   mkdirSync(join(dir, 'bin'));
   copyFileSync(join(root, 'scripts/run-e2e.sh'), join(dir, 'scripts/run-e2e.sh'));
   writeFileSync(join(dir, '.dockerignore'), '.env\n');
+  writeFileSync(join(dir, 'yarn.lock'), 'playwright@1.64.0:\n  version "1.64.0"\n');
   writeFileSync(join(dir, 'bin/git'), [
     '#!/bin/sh',
     'if [ "$1" = cat-file ]; then exit "$DIFF_AVAILABLE"; fi',
@@ -52,7 +53,7 @@ for (const status of [0, 1, 137]) {
     const result = run(dir, { TEST_EXIT: String(status) });
     assert.equal(result.status, status, result.stderr);
     const log = readFileSync(join(dir, 'docker.log'), 'utf8');
-    assert.ok(log.includes('build -f Dockerfile.e2e -t flix-webapp-e2e:1234 .'));
+    assert.ok(log.includes('build -f Dockerfile.e2e --build-arg PLAYWRIGHT_VERSION=1.64.0 -t flix-webapp-e2e:1234 .'));
     assert.ok(log.includes('run --name flix-webapp-e2e-1234 --init --shm-size=1g --env CI=true'));
     assert.ok(log.includes('--env FLIX_E2E_SCOPE=full'));
     assert.doesNotMatch(log, /--rm|--volume|--privileged|--env-file|VITE_|REGISTRY_|TOKEN|PASSWORD/);
@@ -70,6 +71,13 @@ test('E2E runner preserves build failures without starting a container', t => {
   const dir = fixture(t);
   assert.equal(run(dir, { BUILD_EXIT: '7' }).status, 7);
   assert.doesNotMatch(readFileSync(join(dir, 'docker.log'), 'utf8'), /^run |^cp /m);
+});
+
+test('E2E runner refuses an unresolved browser version before building', t => {
+  const dir = fixture(t);
+  writeFileSync(join(dir, 'yarn.lock'), '');
+  assert.equal(run(dir).status, 1);
+  assert.doesNotMatch(readFileSync(join(dir, 'docker.log'), 'utf8'), /^build |^run /m);
 });
 
 test('E2E runner fails if reports cannot be extracted and preserves a test failure', t => {
@@ -119,7 +127,9 @@ test('E2E gates tag builds without duplicating master validation and exports bou
   assert.equal(build.match(/artifacts: false/g)?.length, 2);
   const dockerfile = readFileSync(join(root, 'Dockerfile.e2e'), 'utf8');
   assert.match(dockerfile, /yarn install --frozen-lockfile/);
-  assert.match(dockerfile, /yarn playwright install --with-deps --only-shell chromium/);
+  assert.match(dockerfile, /npm exec --yes --package="playwright@\$PLAYWRIGHT_VERSION" -- playwright install --with-deps --only-shell chromium/);
+  assert.ok(dockerfile.indexOf('playwright install') < dockerfile.indexOf('COPY package.json yarn.lock'));
+  assert.match(dockerfile, /PLAYWRIGHT_BROWSERS_PATH=\/ms-playwright/);
   assert.ok(dockerfile.includes('CMD ["node", "scripts/run-e2e-tests.mjs"]'));
   assert.doesNotMatch(dockerfile, /ARG VITE_|ENV VITE_|COPY .*\.env/);
   const config = readFileSync(join(root, 'playwright.config.ts'), 'utf8');

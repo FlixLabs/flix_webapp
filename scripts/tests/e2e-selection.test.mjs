@@ -4,10 +4,30 @@ import { readdirSync, mkdtempSync, mkdirSync, copyFileSync, writeFileSync, readF
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { selectE2eTests, smokeTests, e2eTimeoutMs } from '../select-e2e-tests.mjs';
+import { selectE2eTests, selectMobileE2eTests, smokeTests, e2eTimeoutMs } from '../select-e2e-tests.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const available = readdirSync(join(root, 'tests/e2e')).filter(file => file.endsWith('.spec.ts')).map(file => 'tests/e2e/' + file);
+
+test('MR mobile coverage keeps the safety net, selected layout checks and every changed spec', () => {
+  const changed = ['src/components/common/MediaDialog.vue', 'tests/e2e/media-history.spec.ts'];
+  const selected = selectE2eTests(changed, available).files;
+  const mobile = selectMobileE2eTests(changed, selected, available);
+  for (const name of [...smokeTests, 'dialog-harmony', 'media-dialog-scroll', 'media-history']) {
+    assert.ok(mobile.includes('tests/e2e/' + name + '.spec.ts'), name);
+  }
+  assert.ok(!mobile.includes('tests/e2e/dashboard-details.spec.ts'));
+  assert.ok(mobile.length < selected.length);
+});
+
+test('shared MR changes retain full desktop selection but bounded mobile coverage', () => {
+  const changed = ['src/i18n/fr.json'];
+  assert.equal(selectE2eTests(changed, available).files, null);
+  const mobile = selectMobileE2eTests(changed, null, available);
+  assert.ok(mobile.includes('tests/e2e/accessibility.spec.ts'));
+  assert.ok(mobile.includes('tests/e2e/regressions.spec.ts'));
+  assert.ok(mobile.length < available.length / 2);
+});
 
 test('suite budgets scale with selected coverage without changing test coverage', () => {
   assert.equal(e2eTimeoutMs(['one'], 64), 15 * 60000);
@@ -93,7 +113,7 @@ test('the container entrypoint escapes paths, exports failures and removes only 
   writeFileSync(join(dir, 'test-results/failure/trace.zip'), 'finalized trace');
   writeFileSync(join(dir, 'test-results/junit.xml'), 'report');
   writeFileSync(join(dir, 'node_modules/playwright/cli.js'),
-    "require('fs').writeFileSync('arguments.json', JSON.stringify(process.argv.slice(2))); require('fs').writeFileSync('budget.txt', process.env.FLIX_E2E_TIMEOUT_MS); process.exit(7);");
+    "require('fs').writeFileSync('arguments.json', JSON.stringify(process.argv.slice(2))); require('fs').writeFileSync('budget.txt', process.env.FLIX_E2E_TIMEOUT_MS); require('fs').writeFileSync('mobile.json', process.env.FLIX_E2E_MOBILE_FILES || 'null'); process.exit(7);");
   const result = spawnSync(process.execPath, ['scripts/run-e2e-tests.mjs'], { cwd: dir, encoding: 'utf8', env: {
     ...process.env, FLIX_E2E_SCOPE: 'changed', FLIX_E2E_CHANGED_FILES: '.gitlab-ci.yml',
   } });
@@ -101,6 +121,7 @@ test('the container entrypoint escapes paths, exports failures and removes only 
   const args = JSON.parse(readFileSync(join(dir, 'arguments.json'), 'utf8'));
   assert.deepEqual(args, ['test', 'tests/e2e/dashboard-actions\\.spec\\.ts$']);
   assert.equal(readFileSync(join(dir, 'budget.txt'), 'utf8'), String(45 * 60000));
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, 'mobile.json'), 'utf8')), ['tests/e2e/dashboard-actions.spec.ts']);
   assert.equal(existsSync(join(dir, 'test-results/.playwright-artifacts-0')), false);
   assert.equal(readFileSync(join(dir, 'test-results/failure/trace.zip'), 'utf8'), 'finalized trace');
   assert.ok(existsSync(join(dir, 'test-results/junit.xml')));
@@ -123,4 +144,10 @@ test('the container entrypoint escapes paths, exports failures and removes only 
     assert.equal(JSON.parse(readFileSync(join(dir, 'arguments.json'), 'utf8')).length, 1 + count);
     assert.match(run.stdout, new RegExp('Suite budget: ' + minutes + ' minutes'));
   }
+  const full = spawnSync(process.execPath, ['scripts/run-e2e-tests.mjs'], { cwd: dir, encoding: 'utf8', env: {
+    ...process.env, FLIX_E2E_SCOPE: 'full', FLIX_E2E_MOBILE_FILES: '[]',
+  } });
+  assert.equal(full.status, 7, full.stderr);
+  assert.equal(readFileSync(join(dir, 'mobile.json'), 'utf8'), 'null');
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, 'arguments.json'), 'utf8')), ['test']);
 });
