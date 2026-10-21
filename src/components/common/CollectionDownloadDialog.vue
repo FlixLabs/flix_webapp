@@ -7,6 +7,7 @@ import { useCollectionDownloads, downloadableCollectionMovies, type CollectionDo
 import LocalizedMedia from './LocalizedMedia.vue';
 import DialogSheet from './DialogSheet.vue';
 import ReadFeedback from './ReadFeedback.vue';
+import { useDialogSnapshot } from '@/composables/useDialogSnapshot';
 
 const visible = defineModel<boolean>({ required: true });
 const props = defineProps<{ movies: CollectionDownloadMovie[]; context: string; disabled: boolean; activator?: HTMLElement | null }>();
@@ -18,11 +19,12 @@ const options = { useAPI, selectedInstanceData };
 const { pending, results, run } = useCollectionDownloads(options);
 const { qualityMovieItems, qualityMovie, qualityReads, getQualityProfileList } = useQualityProfiles({ ...options, showErrorAlert: () => {} });
 const selectedIds = ref<number[]>([]);
-const candidates = computed(() => downloadableCollectionMovies(props.movies));
+const { displayed, closed } = useDialogSnapshot(() => visible.value, () => downloadableCollectionMovies(props.movies).map(movie => ({ ...movie })));
+const candidates = computed(() => visible.value ? downloadableCollectionMovies(props.movies) : displayed.value ?? []);
 const selected = computed(() => candidates.value.filter(movie => selectedIds.value.includes(movie.tmdbId)));
 const needsQuality = computed(() => selected.value.some(movie => !movie.localId));
 const submitted = ref(false);
-const blocked = computed(() => pending.value || submitted.value || props.disabled || !selected.value.length
+const blocked = computed(() => !visible.value || pending.value || submitted.value || props.disabled || !selected.value.length
   || (needsQuality.value && (!qualityReads.movies.state.hasData || qualityReads.movies.state.loading
     || !!qualityReads.movies.state.error || !qualityMovieItems.value.some(profile => profile.value === qualityMovie.value))));
 watch(visible, value => {
@@ -32,7 +34,7 @@ watch(visible, value => {
   selectedIds.value = candidates.value.map(movie => movie.tmdbId);
   if (candidates.value.some(movie => !movie.localId)) void getQualityProfileList('movies');
 }, { immediate: true });
-watch(() => props.context, () => { visible.value = false; selectedIds.value = []; });
+watch(() => props.context, () => { visible.value = false; }, { flush: 'sync' });
 async function confirm() {
   if (blocked.value) return;
   submitted.value = true;
@@ -44,7 +46,7 @@ function close(value: boolean) { if (!pending.value) visible.value = value; }
 </script>
 
 <template>
-  <DialogSheet :model-value="visible" :activator="activator" :title="t('Missing movies')" :label="t('Download missing movies')" :context="context" :close-disabled="pending" @update:model-value="close">
+  <DialogSheet :model-value="visible" :activator="activator" :title="t('Missing movies')" :label="t('Download missing movies')" :context="context" :close-disabled="pending" @update:model-value="close" @closed="closed">
     <p class="mb-3">{{ t("Released films will be searched for. Upcoming films will be monitored for future releases, without an immediate search. Films not in your library will be added first.") }}</p>
     <v-list density="compact" :aria-label="t('Missing movies')" class="collection-request-list">
       <LocalizedMedia v-for="movie in candidates" :key="movie.tmdbId" :item="movie" type="movies" v-slot="{ media: displayedMovie }">
@@ -55,7 +57,7 @@ function close(value: boolean) { if (!pending.value) visible.value = value; }
       </LocalizedMedia>
     </v-list>
     <template v-if="needsQuality">
-      <ReadFeedback :state="qualityReads.movies.state" :label="t('Quality profiles')" :disabled="pending" @retry="getQualityProfileList('movies')" />
+      <ReadFeedback :state="qualityReads.movies.state" :active="visible" :label="t('Quality profiles')" :disabled="pending" @retry="getQualityProfileList('movies')" />
       <v-select v-model="qualityMovie" :items="qualityMovieItems" :label="t('Quality for new movies')" variant="outlined" class="mt-3" :loading="qualityReads.movies.state.loading" :disabled="pending || submitted" hide-details />
     </template>
     <template v-if="results.length">

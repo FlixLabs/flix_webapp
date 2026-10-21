@@ -1,5 +1,6 @@
 import { test, expect, movie, series } from './fixtures';
 import type { Page } from '@playwright/test';
+import { closeWithoutCollapsing } from './dialog-transition';
 
 const filename = 'Example.Movie.2025.720p.mkv';
 const candidate = { id: 8, path: `/downloads/example/${filename}`, relativePath: filename, size: 2e9,
@@ -29,6 +30,23 @@ async function mockImport(page: Page, mutations: { method: string; path: string;
     return route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/command') ? [] : { id: 99, status: command.status } });
   });
 }
+
+test('closing a loading manual import keeps its progress view until the transition ends', async ({ page, mutations }) => {
+  await mockImport(page, mutations);
+  let finish!: () => void;
+  const waiting = new Promise<void>(resolve => { finish = resolve; });
+  await page.route(/\/api\/v3\/manualimport(?:\?|$)/, async route => {
+    await waiting;
+    await route.fulfill({ json: [candidate] }).catch(() => {});
+  });
+  await page.goto('/downloads');
+  await page.getByRole('button', { name: 'Manual import Completed download', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Manual Import - Completed download', exact: true });
+  await expect(dialog.getByRole('progressbar', { name: 'Inspecting download' })).toBeVisible();
+  await closeWithoutCollapsing(dialog);
+  finish();
+  expect(mutations).toEqual([]);
+});
 
 test('manual import reviews rejected files and requires explicit confirmation before replacing', async ({ page, mutations }) => {
   await mockImport(page, mutations);

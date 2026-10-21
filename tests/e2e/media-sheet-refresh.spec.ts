@@ -1,4 +1,17 @@
 import { test, expect, movie, series } from './fixtures';
+import { closeWithoutCollapsing } from './dialog-transition';
+
+test('closing a media sheet keeps its refresh error until the fade has finished', async ({ page, mutations }) => {
+  await page.route('**/api/v3/movie/1', route => route.fulfill({ status: 404, json: {} }));
+  await page.goto('/library');
+  await page.locator('.media-card').click();
+  const dialog = page.getByRole('dialog', { name: `Movie: ${movie.title}`, exact: true });
+  await expect(dialog).toBeVisible();
+  await page.evaluate(() => { window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus')); });
+  await expect(dialog).toContainText('This media is no longer available');
+  await closeWithoutCollapsing(dialog);
+  expect(mutations).toEqual([]);
+});
 
 for (const view of ['library', 'dashboard', 'outings', 'downloads']) {
   test(`${view} refreshes an open movie in place on return and stops after closing`, async ({ page, mutations }) => {

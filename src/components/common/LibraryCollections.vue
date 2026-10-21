@@ -117,9 +117,9 @@ watch(selected, value => { if (!value && props.collectionState.hasData) { dialog
   <v-alert v-if="!filtered.length && !disabled" type="info" class="mt-4">{{ search.trim() ? t("No collections match your search") : t("No automatic movie collections in this library") }}</v-alert>
   <v-alert v-if="initialPending && !disabled && !collections.some(collection => collection.tmdbId === initialPending)" type="info" class="mt-4">{{ t("This collection is not available in the selected instance.") }}</v-alert>
   <DialogSheet v-if="selected" v-model="dialog" :title="t('Collection')" :label="t('Collection: {p0}', { p0: localizedCollection?.title ?? selected.title })" :context="`${selectedId}:${memberPage}:${memberPageSize}`" :activator="activator" :close-label="t('Close collection')" @closed="!dialog && (renderCollection = false)">
-    <ReadFeedback :state="updates.state" :label="t('Collection updates')" @retry="updates.refresh" />
-    <ReadFeedback :state="collectionState" :label="t('Collections')" @retry="emit('retry-collections')" />
-    <ReadFeedback :state="libraryState" :label="t('Movie library')" @retry="emit('retry-library')" />
+    <ReadFeedback :state="updates.state" :active="dialog" :label="t('Collection updates')" @retry="updates.refresh" />
+    <ReadFeedback :state="collectionState" :active="dialog" :label="t('Collections')" @retry="emit('retry-collections')" />
+    <ReadFeedback :state="libraryState" :active="dialog" :label="t('Movie library')" @retry="emit('retry-library')" />
     <MediaSummary :item="selected" media-type="collection" :facts="collectionFacts">
       <v-alert v-if="!members.length" type="info" class="mt-3">{{ t("No films reported for this collection") }}</v-alert>
     </MediaSummary>

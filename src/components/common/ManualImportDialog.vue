@@ -6,12 +6,14 @@ import { useManualImport } from '@/composables/useManualImport';
 import ManualImportStatus from './ManualImportStatus.vue';
 import { suggestImportMedia } from '@/composables/importMediaSuggestions';
 import type { MediaServiceOptions } from '@/composables/useMediaService';
+import { useDialogSnapshot } from '@/composables/useDialogSnapshot';
 
 const props = defineProps<{ options: MediaServiceOptions }>();
 const emit = defineEmits<{ requested: []; finished: [] }>();
 const actions = useManualImport(props.options);
 const { dialog, confirming, type, title, files, media, qualities, languages, episodes, loadingEpisodes, loading,
   busy, error, selected, canReview, canContinueManually, manualReview, commandId, commandState } = actions;
+const { displayed, closed } = useDialogSnapshot(() => dialog.value, () => ({ loading: loading.value, canContinue: canContinueManually.value }));
 const mediaSuggestions = computed(() => new Map(files.value.map(file => [file.path, suggestImportMedia(file, media.value)])));
 const dialogActivator = useDialogActivator(() => dialog.value);
 const confirmationActivator = useDialogActivator(() => confirming.value);
@@ -40,13 +42,13 @@ defineExpose({ open: actions.open, close: actions.close, isOpen: dialog });
 </script>
 
 <template>
-  <v-dialog :model-value="dialog" :activator="dialogActivator" :open-on-click="false" :aria-label="t('Manual Import - {p0}', { p0: title })" max-width="960" scrollable :fullscreen="$vuetify.display.xs" :persistent="busy || confirming" @after-enter="preserveNestedDialogFocus(importCard?.$el)" @update:model-value="value => { if (!value && !busy && !confirming) actions.close(); }">
+  <v-dialog :model-value="dialog" :activator="dialogActivator" :open-on-click="false" :aria-label="t('Manual Import - {p0}', { p0: title })" max-width="960" scrollable :fullscreen="$vuetify.display.xs" :persistent="busy || confirming" @after-enter="preserveNestedDialogFocus(importCard?.$el)" @after-leave="closed" @update:model-value="value => { if (!value && !busy && !confirming) actions.close(); }">
     <v-card ref="importCard">
       <v-card-title>{{ t("Manual Import") }}</v-card-title>
       <v-card-subtitle class="text-wrap">{{ title }}</v-card-subtitle>
       <v-card-text>
         <v-alert v-if="error" type="error" class="mb-4">{{ t(error) }}</v-alert>
-        <v-progress-linear v-if="loading" indeterminate color="primary" :aria-label="t('Inspecting download')" />
+        <v-progress-linear v-if="displayed?.loading" indeterminate color="primary" :aria-label="t('Inspecting download')" />
         <template v-else-if="commandId !== null">
           <ManualImportStatus :status="commandState" :command-id="commandId" />
         </template>
@@ -88,7 +90,7 @@ defineExpose({ open: actions.open, close: actions.close, isOpen: dialog });
       <v-card-actions class="flex-wrap">
         <v-spacer />
         <v-btn color="on-surface" :disabled="busy" @click="actions.close">{{ t("Close") }}</v-btn>
-        <v-btn v-if="canContinueManually && commandId === null" color="warning" :disabled="busy || loading" @click="actions.continueManually">{{ t('Continue with manual information') }}</v-btn>
+        <v-btn v-if="displayed?.canContinue && commandId === null" color="warning" :disabled="busy || loading" @click="actions.continueManually">{{ t('Continue with manual information') }}</v-btn>
         <v-btn v-if="commandId !== null" color="on-surface" :loading="busy" @click="check">{{ t("Check status") }}</v-btn>
         <v-btn v-else color="primary" :loading="busy" :disabled="loading || !canReview" @click="actions.review">{{ t("Review Import ({p0})", { p0: selected.length }) }}</v-btn>
       </v-card-actions>

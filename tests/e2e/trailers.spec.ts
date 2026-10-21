@@ -1,5 +1,6 @@
 import { test, expect } from './fixtures';
 import type { Page } from '@playwright/test';
+import { closeWithoutCollapsing } from './dialog-transition';
 
 const video = (overrides = {}) => ({
   site: 'YouTube', type: 'Trailer', key: 'abcdefghijk', name: 'Official trailer',
@@ -37,7 +38,7 @@ test('loads the movie player only on click and removes it on close, preserving t
   await expect(link).toHaveAttribute('rel', 'noopener noreferrer');
   expect(await player.evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
   await player.screenshot({ path: test.info().outputPath('trailer.png') });
-  await player.getByRole('button', { name: 'Close', exact: true }).click();
+  await closeWithoutCollapsing(player);
   await expect(page.locator('iframe')).toHaveCount(0);
   await expect(sheet).toBeVisible();
   await button.click();
@@ -52,6 +53,35 @@ test('loads the movie player only on click and removes it on close, preserving t
   await expect(sheet).toBeVisible();
   expect(mutations).toEqual([]);
 });
+
+for (const theme of ['flixDark', 'flixLight']) {
+  test(`${theme} keeps a dark reserved player while the iframe loads and preserves the trailer action during sheet closing`, async ({ page, mutations }) => {
+    await page.addInitScript(theme => localStorage.setItem('flix_theme', theme), theme);
+    let finish!: () => void;
+    const waiting = new Promise<void>(resolve => { finish = resolve; });
+    await page.route('https://www.youtube-nocookie.com/embed/**', async route => {
+      await waiting;
+      await route.fulfill({ contentType: 'text/html', body: '<html style="background:#000"><body>Mock player</body></html>' }).catch(() => {});
+    });
+    await page.route('**/movie/10/videos?*', route => route.fulfill({ json: { results: [video()] } }));
+    const sheet = await openMedia(page);
+    await sheet.getByRole('button', { name: 'Trailer', exact: true }).click();
+    const player = page.getByRole('dialog', { name: 'Trailer: Example movie', exact: true });
+    await expect(player).toBeVisible();
+    const stage = player.locator('.trailer-stage');
+    await expect(stage).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+    await expect(player.locator('iframe')).toHaveCSS('visibility', 'hidden');
+    const before = await stage.boundingBox();
+    finish();
+    await expect(player.locator('iframe')).toHaveCSS('visibility', 'visible');
+    const after = await stage.boundingBox();
+    expect(after?.height).toBe(before?.height);
+    await closeWithoutCollapsing(player);
+    await expect(page.locator('iframe')).toHaveCount(0);
+    await closeWithoutCollapsing(sheet);
+    expect(mutations).toEqual([]);
+  });
+}
 
 test('offers a series trailer in the preferred content language', async ({ page, mutations }) => {
   await page.addInitScript(() => localStorage.setItem('flix.preferences.language.content', '"fr"'));

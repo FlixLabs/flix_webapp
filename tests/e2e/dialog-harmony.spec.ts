@@ -223,13 +223,16 @@ test(`closing a media sheet with ${method} keeps its details, share link and blu
     const share = overlay.querySelector('[aria-label="Share media"]')!;
     share.setAttribute('data-closing-share', 'true');
   });
-  if (method === 'escape') await page.keyboard.press('Escape');
-  if (method === 'backdrop') await page.mouse.click(5, 5);
   const state = await close.evaluate(async (button, method) => {
-    if (method === 'button') button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
     const overlay = button.closest('.v-dialog')!;
-    const scrim = overlay.querySelector('.v-overlay__scrim')!;
+    const scrim = overlay.querySelector<HTMLElement>('.v-overlay__scrim')!;
+    if (method === 'escape') window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    else if (method === 'backdrop') {
+      scrim.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      scrim.click();
+      await new Promise<void>(resolve => setTimeout(resolve, 0));
+    } else button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
     return { rootBlur: getComputedStyle(overlay).backdropFilter, scrimBlur: getComputedStyle(scrim).backdropFilter,
       leaving: scrim.classList.contains('fade-transition-leave-active'),
       history: !!overlay.querySelector('[aria-label="Media history"]'),

@@ -1,4 +1,5 @@
 import { test, expect, movie } from './fixtures';
+import { closeWithoutCollapsing } from './dialog-transition';
 import type { Page } from '@playwright/test';
 
 const second = { ...movie, id: 2, tmdbId: 11, title: 'Second film', hasFile: false, movieFile: undefined };
@@ -74,7 +75,7 @@ test('file deletion requires an explicit choice and only selected movies are rem
 test('cancelling collection removal never deletes anything and returns focus', async ({ page, mutations }) => {
   const deletes: { id: number; deleteFiles: string | null }[] = [];
   const dialog = await open(page, deletes);
-  await dialog.getByRole('button', { name: 'Close', exact: true }).click();
+  await closeWithoutCollapsing(dialog);
   await expect(page.getByRole('button', { name: 'Remove movies (2)', exact: true })).toBeFocused();
   expect(deletes).toEqual([]);
   expect(mutations).toEqual([]);

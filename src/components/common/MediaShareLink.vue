@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { t } from '@/i18n';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useFlixStore } from '@/stores/flixStore';
 import { mediaQuery } from '@/composables/mediaLinks';
@@ -10,14 +10,21 @@ import { useDialogActivator } from '@/composables/useDialogActivator';
 const props = defineProps<{ mediaId: number; type: MediaType }>();
 const router = useRouter(); const store = useFlixStore();
 const dialog = ref(false); const copied = ref(false); const error = ref('');
+let copyGeneration = 0;
+watch(dialog, () => { copyGeneration++; }, { flush: 'sync' });
 const dialogActivator = useDialogActivator(() => dialog.value);
 const link = computed(() => new URL(router.resolve({ path: '/library', query: mediaQuery(props.type, props.mediaId, import.meta.env.VITE_FLIX_API_USE === 'true' ? store.selectedInstance : null) }).href, window.location.origin).href);
 async function copy() {
+  if (!dialog.value) return;
+  const current = ++copyGeneration;
   copied.value = false; error.value = '';
   try {
     if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
-    await navigator.clipboard.writeText(link.value); copied.value = true;
-  } catch { error.value = 'Automatic copying is unavailable. Select the link to copy it manually.'; }
+    await navigator.clipboard.writeText(link.value);
+    if (current === copyGeneration && dialog.value) copied.value = true;
+  } catch {
+    if (current === copyGeneration && dialog.value) error.value = 'Automatic copying is unavailable. Select the link to copy it manually.';
+  }
 }
 </script>
 
