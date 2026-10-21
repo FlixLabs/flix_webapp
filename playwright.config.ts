@@ -9,7 +9,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   workers: process.env.CI ? 2 : undefined,
-  globalTimeout: process.env.CI ? (process.env.FLIX_E2E_SCOPE === 'changed' ? 15 : 45) * 60 * 1000 : undefined,
+  globalTimeout: process.env.CI ? Number(process.env.FLIX_E2E_TIMEOUT_MS)
+    || (process.env.FLIX_E2E_SCOPE === 'changed' ? 15 : 45) * 60 * 1000 : undefined,
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI
     ? [['list'], ['html', { open: 'never' }], ['junit', { outputFile: 'test-results/junit.xml' }]]
