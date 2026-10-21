@@ -1,5 +1,26 @@
 import { test, expect } from './fixtures';
 
+test('cancelling quality selection preserves its selected value while closing', async ({ page, mutations }) => {
+  await page.route(/\/discover\/movie\?/, route => route.fulfill({ json: {
+    results: [{ id: 100, title: 'Upcoming movie', release_date: '2026-10-20' }], total_pages: 1,
+  } }));
+  await page.goto('/outings');
+  await page.getByRole('button', { name: 'Open Upcoming movie', exact: true }).click();
+  await page.getByRole('button', { name: 'Add', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Choose quality', exact: true });
+  await expect(dialog.getByRole('combobox', { name: 'Quality', exact: true })).toHaveValue('Any');
+  const retained = await dialog.getByRole('button', { name: 'Cancel', exact: true }).evaluate(async button => {
+    const overlay = button.closest('.v-dialog')!;
+    const before = overlay.querySelector('.v-card-text')!.textContent;
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    return overlay.querySelector('.v-card-text')!.textContent === before;
+  });
+  expect(retained).toBe(true);
+  await expect(dialog).not.toBeVisible();
+  expect(mutations).toEqual([]);
+});
+
 for (const media of ['movies', 'series'] as const) {
   test(`outings can add ${media} with a previously selected instance`, async ({ page, mutations }) => {
     await page.addInitScript(() => localStorage.setItem('flix.preferences.instance', JSON.stringify('Test instance')));
@@ -23,7 +44,14 @@ for (const media of ['movies', 'series'] as const) {
     await expect(page.getByRole('combobox', { name: 'Quality' })).toHaveValue('Any');
     expect(mutations).toEqual([]);
     if (externalIdsResponse) await (await externalIdsResponse).finished();
-    await page.getByRole('button', { name: 'Confirm', exact: true }).click();
+    const retained = await page.getByRole('button', { name: 'Confirm', exact: true }).evaluate(async button => {
+      const overlay = button.closest('.v-dialog')!;
+      const before = overlay.querySelector('.v-card-text')!.textContent;
+      button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      return overlay.querySelector('.v-card-text')!.textContent === before;
+    });
+    expect(retained).toBe(true);
     await expect.poll(() => mutations.length).toBe(1);
     expect(mutations[0]).toMatchObject({ method: 'POST', path: `/api/v3/${media === 'movies' ? 'movie' : 'series'}`,
       body: { qualityProfileId: 1, rootFolderPath: media === 'movies' ? '/movies' : '/tv',

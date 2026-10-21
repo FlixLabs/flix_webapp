@@ -4,6 +4,7 @@ import { t } from '@/i18n';
 import { requestsApi, requestItems, requestStrings, type MediaRequest } from '@/composables/mediaRequests';
 import DialogSheet from './DialogSheet.vue';
 const props = defineProps<{ request: MediaRequest | null }>();
+const displayedRequest = ref<MediaRequest | null>(props.request);
 const emit = defineEmits<{ close: []; saved: [] }>();
 const instances = ref<string[]>([]);
 const instance = ref('');
@@ -19,8 +20,9 @@ const attempted = ref(false);
 let generation = 0;
 watch(() => props.request, async request => {
   const current = ++generation;
+  if (!request) { optionGeneration++; return; }
+  displayedRequest.value = request;
   reason.value = ''; error.value = ''; attempted.value = false; instance.value = ''; profiles.value = []; folders.value = [];
-  if (!request) return;
   loading.value = true;
   try {
     const data = await requestsApi('/options');
@@ -59,8 +61,8 @@ async function decide(action: 'approve' | 'reject') {
 </script>
 
 <template>
-  <DialogSheet :model-value="!!request" :title="t('Review request')" :label="t('Review request')" :close-label="t('Close')" :context="request?.id" :close-disabled="saving" @update:model-value="!$event && emit('close')">
-    <h2 class="text-h6 mb-3">{{ request?.title }}</h2>
+  <DialogSheet :model-value="!!request" :title="t('Review request')" :label="t('Review request')" :close-label="t('Close')" :context="request?.id" :close-disabled="saving" @update:model-value="!$event && emit('close')" @closed="!request && (displayedRequest = null)">
+    <h2 class="text-h6 mb-3">{{ displayedRequest?.title }}</h2>
     <v-alert v-if="error" type="error" variant="tonal" class="mb-4">{{ t(error) }}</v-alert>
     <v-progress-linear v-if="loading" color="primary" indeterminate :aria-label="t('Loading data...')" class="mb-4" />
     <v-row>

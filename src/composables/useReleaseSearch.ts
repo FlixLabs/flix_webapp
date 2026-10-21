@@ -82,9 +82,13 @@ export function useReleaseSearch(options: MediaServiceOptions) {
     grabError.value = '';
   }
 
-  function close() {
+  function close(preserveView = false) {
     context = null;
     dialog.value = false;
+    if (preserveView) {
+      requestId++; controller?.abort(); controller = null;
+      return;
+    }
     clearResults();
     episodes.value = [];
     season.value = null;
@@ -234,7 +238,7 @@ export function useReleaseSearch(options: MediaServiceOptions) {
       if (!isLoadingEpisodes.value && season.value !== null) void search();
     }
   }, { flush: 'sync' });
-  watch(() => [options.useAPI.value, options.selectedInstanceData.value], close, { flush: 'sync' });
+  watch(() => [options.useAPI.value, options.selectedInstanceData.value], () => close(), { flush: 'sync' });
   if (getCurrentScope()) onScopeDispose(close);
 
   return { dialog, releases, episodes, seasons, seasonEpisodes, season, episodeId, isSearching, isLoadingEpisodes, isGrabbing, hasSearched, error, clearGrabError, open, close, search, grab };

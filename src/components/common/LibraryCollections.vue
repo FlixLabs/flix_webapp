@@ -26,6 +26,8 @@ const search = computed(() => props.search ?? '');
 const page = defineModel<number>('page', { required: true });
 const selectedId = ref<number | null>(null);
 const dialog = ref(false);
+const renderCollection = ref(false);
+watch(dialog, value => { if (value) renderCollection.value = true; }, { flush: 'sync' });
 const downloadDialog = ref(false);
 const downloadDialogReady = ref(false);
 const downloadActivator = useDialogActivator(() => downloadDialog.value);
@@ -48,7 +50,7 @@ const filtered = computed(() => collections.value.filter(collection => collectio
 const pages = computed(() => Math.ceil(filtered.value.length / 12));
 const items = computed(() => filtered.value.slice((page.value - 1) * 12, page.value * 12));
 const selected = computed(() => collections.value.find(collection => collection.tmdbId === selectedId.value));
-const localizedCollection = useLocalizedMedia(() => dialog.value ? selected.value : undefined, () => 'collection');
+const localizedCollection = useLocalizedMedia(() => renderCollection.value ? selected.value : undefined, () => 'collection');
 const members = computed(() => selected.value?.members ?? []);
 const downloadable = computed(() => downloadableCollectionMovies(members.value));
 const removable = computed(() => removableCollectionMovies(members.value));
@@ -114,7 +116,7 @@ watch(selected, value => { if (!value && props.collectionState.hasData) { dialog
   </v-row>
   <v-alert v-if="!filtered.length && !disabled" type="info" class="mt-4">{{ search.trim() ? t("No collections match your search") : t("No automatic movie collections in this library") }}</v-alert>
   <v-alert v-if="initialPending && !disabled && !collections.some(collection => collection.tmdbId === initialPending)" type="info" class="mt-4">{{ t("This collection is not available in the selected instance.") }}</v-alert>
-  <DialogSheet v-if="selected" v-model="dialog" :title="t('Collection')" :label="t('Collection: {p0}', { p0: localizedCollection?.title ?? selected.title })" :context="`${selectedId}:${memberPage}:${memberPageSize}`" :activator="activator" :close-label="t('Close collection')">
+  <DialogSheet v-if="selected" v-model="dialog" :title="t('Collection')" :label="t('Collection: {p0}', { p0: localizedCollection?.title ?? selected.title })" :context="`${selectedId}:${memberPage}:${memberPageSize}`" :activator="activator" :close-label="t('Close collection')" @closed="!dialog && (renderCollection = false)">
     <ReadFeedback :state="updates.state" :label="t('Collection updates')" @retry="updates.refresh" />
     <ReadFeedback :state="collectionState" :label="t('Collections')" @retry="emit('retry-collections')" />
     <ReadFeedback :state="libraryState" :label="t('Movie library')" @retry="emit('retry-library')" />

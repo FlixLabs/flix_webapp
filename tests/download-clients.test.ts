@@ -113,4 +113,24 @@ describe('download clients', () => {
     instance.value = 'Second'; finish(Response.json({ clients: [client] })); await pending;
     expect(actions.clients.value).toEqual([]);
   });
+  it('cancels a refresh without clearing the closing view and ignores its late response', async () => {
+    let finish!: (response: Response) => void;
+    const fetch = vi.fn().mockResolvedValueOnce(Response.json({ clients: [client] }))
+      .mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve; }));
+    vi.stubGlobal('fetch', fetch);
+    const { actions } = setup();
+    await actions.load();
+    actions.cancel();
+    expect(actions.clients.value).toEqual([client]);
+    const pending = actions.load();
+    const snapshot = { clients: actions.clients.value, loading: actions.loading.value, error: actions.error.value };
+    actions.cancel();
+    expect(fetch.mock.calls[1]![1].signal.aborted).toBe(true);
+    finish(Response.json({ clients: [client] }));
+    await pending;
+    expect({ clients: actions.clients.value, loading: actions.loading.value, error: actions.error.value }).toEqual(snapshot);
+    actions.reset();
+    expect(actions.loading.value).toBe(false);
+    expect(actions.clients.value).toEqual([]);
+  });
 });

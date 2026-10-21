@@ -1,6 +1,6 @@
 import { readdirSync, rmSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { selectE2eTests } from './select-e2e-tests.mjs';
+import { selectE2eTests, e2eTimeoutMs } from './select-e2e-tests.mjs';
 
 const available = readdirSync('tests/e2e').filter(file => file.endsWith('.spec.ts')).map(file => 'tests/e2e/' + file);
 const scope = process.env.FLIX_E2E_SCOPE || 'full';
@@ -13,6 +13,9 @@ if (selection.files) console.log('[e2e] ' + selection.files.join(', '));
 // Playwright treats file arguments as regexes, not literal paths.
 const filters = selection.files?.map(file => file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$') || [];
 if (!selection.files) process.env.FLIX_E2E_SCOPE = 'full';
+process.env.FLIX_E2E_TIMEOUT_MS = String(e2eTimeoutMs(selection.files, available.length));
+console.log('[e2e] Suite budget: ' + Number(process.env.FLIX_E2E_TIMEOUT_MS) / 60000 + ' minutes ('
+  + (selection.files?.length ?? available.length) + '/' + available.length + ' spec files)');
 const result = spawnSync(process.execPath, ['node_modules/playwright/cli.js', 'test', ...filters, ...process.argv.slice(2)], { stdio: 'inherit' });
 // A global timeout can leave thousands of raw trace resources behind. Finalized
 // trace.zip files, screenshots, HTML and JUnit are stored outside these folders.

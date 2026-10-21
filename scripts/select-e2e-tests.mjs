@@ -1,5 +1,37 @@
 // Keep a small cross-page safety net even for documentation and CI-only changes.
 export const smokeTests = ['api-session', 'login-loading', 'dashboard-actions', 'global-navigation'];
+
+export function e2eTimeoutMs(files, availableCount) {
+  const minutes = files && availableCount > 0
+    ? Math.max(15, Math.min(45, Math.ceil(45 * files.length / availableCount)))
+    : 45;
+  return minutes * 60 * 1000;
+}
+// Specific components take precedence over broad page/feature families. A dialog
+// name must not select every media, download and request scenario at once.
+const componentScenarios = [
+  [/^(DownloadClientsDialog|useDownloadClients)$/, ['download-clients', 'download-client-refresh']],
+  [/^(ManualImportDialog|ManualImportStatus|ManualImportActivity|useManualImport|manualImportTracking|importMediaSuggestions)$/, ['manual-import', 'manual-import-pending']],
+  [/^(ReleaseSelectionDialog|useReleaseSearch)$/, ['release-pagination', 'release-association', 'release-download-errors', 'release-source-links']],
+  [/^DeleteConfirmationDialog$/, ['regressions']],
+  [/^useDeleteConfirmation$/, ['regressions', 'download-import-protection']],
+  [/^(QualitySelectionDialog|useQualitySelection)$/, ['outings-add']],
+  [/^useQualityProfiles$/, ['outings-add', 'dashboard-details', 'media-settings']],
+  [/^MediaDialog$/, ['dialog-harmony', 'media-dialog-scroll', 'dashboard-details']],
+  [/^(DialogSheet|DialogScrollHint|useDialogScroll|useDialogActivator|useDialog)$/, ['dialog-harmony', 'media-dialog-scroll', 'accessibility']],
+  [/^LibraryCollections$/, ['collections', 'collection-sheet-refresh']],
+  [/^(CollectionDownloadDialog|useCollectionDownloads)$/, ['collection-downloads']],
+  [/^(CollectionRemovalDialog|useCollectionRemoval)$/, ['collection-removal']],
+  [/^(MediaRequests|RequestReviewDialog|mediaRequests)$/, ['media-requests']],
+  [/^(useLocalizedMedia|LocalizedMedia|LocalizedEpisode)$/, ['multilingual']],
+  [/^(MediaShareLink|mediaLinks|useMediaSheetRoute)$/, ['media-links']],
+  [/^(MediaHistory|useMediaHistory)$/, ['media-history']],
+  [/^(MediaFileDetails|mediaFileDetails)$/, ['media-file-details']],
+  [/^(MediaMonitoring|useMediaMonitoring)$/, ['media-monitoring']],
+  [/^(MediaSettings|useMediaSettings)$/, ['media-settings']],
+  [/^(useMediaSheetRefresh|useCollectionSheetRefresh)$/, ['media-sheet-refresh', 'collection-sheet-refresh']],
+  [/^(queueImportProtection|useDownloadActions)$/, ['download-import-protection', 'manual-import']],
+];
 const groups = [
   [/dashboard/i, /^(dashboard-|media-sheet-navigation)/],
   [/library/i, /^(library-|collection|media-counts|media-badges)/],
@@ -11,7 +43,7 @@ const groups = [
   [/collection/i, /^collection/],
   [/storage|system|integration/i, /^(storage-|system-|integration-status)/],
   [/settings|theme|color/i, /^(media-settings|button-colors|regressions|loading-colors)/],
-  [/media|movie|series|episode|dialog/i, /^(media-|dashboard-details|dialog-harmony|season-|accessibility|upcoming-|download-media-sheet|collection)/],
+  [/media|movie|series|episode/i, /^(media-|dashboard-details|dialog-harmony|season-|accessibility|upcoming-|download-media-sheet|collection)/],
   [/auth|login|session|user|request/i, /^(api-session|login-|user-|media-requests|media-links)/],
 ];
 
@@ -28,6 +60,16 @@ export function selectE2eTests(changedFiles, available) {
       return { files: null, reason: 'Shared runtime or fixture changed: ' + file };
     }
     if (!file.startsWith('src/')) continue;
+    const name = file.split('/').at(-1).replace(/\.(vue|ts)$/, '');
+    const component = componentScenarios.find(([pattern]) => pattern.test(name));
+    if (component) {
+      for (const scenario of component[1]) {
+        const spec = 'tests/e2e/' + scenario + '.spec.ts';
+        if (!available.includes(spec)) return { files: null, reason: 'Mapped E2E spec missing: ' + spec };
+        selected.add(spec);
+      }
+      continue;
+    }
     const matches = groups.filter(([source]) => source.test(file));
     if (!matches.length) return { files: null, reason: 'Unmapped application change: ' + file };
     for (const test of available) {

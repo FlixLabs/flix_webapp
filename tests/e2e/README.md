@@ -24,7 +24,11 @@ commit. Changed E2E specs are always included. Shared runtime/fixture changes,
 unmapped application changes, lockfile changes or an unavailable diff trigger the full suite.
 Package metadata/version bumps alone keep the safety net; dependency resolution
 changes are detected through `yarn.lock` and frozen installation remains required.
-The feature-to-test groups are maintained in `scripts/select-e2e-tests.mjs`.
+The component-to-scenario mappings and fallback feature groups are maintained in
+`scripts/select-e2e-tests.mjs`. Known components use their direct scenario mapping
+instead of accumulating every family matching their name (for example, a client
+dialog does not also select all media and manual-import tests). Changed specs and
+the safety net are still included. Missing mapped specs fail safe to full coverage.
 
 The default branch only creates the release tag. Stable tags run `quality` and
 the full desktop/mobile E2E suite in parallel before building and deploying.
@@ -32,8 +36,11 @@ This avoids repeating the full validation on both master and its tag.
 No release build or deployment can bypass these two checks.
 
 `sh scripts/run-e2e.sh` uses Docker, two workers and at most one retry. Local
-runs default to the full suite. CI budgets are 15 minutes for targeted runs and
-45 minutes for full runs (not a per-test timeout). The runner needs Docker but
+runs default to the full suite. The CI suite budget scales with the fraction of
+spec files selected: `ceil(45 * selected / total)` minutes, with a 15-minute
+minimum and a 45-minute maximum. Full runs always get 45 minutes. This changes
+only the suite budget, not individual test timeouts or selected coverage. The
+entrypoint logs the chosen budget before starting Playwright. The runner needs Docker but
 not Node or Chromium. Only `CI=true` and non-secret selection data are passed
 to the container, never production configuration or credentials. The image
 installs Chromium's headless shell, without also downloading the full browser.

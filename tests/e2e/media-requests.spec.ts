@@ -4,6 +4,47 @@ import type { Page } from '@playwright/test';
 const film = { type: 'movies', tmdbId: 10, title: 'Requested movie', year: '2027', poster: '', overview: 'A requested movie synopsis' };
 const series = { type: 'series', tmdbId: 20, tvdbId: 200, title: 'Requested series', year: '2027', poster: '', overview: 'A requested series synopsis', seasons: [{ number: 1, name: 'First', episodeCount: 5 }, { number: 2, name: 'Second', episodeCount: 5 }] };
 const pending = { id: 'request-id', ...film, seasons: null, status: 'pending', createdAt: 1700000000000, subscribers: [{ id: 'guest', name: 'Guest' }] };
+
+test('closing a request review preserves its title, options and refusal reason during the fade', async ({ page, mutations }) => {
+  const state = await mock(page, 'admin', [{ ...pending }]);
+  await page.goto('/requests');
+  await page.getByRole('button', { name: 'Review request', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Review request', exact: true });
+  await expect(dialog.getByRole('button', { name: 'Approve request', exact: true })).toBeEnabled();
+  await dialog.getByRole('textbox', { name: 'Refusal reason (optional)', exact: true }).fill('Retained reason');
+  const retained = await dialog.getByRole('button', { name: 'Close', exact: true }).evaluate(async button => {
+    const overlay = button.closest('.v-dialog')!;
+    const before = overlay.querySelector('.v-card-text')!.textContent;
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    return overlay.querySelector('.v-card-text')!.textContent === before && overlay.querySelector('textarea')?.value === 'Retained reason';
+  });
+  expect(retained).toBe(true);
+  await expect(dialog).not.toBeVisible();
+  expect(state.writes).toEqual([]);
+  expect(mutations).toEqual([]);
+});
+
+test('closing a catalog request preserves its heading during the fade', async ({ page, mutations }) => {
+  const state = await mock(page);
+  await page.goto('/requests');
+  await page.getByRole('textbox', { name: 'Search', exact: true }).fill('Requested movie');
+  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByRole('button', { name: 'Open Requested movie', exact: true }).click();
+  const dialog = page.getByRole('dialog', { name: 'Request media', exact: true });
+  await expect(dialog.getByText('A requested movie synopsis', { exact: true })).toBeVisible();
+  const retained = await dialog.getByRole('button', { name: 'Close', exact: true }).evaluate(async button => {
+    const overlay = button.closest('.v-dialog')!;
+    const before = overlay.querySelector('.v-card-title')!.textContent;
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+    return overlay.querySelector('.v-card-title')!.textContent === before;
+  });
+  expect(retained).toBe(true);
+  await expect(dialog).not.toBeVisible();
+  expect(state.writes).toEqual([]);
+  expect(mutations).toEqual([]);
+});
 async function mock(page: Page, role = 'user', initial: Record<string, unknown>[] = []) {
   const state = { items: initial, writes: [] as { path: string; body: Record<string, unknown> }[], available: false, failedList: false };
   await page.addInitScript(() => localStorage.setItem('flix-session:/flix-api', JSON.stringify({ token: 'f'.repeat(64), expiresAt: Date.now() + 86400000 })));

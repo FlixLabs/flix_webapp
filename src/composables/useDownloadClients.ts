@@ -53,8 +53,11 @@ export function useDownloadClients(instance: Ref<string | null>) {
   let generation = 0;
   let controller: AbortController | null = null;
   const endpoint = () => `${import.meta.env.VITE_FLIX_API_URL}/download-clients/${encodeURIComponent(instance.value ?? '')}`;
-  function reset() {
+  function cancel() {
     generation++; controller?.abort(); controller = null;
+  }
+  function reset() {
+    cancel();
     clients.value = []; error.value = ''; message.value = ''; warning.value = '';
     loading.value = false; removing.value = false; uncertain.value = false;
   }
@@ -119,5 +122,5 @@ export function useDownloadClients(instance: Ref<string | null>) {
   }
   watch(instance, reset, { flush: 'sync' });
   onScopeDispose(reset);
-  return { clients, loading, removing, error, message, warning, uncertain, load, remove, reset };
+  return { clients, loading, removing, error, message, warning, uncertain, load, remove, reset, cancel };
 }
