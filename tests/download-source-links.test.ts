@@ -53,6 +53,18 @@ it('retains a verified indexer even when the source URL is missing or unsafe', a
   expect(await links.resolve('movies', { downloadId: 'abc' })).toBeUndefined();
 });
 
+it('matches torrent hashes regardless of case without relaxing other identifiers', async () => {
+  const { links, fetchMock } = setup();
+  const hash = 'a'.repeat(40);
+  fetchMock.mockResolvedValueOnce(Response.json({ records: [
+    { ...grabbed, downloadId: 'b'.repeat(40), data: { indexer: 'Wrong' } },
+    { ...grabbed, downloadId: hash.toUpperCase(), data: { indexer: 'Ygg' } },
+  ] }));
+  expect(await links.resolveInfo('movies', { downloadId: hash })).toEqual({ indexer: 'Ygg', url: undefined });
+  fetchMock.mockResolvedValueOnce(Response.json({ records: [{ ...grabbed, downloadId: 'ABC' }] }));
+  expect(await links.resolveInfo('movies', { downloadId: 'abc' })).toBeUndefined();
+});
+
 it('looks up the exact grab by download ID for either service and deduplicates requests', async () => {
   const { links, fetchMock } = setup();
   expect(await Promise.all([links.resolve('movies', { downloadId: 'abc' }), links.resolve('movies', { downloadId: 'abc' })])).toEqual([source, source]);

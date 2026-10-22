@@ -392,7 +392,7 @@ watch(serviceContext, () => {
 
 <template>
   <Alert :alert="alert" @update:alert="alert = $event" />
-  <DownloadClientsDialog v-if="useAPI && selectedInstanceData?.has_download_clients" v-model="clientsDialog" :instance="selectedInstance" />
+  <DownloadClientsDialog v-if="useAPI && selectedInstanceData?.has_download_clients" v-model="clientsDialog" :instance="selectedInstance" :source-context="serviceContext()" :resolve-source="sourceLinks.resolveInfo" />
   <MediaDialog v-if="detailItem" v-model="mediaDialog" :item="detailItem" :media-type="detailType === 'movies' ? 'Movie' : 'Serie'" :announcement-name="detailType === 'movies' ? 'Release' : 'Premiere'" :activator="detailActivator" :summary-visible="mediaSheet.state.hasData" :show-search="false" :show-add="false" :show-remove="false" :library-item="mediaSheet.state.hasData && !mediaSheet.state.error" read-only>
     <template #status>
       <Loading :is-loading="mediaSheet.state.loading" :sentence="t('Loading media...')" />
@@ -412,7 +412,7 @@ watch(serviceContext, () => {
   <v-container>
     <PageNavigation ref="navigation">
       <v-text-field v-model="search" :label="t('Search')" variant="outlined" prepend-inner-icon="mdi-magnify" clearable hide-details />
-      <div class="d-flex flex-wrap align-center justify-space-between ga-3 mt-3">
+      <div class="d-flex flex-wrap align-center ga-3 mt-3">
         <MediaTypeToggle
           v-model="mediaType"
           :total-movies="view === 'queue' ? movieRecords.length : movieHistory.length"
@@ -420,22 +420,25 @@ watch(serviceContext, () => {
           :movies-pending="!reads.movies[view].state.hasData"
           :series-pending="!reads.series[view].state.hasData"
         />
-        <v-btn-toggle v-model="view" color="primary" variant="outlined" mandatory :aria-label="t('Download view')">
-          <v-btn value="queue" prepend-icon="mdi-download-outline">{{ t("Queue") }}</v-btn>
-          <v-btn value="history" prepend-icon="mdi-history">{{ t("History") }}</v-btn>
-        </v-btn-toggle>
-        <v-select
-          v-if="view === 'queue'"
-          v-model="queueFilter"
-          :items="translatedChoices(queueFilterOptions)"
-          :label="t('Queue filter')"
-          variant="outlined"
-          density="compact"
-          hide-details
-          class="queue-filter"
-        />
+        <div class="download-view-controls">
+          <v-btn-toggle v-model="view" color="primary" variant="outlined" mandatory :aria-label="t('Download view')">
+            <v-btn value="queue" prepend-icon="mdi-download-outline">{{ t("Queue") }}</v-btn>
+            <v-btn value="history" prepend-icon="mdi-history">{{ t("History") }}</v-btn>
+          </v-btn-toggle>
+          <v-select
+            v-if="view === 'queue'"
+            v-model="queueFilter"
+            :items="translatedChoices(queueFilterOptions)"
+            :label="t('Queue filter')"
+            variant="outlined"
+            density="compact"
+            hide-details
+            class="queue-filter"
+          />
+        </div>
         <v-pagination
           v-if="pageCount > 1"
+          class="ms-auto"
           v-model="page"
           :length="pageCount"
           :total-visible="$vuetify.display.xs ? 3 : 5"
@@ -541,8 +544,17 @@ watch(serviceContext, () => {
   .downloads-table :deep(.v-data-table__td-title) { display: none; }
   .downloads-table :deep(.v-data-table__td-value) { width: 100%; text-align: left; }
 }
+.download-view-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  flex: 0 1 560px;
+  min-width: min(100%, 560px);
+}
+.download-view-controls > .v-btn-toggle { flex-shrink: 0; }
 .queue-filter {
-  flex: 0 1 220px;
+  flex: 1 1 180px;
   min-width: 180px;
 }
 .downloads-table :deep(.v-data-table__td-value) {
