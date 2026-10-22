@@ -1,5 +1,10 @@
 # flix_webapp
 
+With Flix API 2.2.2+, download-client inspection remains available in read-only
+mode when import protection cannot be verified. The panel displays torrents and
+an explicit warning, without claiming they are untracked. Removal, including
+forced removal, stays disabled until a refresh verifies protection successfully.
+
 ## Download Origin
 
 Downloads and history display the indexer next to each release, without expanding

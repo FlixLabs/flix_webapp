@@ -7,10 +7,10 @@ export interface ClientTorrent {
   removalBlockedReason?: 'Import in progress' | 'Import queued' | 'Import status unavailable' | null;
 }
 export interface DownloadClient {
-  id: string; name: string; type: string; allowDeleteData: boolean; allowForceRemoval?: boolean; torrents: ClientTorrent[];
+  id: string; name: string; type: string; allowDeleteData: boolean; allowForceRemoval?: boolean; trackingVerified?: boolean; torrents: ClientTorrent[];
 }
 export function canRemoveClientTorrent(client: DownloadClient, item: ClientTorrent, force = false): boolean {
-  return item.removalBlockedReason === null && item.completed
+  return client.trackingVerified !== false && item.removalBlockedReason === null && item.completed
     && (item.tracked ? force && client.allowForceRemoval === true : item.removable);
 }
 export function parseDownloadClients(value: unknown): DownloadClient[] {
@@ -19,6 +19,7 @@ export function parseDownloadClients(value: unknown): DownloadClient[] {
   const ids = new Set<string>();
   for (const client of data.clients) {
     if (!client || typeof client.id !== 'string' || ids.has(client.id) || typeof client.name !== 'string'
+      || (client.trackingVerified !== undefined && typeof client.trackingVerified !== 'boolean')
       || (client.allowForceRemoval !== undefined && typeof client.allowForceRemoval !== 'boolean') || typeof client.type !== 'string' || typeof client.allowDeleteData !== 'boolean' || !Array.isArray(client.torrents)) throw new Error('Invalid client response.');
     ids.add(client.id);
     const torrents = new Set<string>();
@@ -36,6 +37,7 @@ export function parseDownloadClients(value: unknown): DownloadClient[] {
       }
       if (item.removalBlockedReason !== null && !['Import in progress', 'Import queued', 'Import status unavailable'].includes(item.removalBlockedReason)) throw new Error('Invalid import protection response.');
       if (item.removalBlockedReason && item.removable) throw new Error('Invalid removal protection.');
+      if (client.trackingVerified === false && (item.removable || item.removalBlockedReason !== 'Import status unavailable')) throw new Error('Invalid read-only protection.');
       torrents.add(item.id);
     }
   }

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { effectScope, ref } from 'vue';
-import { parseDownloadClients, useDownloadClients } from '@/composables/useDownloadClients';
+import { parseDownloadClients, useDownloadClients, canRemoveClientTorrent } from '@/composables/useDownloadClients';
 
 const item = { id: 'a'.repeat(40), name: 'Torrent', state: 'Seeding', progress: 100, completed: true,
   sizeBytes: 1e9, path: '/downloads', ratio: 2, tracked: false, removable: true, removalBlockedReason: null };
@@ -14,6 +14,21 @@ function setup() {
 }
 afterEach(() => { scopes.splice(0).forEach(scope => scope.stop()); vi.unstubAllGlobals(); });
 describe('download clients', () => {
+  it('keeps unverified inspection read-only, including forced removals', async () => {
+    const readonlyItem = { ...item, removable: false, removalBlockedReason: 'Import status unavailable' as const };
+    const readonlyClient = { ...client, trackingVerified: false, allowForceRemoval: false, torrents: [readonlyItem] };
+    expect(parseDownloadClients({ clients: [readonlyClient] })).toEqual([readonlyClient]);
+    expect(canRemoveClientTorrent(readonlyClient, readonlyItem, true)).toBe(false);
+    expect(canRemoveClientTorrent(readonlyClient, item, true)).toBe(false);
+    expect(() => parseDownloadClients({ clients: [{ ...readonlyClient, torrents: [item] }] })).toThrow();
+    expect(() => parseDownloadClients({ clients: [{ ...client, trackingVerified: 'false' }] })).toThrow();
+    const fetch = vi.fn().mockResolvedValue(Response.json({ clients: [readonlyClient] }));
+    vi.stubGlobal('fetch', fetch);
+    const { actions } = setup();
+    await actions.load();
+    expect(await actions.remove(readonlyClient, readonlyItem, false, true)).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
   it('rejects incomplete responses and inconsistent removal permissions', () => {
     expect(parseDownloadClients({ clients: [client] })).toEqual([client]);
     for (const data of [null, {}, { clients: [client, client] }, { clients: [{ ...client, torrents: [{ ...item, tracked: true }] }] },

@@ -1,6 +1,32 @@
 import { test, expect } from './fixtures';
 
 const hash = 'a'.repeat(40);
+
+test('unverified imports keep Deluge readable without claiming tracking or allowing removal', async ({ page, mutations }) => {
+  const writes: unknown[] = [];
+  const dialog = await open(page, writes);
+  let verified = false;
+  await page.route('**/download-clients/**', route => {
+    if (route.request().method() !== 'GET') { writes.push(route.request().method()); return route.abort(); }
+    return route.fulfill({ json: { clients: [{ id: 'main', name: 'My Deluge', type: 'deluge',
+      trackingVerified: verified, allowForceRemoval: verified, allowDeleteData: false, torrents: [{
+        id: hash, name: 'Read-only torrent', state: 'Seeding', progress: 100, completed: true,
+        sizeBytes: 1e9, path: '/downloads/movie', ratio: 2, tracked: false,
+        removable: verified, removalBlockedReason: verified ? null : 'Import status unavailable',
+      }] }] } });
+  });
+  await dialog.getByRole('button', { name: 'Refresh clients', exact: true }).click();
+  await expect(dialog.getByText('Read-only torrent', { exact: true })).toBeVisible();
+  await expect(dialog).toContainText('Read-only inspection: import protection is unavailable.');
+  await expect(dialog.getByText('Not currently tracked by Radarr / Sonarr', { exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Remove torrent Read-only torrent', exact: true })).toBeDisabled();
+  verified = true;
+  await dialog.getByRole('button', { name: 'Refresh clients', exact: true }).click();
+  await expect(dialog).not.toContainText('Read-only inspection:');
+  await expect(dialog.getByRole('button', { name: 'Remove torrent Read-only torrent', exact: true })).toBeEnabled();
+  expect(writes).toEqual([]);
+  expect(mutations).toEqual([]);
+});
 async function open(page: import('@playwright/test').Page, writes: unknown[], allowDeleteData = false, fail = false) {
   await page.route('**/instances', route => route.fulfill({ json: [{ name: 'Test instance', has_download_clients: true,
     radarr: { base_url: 'http://radarr.test', api_key: 'test-only', root_folder_path: '/movies' },

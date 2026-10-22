@@ -63,6 +63,7 @@ async function confirm() {
     <v-progress-linear v-if="loading" indeterminate color="primary" :aria-label="t('Loading download clients')" class="mt-3" />
     <template v-if="clients.length">
       <v-select v-model="clientId" :items="clients" item-value="id" item-title="name" :label="t('Download client')" variant="outlined" class="mt-4" :disabled="removing || confirming" hide-details />
+      <v-alert v-if="client?.trackingVerified === false" type="warning" variant="tonal" class="mt-3" role="status">{{ t('Read-only inspection: import protection is unavailable. Removal is disabled. Refresh clients to retry.') }}</v-alert>
       <p class="text-caption text-medium-emphasis my-3">{{ t("{p0} completed torrents. Active downloads are excluded. Untracked does not guarantee a file has been imported or is safe to delete.", { p0: completed.length }) }}</p>
       <v-alert v-if="!completed.length" type="info" variant="tonal">{{ t("No completed torrents.") }}</v-alert>
       <v-alert v-else-if="!filtered.length" type="info" variant="tonal" class="mb-3">{{ t('No completed torrents match this search. Clear the search to see the remaining torrents.') }}</v-alert>
@@ -72,7 +73,7 @@ async function confirm() {
           <template #title><span class="text-wrap">{{ item.name }}</span></template>
           <template #subtitle>
             <div class="text-wrap mt-1">{{ t("{p0} · {p1} GB · Ratio: {p2}", { p0: t(item.state), p1: decimal((item.sizeBytes / 1e9)), p2: typeof item.ratio === 'number' ? decimal(item.ratio) : t("Unknown") }) }}</div>
-            <div class="text-wrap">{{ item.tracked ? t("Tracked by Radarr / Sonarr") : t("Not currently tracked by Radarr / Sonarr") }}</div>
+            <div v-if="client?.trackingVerified !== false" class="text-wrap">{{ item.tracked ? t("Tracked by Radarr / Sonarr") : t("Not currently tracked by Radarr / Sonarr") }}</div>
             <div v-if="item.removalBlockedReason" class="text-warning text-wrap">{{ t(item.removalBlockedReason) }}</div>
             <details class="mt-2"><summary>{{ t("Details") }}</summary><p class="text-break">{{ item.path }}</p><p class="text-break">{{ item.id }}</p></details>
           </template>

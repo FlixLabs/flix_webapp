@@ -918,5 +918,6 @@
   "Trailer: {p0}": "Bande-annonce : {p0}",
   "Open on YouTube": "Ouvrir sur YouTube",
   "If playback is unavailable, open the trailer on YouTube.": "Si la lecture est indisponible, ouvrez la bande-annonce sur YouTube.",
-  "Unable to load trailers. Check TMDB and retry.": "Impossible de charger les bandes-annonces. Vérifiez TMDB et réessayez."
+  "Unable to load trailers. Check TMDB and retry.": "Impossible de charger les bandes-annonces. Vérifiez TMDB et réessayez.",
+  "Read-only inspection: import protection is unavailable. Removal is disabled. Refresh clients to retry.": "Consultation seule : la protection des imports est indisponible. La suppression est désactivée. Actualisez les clients pour réessayer."
 }
