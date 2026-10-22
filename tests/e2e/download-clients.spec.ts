@@ -2,6 +2,31 @@ import { test, expect } from './fixtures';
 
 const hash = 'a'.repeat(40);
 
+test('completed client torrents show indexers by hash without requiring a source URL', async ({ page, mutations }) => {
+  const lookups: string[] = [];
+  await page.route('**/api/v3/history?*', route => {
+    const url = new URL(route.request().url());
+    const id = url.searchParams.get('downloadId');
+    if (id) lookups.push(`${url.hostname}:${id}`);
+    if (id === 'b'.repeat(40)) return route.fulfill({ status: 503, json: {} });
+    return route.fulfill({ json: { records: id === hash && url.hostname === 'sonarr.test' ? [
+      { downloadId: 'f'.repeat(40), eventType: 'grabbed', data: { indexer: 'Wrong origin' } },
+      { downloadId: hash.toUpperCase(), eventType: 'grabbed', data: { indexer: 'Ygg' } },
+    ] : [] } });
+  });
+  const writes: unknown[] = [];
+  const dialog = await open(page, writes);
+  const torrent = dialog.getByRole('listitem').filter({ hasText: 'A completed torrent' });
+  await expect(torrent.locator('.client-torrent-origin')).toHaveText('Indexer: Ygg');
+  await expect(dialog.getByRole('listitem').filter({ hasText: 'Tracked film' }).locator('.client-torrent-origin')).toHaveText('Indexer: Unknown');
+  await expect(dialog).not.toContainText('Wrong origin');
+  await expect(dialog.getByRole('button', { name: 'Remove torrent Tracked film', exact: true })).toBeEnabled();
+  expect(lookups.filter(value => value.endsWith(`:${hash}`))).toHaveLength(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(writes).toEqual([]);
+  expect(mutations).toEqual([]);
+});
+
 test('unverified imports keep Deluge readable without claiming tracking or allowing removal', async ({ page, mutations }) => {
   const writes: unknown[] = [];
   const dialog = await open(page, writes);

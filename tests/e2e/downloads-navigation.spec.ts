@@ -3,6 +3,33 @@ import { test, expect } from './fixtures';
 const longTitle = 'A complete download title with a very long release name that must remain readable on mobile';
 const record = { id: 101, title: longTitle, size: 1e9, sizeleft: 5e8, timeleft: '00:10:00', status: 'downloading', added: '2026-01-01', languages: [] };
 
+for (const locale of ['en-US', 'fr-FR']) {
+  test.describe(locale, () => {
+    test.use({ locale });
+    test('queue view buttons and filter stay on the same row at desktop and tablet widths', async ({ page, mutations }) => {
+      await page.goto('/downloads');
+      for (const width of [768, 1024, 1280, 1440]) {
+        await page.setViewportSize({ width, height: 1000 });
+        const history = page.getByRole('button', { name: /^(History|Historique)$/ });
+        const filter = page.locator('.queue-filter');
+        await expect(filter).toBeVisible();
+        await expect.poll(async () => {
+          const button = (await history.boundingBox())!;
+          const field = (await filter.boundingBox())!;
+          return Math.abs(button.y + button.height / 2 - field.y - field.height / 2);
+        }).toBeLessThan(2);
+        const before = (await history.boundingBox())!;
+        await history.click();
+        await expect(filter).toHaveCount(0);
+        await expect.poll(async () => Math.abs((await history.boundingBox())!.x - before.x)).toBeLessThan(2);
+        await page.getByRole('button', { name: /^(Queue|File d\u2019attente)$/ }).click();
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      }
+      expect(mutations).toEqual([]);
+    });
+  });
+}
+
 test('downloads switch media and history without stacking tables or refetching', async ({ page, mutations }) => {
   const reads: string[] = [];
   await page.route(/\/api\/v3\/(queue|history)\?/, route => {
@@ -19,8 +46,15 @@ test('downloads switch media and history without stacking tables or refetching',
   await expect(table).toContainText(longTitle);
   await expect(table).not.toContainText('Movie history');
   await expect.poll(() => reads.length).toBe(4);
+  const historyButton = page.getByRole('button', { name: 'History', exact: true });
+  const queuePosition = await historyButton.boundingBox();
+  expect(queuePosition).not.toBeNull();
   await page.getByRole('button', { name: 'History', exact: true }).click();
   await expect(table).toContainText('Movie history');
+  await expect.poll(async () => {
+    const position = await historyButton.boundingBox();
+    return position && Math.abs(position.x - queuePosition!.x);
+  }).toBeLessThan(2);
   await expect(page.getByRole('button', { name: /^Remove / })).toHaveCount(0);
   await page.getByRole('button', { name: 'Series (1)', exact: true }).click();
   await expect(table).toContainText('Series history');

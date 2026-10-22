@@ -149,6 +149,10 @@ selectors use the primary color only for the active choice.
 
 ### Download Clients
 
+Each completed torrent shows its indexer when a matching grab is available in
+Radarr or Sonarr history. Matching uses the torrent hash, never the title. Missing
+or unavailable history displays **Unknown** without blocking client inspection.
+
 With Flix API 2.0.0+, configured instances expose **Download clients** in Downloads.
 The panel loads automatically using your Flix session; no separate client token is
 required. Sign in once in this browser: the session persists across reloads and

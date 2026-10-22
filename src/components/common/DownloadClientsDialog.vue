@@ -4,9 +4,11 @@ import { computed, ref, watch } from 'vue';
 import DialogSheet from './DialogSheet.vue';
 import { useDownloadClients, canRemoveClientTorrent, type ClientTorrent, type DownloadClient } from '@/composables/useDownloadClients';
 import { useDialogActivator } from '@/composables/useDialogActivator';
+import type { DownloadSource, DownloadSourceRecord } from '@/composables/useDownloadSourceLinks';
+import type { MediaType } from '@/composables/useMediaService';
 
 const visible = defineModel<boolean>({ required: true });
-const props = defineProps<{ instance: string | null }>();
+const props = defineProps<{ instance: string | null; sourceContext?: string; resolveSource?: (type: MediaType, record: DownloadSourceRecord) => Promise<DownloadSource | undefined> }>();
 const instance = computed(() => props.instance);
 const actions = useDownloadClients(instance);
 const { clients, loading, removing, error, message, warning, uncertain } = actions;
@@ -18,6 +20,20 @@ const page = ref(1);
 const filtered = computed(() => completed.value.filter(item => item.name.toLowerCase().includes(search.value.trim().toLowerCase())));
 const pageCount = computed(() => Math.max(1, Math.ceil(filtered.value.length / 10)));
 const visibleTorrents = computed(() => filtered.value.slice((page.value - 1) * 10, page.value * 10));
+const indexers = ref<Record<string, string>>({});
+watch([visibleTorrents, visible, () => props.sourceContext], async (_, __, onCleanup) => {
+  let current = true;
+  onCleanup(() => { current = false; });
+  // Keep the displayed origins during closing, just like the torrent list.
+  if (!visible.value) return;
+  indexers.value = {};
+  await Promise.all(visibleTorrents.value.map(async item => {
+    const sources = await Promise.all((['movies', 'series'] as const).map(type =>
+      props.resolveSource?.(type, { downloadId: item.id }).catch(() => undefined)));
+    const names = [...new Set(sources.flatMap(source => source?.indexer ? [source.indexer] : []))];
+    if (current && names.length) indexers.value[item.id] = names.join(' / ');
+  }));
+});
 watch([clientId, search], () => { page.value = 1; });
 watch(pageCount, count => { page.value = Math.min(page.value, count); });
 const target = ref<{ client: DownloadClient; item: ClientTorrent } | null>(null);
@@ -72,6 +88,7 @@ async function confirm() {
         <v-list-item v-for="item in visibleTorrents" :key="item.id">
           <template #title><span class="text-wrap">{{ item.name }}</span></template>
           <template #subtitle>
+            <div class="client-torrent-origin text-wrap">{{ t('Indexer') }}: {{ indexers[item.id] ?? t('Unknown') }}</div>
             <div class="text-wrap mt-1">{{ t("{p0} · {p1} GB · Ratio: {p2}", { p0: t(item.state), p1: decimal((item.sizeBytes / 1e9)), p2: typeof item.ratio === 'number' ? decimal(item.ratio) : t("Unknown") }) }}</div>
             <div v-if="client?.trackingVerified !== false" class="text-wrap">{{ item.tracked ? t("Tracked by Radarr / Sonarr") : t("Not currently tracked by Radarr / Sonarr") }}</div>
             <div v-if="item.removalBlockedReason" class="text-warning text-wrap">{{ t(item.removalBlockedReason) }}</div>

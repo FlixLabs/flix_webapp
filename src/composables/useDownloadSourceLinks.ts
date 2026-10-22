@@ -55,7 +55,9 @@ export function useDownloadSourceLinks(options: MediaServiceOptions) {
         if (controller.signal.aborted) return;
         // Never match by title: another release of the same media may have a different source.
         for (const item of records) {
-          if (item.downloadId !== id || item.eventType !== 'grabbed') continue;
+          const sameId = item.downloadId === id || (/^[a-f0-9]{40}$/i.test(id)
+            && typeof item.downloadId === 'string' && item.downloadId.toLowerCase() === id.toLowerCase());
+          if (!sameId || item.eventType !== 'grabbed') continue;
           const url = downloadSourceUrl(item);
           const indexer = downloadSourceIndexer(item);
           if (url || indexer) return { url, indexer };
