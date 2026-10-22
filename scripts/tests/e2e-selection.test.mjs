@@ -4,10 +4,18 @@ import { readdirSync, mkdtempSync, mkdirSync, copyFileSync, writeFileSync, readF
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { selectE2eTests, selectMobileE2eTests, smokeTests, e2eTimeoutMs } from '../select-e2e-tests.mjs';
+import { selectE2eTests, selectReleaseE2eTests, releaseSmokeTests, selectMobileE2eTests, smokeTests, e2eTimeoutMs } from '../select-e2e-tests.mjs';
 
 const root = resolve(import.meta.dirname, '../..');
 const available = readdirSync(join(root, 'tests/e2e')).filter(file => file.endsWith('.spec.ts')).map(file => 'tests/e2e/' + file);
+
+test('release coverage is bounded and never silently drops critical specs', () => {
+  const selection = selectReleaseE2eTests(available);
+  assert.equal(selection.files.length, 8);
+  assert.deepEqual(selection.files, releaseSmokeTests.map(name => 'tests/e2e/' + name + '.spec.ts').sort());
+  assert.ok(selection.files.length < available.length / 4);
+  assert.throws(() => selectReleaseE2eTests(available.filter(file => !file.endsWith('/download-import-protection.spec.ts'))), /Missing critical/);
+});
 
 test('MR mobile coverage keeps the safety net, selected layout checks and every changed spec', () => {
   const changed = ['src/components/common/MediaDialog.vue', 'tests/e2e/media-history.spec.ts'];
@@ -150,4 +158,19 @@ test('the container entrypoint escapes paths, exports failures and removes only 
   assert.equal(full.status, 7, full.stderr);
   assert.equal(readFileSync(join(dir, 'mobile.json'), 'utf8'), 'null');
   assert.deepEqual(JSON.parse(readFileSync(join(dir, 'arguments.json'), 'utf8')), ['test']);
+  const missing = spawnSync(process.execPath, ['scripts/run-e2e-tests.mjs'], { cwd: dir, encoding: 'utf8', env: {
+    ...process.env, FLIX_E2E_SCOPE: 'smoke',
+  } });
+  assert.notEqual(missing.status, 0);
+  assert.match(missing.stderr, /Missing critical release E2E spec/);
+  for (const name of releaseSmokeTests) writeFileSync(join(dir, 'tests/e2e/' + name + '.spec.ts'), '');
+  const smoke = spawnSync(process.execPath, ['scripts/run-e2e-tests.mjs'], { cwd: dir, encoding: 'utf8', env: {
+    ...process.env, FLIX_E2E_SCOPE: 'smoke', FLIX_E2E_MOBILE_FILES: '[]',
+  } });
+  assert.equal(smoke.status, 7, smoke.stderr);
+  assert.equal(readFileSync(join(dir, 'mobile.json'), 'utf8'), 'null');
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, 'arguments.json'), 'utf8')), ['test',
+    ...selectReleaseE2eTests(releaseSmokeTests.map(name => 'tests/e2e/' + name + '.spec.ts')).files
+      .map(file => file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$'),
+  ]);
 });

@@ -43,7 +43,7 @@ function run(dir, overrides = {}) {
   return spawnSync('sh', ['scripts/run-e2e.sh'], { cwd: dir, encoding: 'utf8', env: {
     ...process.env, PATH: dir + '/bin:' + process.env.PATH, CI_JOB_ID: '1234',
     BUILD_EXIT: '0', TEST_EXIT: '0', COPY_EXIT: '0', DIFF_AVAILABLE: '0', DIFF_EXIT: '0',
-    CI_PIPELINE_SOURCE: '', CI_MERGE_REQUEST_DIFF_BASE_SHA: '', TEST_CHANGED_FILES: '', ...overrides,
+    CI_PIPELINE_SOURCE: '', CI_COMMIT_TAG: '', CI_MERGE_REQUEST_DIFF_BASE_SHA: '', TEST_CHANGED_FILES: '', ...overrides,
   } });
 }
 
@@ -99,6 +99,31 @@ test('MR diff is passed as data, with full coverage if its base or diff is unava
     assert.equal(run(dir, { ...env, ...overrides }).status, 0);
     assert.match(readFileSync(join(dir, 'docker.log'), 'utf8'), /FLIX_E2E_SCOPE=full/);
   }
+});
+
+test('release tags use smoke coverage while scheduled and web pipelines always use full coverage', t => {
+  const dir = fixture(t);
+  for (const [source, tag, scope] of [
+    ['push', 'v3.34.0', 'smoke'], ['api', 'v3.34.0', 'smoke'],
+    ['schedule', '', 'full'], ['web', '', 'full'],
+    ['schedule', 'v3.34.0', 'full'], ['web', 'v3.34.0', 'full'],
+    ['push', 'v3.34.0-beta', 'full'], ['push', '', 'full'],
+  ]) {
+    writeFileSync(join(dir, 'docker.log'), '');
+    assert.equal(run(dir, { CI_PIPELINE_SOURCE: source, CI_COMMIT_TAG: tag }).status, 0);
+    assert.match(readFileSync(join(dir, 'docker.log'), 'utf8'), new RegExp('FLIX_E2E_SCOPE=' + scope));
+  }
+});
+
+test('scheduled and manual validation cannot release, publish, deploy or mirror', () => {
+  const ci = readFileSync(join(root, '.gitlab-ci.yml'), 'utf8');
+  const condition = `    - if: '$CI_PIPELINE_SOURCE == "schedule" || $CI_PIPELINE_SOURCE == "web"'`;
+  for (const job of ['quality', 'create_release_tag', 'build', 'deploy', 'mirror-gitlab', 'mirror-github']) {
+    const block = ci.split(`\n${job}:\n`)[1].split(/\n[a-z][a-z_-]*:\n/)[0];
+    assert.ok(block.includes('  rules:\n' + condition + '\n      when: never'), job);
+  }
+  const e2e = ci.split('\ne2e:\n')[1].split('\ncreate_release_tag:')[0];
+  assert.ok(e2e.includes('  rules:\n' + condition + '\n'));
 });
 
 test('E2E gates tag builds without duplicating master validation and exports bounded reports', () => {
