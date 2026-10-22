@@ -6,6 +6,10 @@ image="flix-webapp-e2e:$id"
 container="flix-webapp-e2e-$id"
 scope=full
 changed_files=''
+if [ "${CI_PIPELINE_SOURCE:-}" != schedule ] && [ "${CI_PIPELINE_SOURCE:-}" != web ] &&
+   printf '%s\n' "${CI_COMMIT_TAG:-}" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$'; then
+  scope=smoke
+fi
 if [ "${CI_PIPELINE_SOURCE:-}" = merge_request_event ]; then
   base="${CI_MERGE_REQUEST_DIFF_BASE_SHA:-}"
   if [ -n "$base" ] && git cat-file -e "$base^{commit}" 2>/dev/null &&

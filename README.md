@@ -533,8 +533,13 @@ has its own version; the webapp and API do not need matching versions.
   production secrets. Merge requests run affected scenarios on desktop; mobile
   keeps the cross-page safety net, selected accessibility/layout scenarios and
   every modified E2E spec. Shared/unmapped changes run all desktop scenarios with
-  that same mobile policy. An unavailable MR diff and release tags run the full
-  desktop/mobile suite.
+  that same mobile policy. An unavailable MR diff runs the full desktop/mobile
+  suite rather than skipping checks. Release tags run eight critical spec files
+  on both desktop and mobile: session, login loading, dashboard actions, global
+  navigation, regressions, import protection, download clients and media requests.
+  Full desktop/mobile coverage runs in scheduled pipelines or when using
+  **Build > Pipelines > New pipeline**. These validation-only pipelines cannot
+  create releases, publish images, deploy or update mirrors, even when targeting a tag.
   Chromium and its Linux dependencies use the locked Playwright version in a
   separate Docker layer, reusable across application dependency/version changes
   on the same Docker daemon. The first build or a Playwright update still installs
@@ -547,11 +552,18 @@ has its own version; the webapp and API do not need matching versions.
 - On the default branch, `create_release_tag` creates an
   annotated `vX.Y.Z` tag and triggers its pipeline. An existing release tag is
   never moved; bump `package.json` to release another version.
-  Both `quality` and full `e2e` must pass in the tag pipeline before building a release image.
+  Both `quality` and critical `e2e` must pass in the tag pipeline before building a release image.
   Release/build jobs wait for E2E without downloading the browser reports.
 - Tag pipelines build the production image with the configured variables, publish
   it as `vX.Y.Z` and `latest`, then deploy the exact version using the `X-Deploy-Version` webhook header.
 - Mirrors remain independent and run on the default branch and release tags.
+
+To enable nightly full validation, create a schedule in **Build > Pipeline schedules**
+targeting `master`, for example `0 3 * * *` with timezone `Europe/Paris`.
+The repository defines the jobs, but a Maintainer must create/activate the schedule
+in GitLab. No extra variables are needed. For local full validation, use
+`yarn test:e2e`; to inspect or run the release selection, use
+`FLIX_E2E_SCOPE=smoke node scripts/run-e2e-tests.mjs` (append `--list` to list only).
 
 Before enabling automatic releases in GitLab:
 

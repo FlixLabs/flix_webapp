@@ -1,6 +1,15 @@
 // Keep a small cross-page safety net even for documentation and CI-only changes.
 export const smokeTests = ['api-session', 'login-loading', 'dashboard-actions', 'global-navigation'];
 
+export const releaseSmokeTests = [...smokeTests, 'regressions', 'download-import-protection', 'download-clients', 'media-requests'];
+export function selectReleaseE2eTests(available) {
+  const files = releaseSmokeTests.map(name => 'tests/e2e/' + name + '.spec.ts').sort();
+  for (const file of files) {
+    if (!available.includes(file)) throw new Error('Missing critical release E2E spec: ' + file);
+  }
+  return { files, reason: 'Critical release scenarios on desktop and mobile' };
+}
+
 export function selectMobileE2eTests(changedFiles, selectedFiles, available) {
   const changed = new Set(changedFiles);
   const selected = new Set(selectedFiles ?? available);
