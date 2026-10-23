@@ -5,6 +5,8 @@ import { trackedImports } from '@/composables/manualImportTracking';
 import type { MediaInstance } from '@/composables/useMediaService';
 
 const download = { title: 'Movie download', downloadId: 'download-token', outputPath: '/downloads/movie', status: 'completed', trackedDownloadState: 'importBlocked' };
+const rejectedUpgrade = { ...download, trackedDownloadState: 'importPending', trackedDownloadStatus: 'warning',
+  statusMessages: [{ title: 'Movie.mkv', messages: ['Not an upgrade for existing movie file'] }] };
 const movie = { id: 42, title: 'Movie' };
 const series = { id: 7, title: 'Series' };
 const episode = { id: 12, seasonNumber: 1, episodeNumber: 2, title: 'Second' };
@@ -43,6 +45,69 @@ function setup(mediaType: 'movies' | 'series' = 'movies') {
 afterEach(() => { trackedImports.value = []; vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('manual download imports', () => {
+  it.each([
+    'Not an upgrade for existing movie file',
+    'Not an upgrade for existing episode file(s). Existing quality: Bluray-1080p. New Quality HDTV-720p.',
+    'Not a quality revision upgrade for existing movie file(s)',
+    'Not a Custom Format upgrade for existing episode file(s). New: [] (0) do not improve on Existing: [] (10)',
+  ])('recognizes an explicit pending upgrade rejection: %s', message => {
+    expect(canManualImport({ ...rejectedUpgrade, statusMessages: [{ messages: [message] }] })).toBe(true);
+  });
+  it.each([
+    { status: 'downloading' }, { status: undefined }, { trackedDownloadState: 'importing' },
+    { trackedDownloadStatus: 'ok' }, { errorMessage: 'Import is running' },
+    { statusMessages: [] }, { statusMessages: [{ title: 'Not an upgrade for existing movie file', messages: [] }] },
+    { statusMessages: [{ messages: ['Not an upgrade for existing movie file', 'Waiting for import'] }] },
+    { statusMessages: [{ messages: ['Not an upgrade for existing movie file'] }, { messages: ['Unknown warning'] }] },
+    { statusMessages: [{ messages: [null] }] }, { statusMessages: [{ messages: ['Not an upgrade for existing movie filename'] }] },
+  ])('does not relax protection for ambiguous pending downloads: %j', changes => {
+    expect(canManualImport({ ...rejectedUpgrade, ...changes })).toBe(false);
+  });
+  it.each(['movies', 'series'] as const)('reviews and explicitly submits a rejected pending %s upgrade', async type => {
+    const { actions, fetchMock, checks, scope } = setup(type);
+    checks.mockImplementation(async url => Response.json(new URL(url).pathname.endsWith('/queue')
+      ? { totalRecords: 1, records: [{ id: 101, ...rejectedUpgrade }] } : []));
+    await actions.open(type, rejectedUpgrade);
+    expect(actions.files.value).toHaveLength(1);
+    expect(actions.error.value).toBe('');
+    actions.files.value[0]!.selected = true;
+    await actions.review();
+    expect(actions.confirming.value).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/command'))).toBe(false);
+    expect(await actions.submit()).toBe(true);
+    expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/command'))).toHaveLength(1);
+    scope.stop();
+  });
+  it.each(['queued', 'started'])('still blocks a rejected upgrade with a %s native command', async status => {
+    const { actions, fetchMock, checks, scope } = setup();
+    checks.mockImplementation(async url => Response.json(new URL(url).pathname.endsWith('/queue')
+      ? { totalRecords: 1, records: [{ id: 101, ...rejectedUpgrade }] }
+      : [{ name: 'ManualImport', status, body: { files: [{ downloadId: download.downloadId }] } }]));
+    await actions.open('movies', rejectedUpgrade);
+    expect(actions.files.value).toHaveLength(0);
+    expect(actions.error.value).toContain(status === 'queued' ? 'Import queued' : 'Import in progress');
+    expect(fetchMock).not.toHaveBeenCalled();
+    scope.stop();
+  });
+  it('rechecks the rejection and native commands before confirming a pending upgrade', async () => {
+    const { actions, fetchMock, checks, scope } = setup();
+    checks.mockImplementation(async url => Response.json(new URL(url).pathname.endsWith('/queue')
+      ? { totalRecords: 1, records: [{ id: 101, ...rejectedUpgrade }] } : []));
+    await actions.open('movies', rejectedUpgrade);
+    actions.files.value[0]!.selected = true;
+    await actions.review();
+    checks.mockResolvedValueOnce(Response.json({ totalRecords: 1, records: [{ id: 101, ...rejectedUpgrade, statusMessages: [] }] }));
+    expect(await actions.submit()).toBe(false);
+    expect(actions.error.value).toContain('Import queued');
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/command'))).toBe(false);
+    checks.mockImplementation(async url => Response.json(new URL(url).pathname.endsWith('/queue')
+      ? { totalRecords: 1, records: [{ id: 101, ...rejectedUpgrade }] }
+      : [{ name: 'DownloadedMoviesScan', status: 'started', body: { downloadClientId: download.downloadId } }]));
+    expect(await actions.submit()).toBe(false);
+    expect(actions.error.value).toContain('Import in progress');
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/command'))).toBe(false);
+    scope.stop();
+  });
   it.each(['movies', 'series'] as const)('blocks %s importPending even without an active native command', async type => {
     const { actions, checks, scope } = setup(type);
     checks.mockImplementation(async url => Response.json(new URL(url).pathname.endsWith('/queue')
