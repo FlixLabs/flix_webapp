@@ -8,10 +8,11 @@ const candidate = { id: 8, path: `/downloads/example/${filename}`, relativePath:
   quality: { quality: { id: 4, name: 'HDTV-720p' }, revision: { version: 1, real: 0, isRepack: false } },
   languages: [{ id: 1, name: 'English' }], rejections: [{ reason: 'Not an upgrade for existing file' }],
 };
-async function mockImport(page: Page, mutations: { method: string; path: string; body: unknown }[], reviewStatus = 200, command = { status: 'completed' }) {
+async function mockImport(page: Page, mutations: { method: string; path: string; body: unknown }[], reviewStatus = 200, command = { status: 'completed' }, pendingUpgrade = false) {
   await page.route(/\/api\/v3\/queue\?/, route => route.fulfill({ json: { totalRecords: 1, records: [{ id: 101, title: 'Completed download',
-    downloadId: 'download-1', outputPath: '/downloads/example', status: 'completed', trackedDownloadState: 'importBlocked',
-    size: 2e9, sizeleft: 0, languages: [], statusMessages: [{ title: 'Unable to import automatically', messages: ['Not an upgrade for existing file'] }],
+    downloadId: 'download-1', outputPath: '/downloads/example', status: 'completed', trackedDownloadState: pendingUpgrade ? 'importPending' : 'importBlocked',
+    trackedDownloadStatus: 'warning',
+    size: 2e9, sizeleft: 0, languages: [], statusMessages: [{ title: 'Unable to import automatically', messages: ['Not an upgrade for existing movie file'] }],
   }] } }));
   await page.route(/\/api\/v3\/manualimport(?:\?|$)/, route => {
     if (route.request().method() === 'POST') {
@@ -28,6 +29,32 @@ async function mockImport(page: Page, mutations: { method: string; path: string;
       return route.fulfill({ json: { id: 99, status: 'queued' } });
     }
     return route.fulfill({ json: new URL(route.request().url()).pathname.endsWith('/command') ? [] : { id: 99, status: command.status } });
+  });
+}
+
+for (const type of ['movies', 'series']) for (const nativeStarts of [false, true]) {
+  test(`${type} rejected pending upgrade ${nativeStarts ? 'blocks a new native import' : 'allows explicit manual confirmation'}`, async ({ page, mutations }) => {
+    await mockImport(page, mutations, 200, { status: 'completed' }, true);
+    await page.goto('/downloads');
+    if (type === 'series') await page.getByRole('button', { name: /^Series/ }).click();
+    await expect(page.getByText('Automatic import rejected; manual review is available. Removal remains protected.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Remove Completed download', exact: true })).toBeDisabled();
+    await page.getByRole('button', { name: 'Manual import Completed download', exact: true }).click();
+    await page.getByRole('checkbox', { name: `Select ${filename}`, exact: true }).check();
+    await page.getByRole('button', { name: 'Review Import (1)', exact: true }).click();
+    const confirmation = page.getByRole('dialog', { name: 'Confirm Manual Import', exact: true });
+    await expect(confirmation).toBeVisible();
+    expect(mutations.some(item => item.path === '/api/v3/command')).toBe(false);
+    if (nativeStarts) await page.route('**/api/v3/command', route => route.fulfill({ json: [
+      { name: 'ManualImport', status: 'queued', body: { files: [{ downloadId: 'download-1' }] } },
+    ] }));
+    await confirmation.getByRole('button', { name: 'Confirm Import', exact: true }).click();
+    if (nativeStarts) {
+      await expect(confirmation.getByText('Import queued. No new import was requested.', { exact: true })).toBeVisible();
+      expect(mutations.some(item => item.path === '/api/v3/command')).toBe(false);
+    } else {
+      await expect.poll(() => mutations.filter(item => item.path === '/api/v3/command').length).toBe(1);
+    }
   });
 }
 

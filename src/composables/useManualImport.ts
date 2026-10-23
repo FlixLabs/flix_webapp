@@ -10,6 +10,9 @@ export interface ImportDownload {
   outputPath?: string;
   status?: string;
   trackedDownloadState?: string;
+  trackedDownloadStatus?: unknown;
+  statusMessages?: unknown;
+  errorMessage?: unknown;
 }
 interface Media { id: number; title: string; year?: number }
 interface Quality { id: number; name: string }
@@ -41,10 +44,24 @@ export interface ImportFile {
   selected: boolean;
 }
 
+export function rejectedUpgradeImport(download: ImportDownload): boolean {
+  if (download.trackedDownloadState?.toLowerCase() !== 'importpending'
+    || download.status?.toLowerCase() !== 'completed'
+    || typeof download.trackedDownloadStatus !== 'string' || download.trackedDownloadStatus.toLowerCase() !== 'warning'
+    || (download.errorMessage !== undefined && download.errorMessage !== null && download.errorMessage !== '')
+    || !Array.isArray(download.statusMessages) || !download.statusMessages.length) return false;
+  // Match service rejection messages, never filenames or a generic pending warning.
+  return download.statusMessages.every(group => group && typeof group === 'object'
+    && Array.isArray(group.messages) && group.messages.length > 0
+    && group.messages.every((message: unknown) => typeof message === 'string'
+      && /^Not (?:an|a (?:Custom Format|quality revision)) upgrade for existing (?:movie|episode) file(?:\(s\))?(?:\.(?:\s|$)|$)/i.test(message.trim())));
+}
+
 export function canManualImport(download: ImportDownload) {
   return typeof download.downloadId === 'string' && !!download.downloadId.trim()
     && !['downloading', 'paused'].includes(download.status?.toLowerCase() ?? '')
-    && ['importblocked', 'importfailed'].includes(download.trackedDownloadState?.toLowerCase() ?? '');
+    && (['importblocked', 'importfailed'].includes(download.trackedDownloadState?.toLowerCase() ?? '')
+      || rejectedUpgradeImport(download));
 }
 
 export function useManualImport(options: MediaServiceOptions) {
@@ -122,11 +139,13 @@ export function useManualImport(options: MediaServiceOptions) {
       const records = queue.filter(record => typeof record.downloadId === 'string' && record.downloadId.trim().toLowerCase() === id);
       if (!records.length) throw new Error('Download no longer available');
       for (const record of records) {
-        const reason = queueImportBlock(record.trackedDownloadState);
-        if (reason) throw new ImportProtectionError(`${reason}. No new import was requested.`);
-        if (!canManualImport({ title: active.download.title, downloadId: id,
+        const fresh: ImportDownload = { title: active.download.title, downloadId: id,
           status: typeof record.status === 'string' ? record.status : undefined,
-          trackedDownloadState: typeof record.trackedDownloadState === 'string' ? record.trackedDownloadState : undefined })) throw new Error('Download is not importable');
+          trackedDownloadState: typeof record.trackedDownloadState === 'string' ? record.trackedDownloadState : undefined,
+          trackedDownloadStatus: record.trackedDownloadStatus, statusMessages: record.statusMessages, errorMessage: record.errorMessage };
+        const reason = queueImportBlock(record.trackedDownloadState);
+        if (reason && !(reason === 'Import queued' && rejectedUpgradeImport(fresh))) throw new ImportProtectionError(`${reason}. No new import was requested.`);
+        if (!canManualImport(fresh)) throw new Error('Download is not importable');
       }
       const reason = commandImportBlock(await request(active, 'command'), id);
       if (reason) throw new ImportProtectionError(`${reason}. No new import was requested.`);
