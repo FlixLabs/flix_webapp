@@ -13,6 +13,12 @@ for (const locale of ['en-US', 'fr-FR']) {
         const history = page.getByRole('button', { name: /^(History|Historique)$/ });
         const filter = page.locator('.queue-filter');
         await expect(filter).toBeVisible();
+        expect((await filter.boundingBox())!.width).toBeLessThanOrEqual(221);
+        await expect.poll(async () => {
+          const toolbar = (await page.locator('.downloads-toolbar').boundingBox())!;
+          const controls = (await page.locator('.download-view-controls').boundingBox())!;
+          return Math.abs(controls.x + controls.width - toolbar.x - toolbar.width);
+        }).toBeLessThan(2);
         await expect.poll(async () => {
           const button = (await history.boundingBox())!;
           const field = (await filter.boundingBox())!;
@@ -29,6 +35,29 @@ for (const locale of ['en-US', 'fr-FR']) {
     });
   });
 }
+
+test('pagination does not move the right-aligned view controls when switching to short history', async ({ page, mutations }) => {
+  await page.route('**/api/v3/queue?*', route => route.fulfill({ json: { totalRecords: 15,
+    records: Array.from({ length: 15 }, (_, index) => ({ ...record, id: 101 + index })) } }));
+  await page.route('**/api/v3/history?*', route => route.fulfill({ json: { records: [
+    { id: 201, sourceTitle: 'Short history', date: '2026-01-01', eventType: 'grabbed', languages: [] },
+  ] } }));
+  await page.goto('/downloads');
+  const history = page.getByRole('button', { name: 'History', exact: true });
+  const pagination = page.getByRole('navigation', { name: 'Download pages', exact: true });
+  await expect(pagination).toBeVisible();
+  const before = (await history.boundingBox())!;
+  const controls = (await page.locator('.download-view-controls').boundingBox())!;
+  expect((await pagination.boundingBox())!.y).toBeGreaterThanOrEqual(controls.y + controls.height);
+  await history.click();
+  await expect(pagination).toHaveCount(0);
+  await expect.poll(async () => Math.abs((await history.boundingBox())!.x - before.x)).toBeLessThan(2);
+  await page.getByRole('button', { name: 'Queue', exact: true }).click();
+  await expect(pagination).toBeVisible();
+  await expect.poll(async () => Math.abs((await history.boundingBox())!.x - before.x)).toBeLessThan(2);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(mutations).toEqual([]);
+});
 
 test('downloads switch media and history without stacking tables or refetching', async ({ page, mutations }) => {
   const reads: string[] = [];
