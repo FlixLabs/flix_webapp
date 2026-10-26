@@ -88,7 +88,10 @@ explicit selection and never rename the file or infer its quality/languages.
 Manual Import is available after the service reports an automatic import
 failure or rejection (`importFailed` or `importBlocked`). A completed download
 still marked `importPending` can also be reviewed when its warning messages
-exclusively identify a rejected quality, revision or custom-format upgrade.
+exclusively identify a rejected quality, revision or custom-format upgrade, or
+the explicit `Unable to parse file` rejection. Unparseable files still require
+an identified media and quality, review and explicit confirmation; Flix never
+renames them or automatically requests an import.
 A completed download, pending state or generic warning alone is not enough.
 Every matching queue row must still qualify on revalidation; queued/running
 native import commands continue to block review and submission. This exception
