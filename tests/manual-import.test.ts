@@ -7,6 +7,7 @@ import type { MediaInstance } from '@/composables/useMediaService';
 const download = { title: 'Movie download', downloadId: 'download-token', outputPath: '/downloads/movie', status: 'completed', trackedDownloadState: 'importBlocked' };
 const rejectedUpgrade = { ...download, trackedDownloadState: 'importPending', trackedDownloadStatus: 'warning',
   statusMessages: [{ title: 'Movie.mkv', messages: ['Not an upgrade for existing movie file'] }] };
+const rejectedParse = { ...rejectedUpgrade, statusMessages: [{ title: 'Dracula (coppola) - 1080p FR EN x264 ac3 mHDgz.mkv', messages: ['Unable to parse file'] }] };
 const movie = { id: 42, title: 'Movie' };
 const series = { id: 7, title: 'Series' };
 const episode = { id: 12, seasonNumber: 1, episodeNumber: 2, title: 'Second' };
@@ -45,6 +46,63 @@ function setup(mediaType: 'movies' | 'series' = 'movies') {
 afterEach(() => { trackedImports.value = []; vi.unstubAllGlobals(); vi.unstubAllEnvs(); });
 
 describe('manual download imports', () => {
+  it.each(['movies', 'series'] as const)('reviews and confirms an unparseable pending %s download without resubmission', async type => {
+    const { actions, fetchMock, checks, scope } = setup(type);
+    checks.mockImplementation(async url => Response.json(new URL(url).pathname.endsWith('/queue')
+      ? { totalRecords: 1, records: [{ id: 101, ...rejectedParse }] } : []));
+    await actions.open(type, rejectedParse);
+    expect(actions.error.value).toBe('');
+    expect(actions.files.value).toHaveLength(1);
+    expect(actions.selected.value).toHaveLength(0);
+    actions.files.value[0]!.selected = true;
+    await actions.review();
+    expect(actions.confirming.value).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/command'))).toBe(false);
+    expect(await actions.submit()).toBe(true);
+    expect(await actions.submit()).toBe(false);
+    expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/command'))).toHaveLength(1);
+    await actions.open(type, rejectedParse);
+    expect(actions.commandId.value).toBe(99);
+    expect(fetchMock.mock.calls.filter(([url]) => url.endsWith('/command'))).toHaveLength(1);
+    scope.stop();
+  });
+  it.each([
+    { trackedDownloadState: 'importing' }, { status: 'downloading' }, { trackedDownloadStatus: 'ok' },
+    { statusMessages: [{ title: 'Unable to parse file', messages: [] }] },
+    { statusMessages: [{ messages: ['Unable to parse file', 'Waiting for automatic import'] }] },
+    { statusMessages: [{ messages: ['Unable to parse file while importing'] }] },
+    { statusMessages: [{ messages: ['Unable to parse file'] }, { messages: ['Unknown warning'] }] },
+  ])('keeps ambiguous unparseable pending downloads protected: %j', changes => {
+    expect(canManualImport({ ...rejectedParse, ...changes })).toBe(false);
+  });
+  it.each(['queued', 'started'])('blocks unparseable pending downloads when a native import is %s', async status => {
+    const { actions, checks, fetchMock, scope } = setup();
+    checks.mockImplementation(async url => Response.json(new URL(url).pathname.endsWith('/queue')
+      ? { totalRecords: 1, records: [{ id: 101, ...rejectedParse }] }
+      : [{ name: 'ManualImport', status, body: { files: [{ downloadId: download.downloadId }] } }]));
+    await actions.open('movies', rejectedParse);
+    expect(actions.error.value).toContain(status === 'queued' ? 'Import queued' : 'Import in progress');
+    expect(fetchMock).not.toHaveBeenCalled();
+    scope.stop();
+  });
+  it('revalidates an unparseable rejection and commands before confirmation', async () => {
+    const { actions, checks, fetchMock, scope } = setup();
+    checks.mockImplementation(async url => Response.json(new URL(url).pathname.endsWith('/queue')
+      ? { totalRecords: 1, records: [{ id: 101, ...rejectedParse }] } : []));
+    await actions.open('movies', rejectedParse);
+    actions.files.value[0]!.selected = true;
+    await actions.review();
+    checks.mockResolvedValueOnce(Response.json({ totalRecords: 1, records: [{ id: 101, ...rejectedParse, statusMessages: [] }] }));
+    expect(await actions.submit()).toBe(false);
+    expect(actions.error.value).toContain('Import queued');
+    checks.mockImplementation(async url => Response.json(new URL(url).pathname.endsWith('/queue')
+      ? { totalRecords: 1, records: [{ id: 101, ...rejectedParse }] }
+      : [{ name: 'DownloadedMoviesScan', status: 'started', body: { downloadClientId: download.downloadId } }]));
+    expect(await actions.submit()).toBe(false);
+    expect(actions.error.value).toContain('Import in progress');
+    expect(fetchMock.mock.calls.some(([url]) => url.endsWith('/command'))).toBe(false);
+    scope.stop();
+  });
   it.each([
     'Not an upgrade for existing movie file',
     'Not an upgrade for existing episode file(s). Existing quality: Bluray-1080p. New Quality HDTV-720p.',

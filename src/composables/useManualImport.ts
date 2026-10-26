@@ -44,7 +44,7 @@ export interface ImportFile {
   selected: boolean;
 }
 
-export function rejectedUpgradeImport(download: ImportDownload): boolean {
+export function rejectedPendingImport(download: ImportDownload): boolean {
   if (download.trackedDownloadState?.toLowerCase() !== 'importpending'
     || download.status?.toLowerCase() !== 'completed'
     || typeof download.trackedDownloadStatus !== 'string' || download.trackedDownloadStatus.toLowerCase() !== 'warning'
@@ -54,14 +54,15 @@ export function rejectedUpgradeImport(download: ImportDownload): boolean {
   return download.statusMessages.every(group => group && typeof group === 'object'
     && Array.isArray(group.messages) && group.messages.length > 0
     && group.messages.every((message: unknown) => typeof message === 'string'
-      && /^Not (?:an|a (?:Custom Format|quality revision)) upgrade for existing (?:movie|episode) file(?:\(s\))?(?:\.(?:\s|$)|$)/i.test(message.trim())));
+      && (/^Unable to parse file\.?$/i.test(message.trim())
+        || /^Not (?:an|a (?:Custom Format|quality revision)) upgrade for existing (?:movie|episode) file(?:\(s\))?(?:\.(?:\s|$)|$)/i.test(message.trim()))));
 }
 
 export function canManualImport(download: ImportDownload) {
   return typeof download.downloadId === 'string' && !!download.downloadId.trim()
     && !['downloading', 'paused'].includes(download.status?.toLowerCase() ?? '')
     && (['importblocked', 'importfailed'].includes(download.trackedDownloadState?.toLowerCase() ?? '')
-      || rejectedUpgradeImport(download));
+      || rejectedPendingImport(download));
 }
 
 export function useManualImport(options: MediaServiceOptions) {
@@ -144,7 +145,7 @@ export function useManualImport(options: MediaServiceOptions) {
           trackedDownloadState: typeof record.trackedDownloadState === 'string' ? record.trackedDownloadState : undefined,
           trackedDownloadStatus: record.trackedDownloadStatus, statusMessages: record.statusMessages, errorMessage: record.errorMessage };
         const reason = queueImportBlock(record.trackedDownloadState);
-        if (reason && !(reason === 'Import queued' && rejectedUpgradeImport(fresh))) throw new ImportProtectionError(`${reason}. No new import was requested.`);
+        if (reason && !(reason === 'Import queued' && rejectedPendingImport(fresh))) throw new ImportProtectionError(`${reason}. No new import was requested.`);
         if (!canManualImport(fresh)) throw new Error('Download is not importable');
       }
       const reason = commandImportBlock(await request(active, 'command'), id);
