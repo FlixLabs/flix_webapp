@@ -415,7 +415,7 @@ watch(serviceContext, () => {
   <v-container>
     <PageNavigation ref="navigation">
       <v-text-field v-model="search" :label="t('Search')" variant="outlined" prepend-inner-icon="mdi-magnify" clearable hide-details />
-      <div class="d-flex flex-wrap align-center ga-3 mt-3">
+      <div class="downloads-toolbar d-flex flex-wrap align-center ga-3 mt-3">
         <MediaTypeToggle
           v-model="mediaType"
           :total-movies="view === 'queue' ? movieRecords.length : movieHistory.length"
@@ -439,17 +439,17 @@ watch(serviceContext, () => {
             class="queue-filter"
           />
         </div>
-        <v-pagination
-          v-if="pageCount > 1"
-          class="ms-auto"
-          v-model="page"
-          :length="pageCount"
-          :total-visible="$vuetify.display.xs ? 3 : 5"
-          density="compact"
-          :aria-label="t('Download pages')"
-          rounded
-        />
       </div>
+      <v-pagination
+        v-if="pageCount > 1"
+        class="d-flex justify-end mt-3"
+        v-model="page"
+        :length="pageCount"
+        :total-visible="$vuetify.display.xs ? 3 : 5"
+        density="compact"
+        :aria-label="t('Download pages')"
+        rounded
+      />
     </PageNavigation>
     <ReadFeedback :state="activeRead" :label="`${mediaType === 'movies' ? t('Movie') : t('Series')} ${view === 'queue' ? 'downloads' : 'history'}`" :disabled="isRemoving" @retry="refreshActive" />
     <ManualImportActivity :options="importOptions" :paused="importDialog?.isOpen" @finished="type => { getDownload(type); getHistory(type); }" />
@@ -551,14 +551,19 @@ watch(serviceContext, () => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   flex: 0 1 560px;
   min-width: min(100%, 560px);
+  margin-inline-start: auto;
 }
 .download-view-controls > .v-btn-toggle { flex-shrink: 0; }
 .queue-filter {
-  flex: 1 1 180px;
+  flex: 0 1 220px;
   min-width: 180px;
+}
+@media (max-width: 599px) {
+  .queue-filter { flex-basis: 100%; }
 }
 .downloads-table :deep(.v-data-table__td-value) {
   min-width: 0;
