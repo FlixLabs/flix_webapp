@@ -2,6 +2,7 @@ import { test, expect, movie } from './fixtures';
 
 for (const path of ['/library', '/outings']) {
   test(`${path} keeps search and pages accessible while scrolling`, async ({ page, mutations }) => {
+    await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
     await page.setViewportSize({ width: page.viewportSize()!.width, height: 700 });
     const items = Array.from({ length: 25 }, (_, i) => ({
       ...movie, id: 100 + i, tmdbId: 100 + i, title: `Example ${String(i + 1).padStart(2, '0')}`,
