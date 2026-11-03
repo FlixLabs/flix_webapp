@@ -65,6 +65,19 @@ it('matches torrent hashes regardless of case without relaxing other identifiers
   expect(await links.resolveInfo('movies', { downloadId: 'abc' })).toBeUndefined();
 });
 
+it.each(['movies', 'series'] as const)('normalizes torrent hashes before querying case-sensitive %s history', async type => {
+  const { links, fetchMock } = setup();
+  const hash = 'ab'.repeat(20);
+  fetchMock.mockImplementation(async (...args: unknown[]) => {
+    const id = new URL(args[0] as string).searchParams.get('downloadId');
+    return Response.json({ records: id === hash.toUpperCase()
+      ? [{ ...grabbed, downloadId: hash.toUpperCase(), data: { indexer: 'Ygg' } }] : [] });
+  });
+  expect(await links.resolveInfo(type, { downloadId: hash })).toEqual({ indexer: 'Ygg', url: undefined });
+  expect(await links.resolveInfo(type, { downloadId: hash.toUpperCase() })).toEqual({ indexer: 'Ygg', url: undefined });
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
 it('looks up the exact grab by download ID for either service and deduplicates requests', async () => {
   const { links, fetchMock } = setup();
   expect(await Promise.all([links.resolve('movies', { downloadId: 'abc' }), links.resolve('movies', { downloadId: 'abc' })])).toEqual([source, source]);
