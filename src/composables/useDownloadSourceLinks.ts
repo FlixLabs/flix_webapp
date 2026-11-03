@@ -34,7 +34,9 @@ export function useDownloadSourceLinks(options: MediaServiceOptions) {
   function resolveInfo(type: MediaType, record: DownloadSourceRecord): Promise<DownloadSource | undefined> {
     const direct = downloadSourceUrl(record);
     if (direct) return Promise.resolve({ url: direct, indexer: downloadSourceIndexer(record) });
-    const id = typeof record.downloadId === 'string' ? record.downloadId.trim() : '';
+    const downloadId = typeof record.downloadId === 'string' ? record.downloadId.trim() : '';
+    // Deluge uses lowercase hashes; Radarr/Sonarr history filters expect uppercase.
+    const id = /^[a-f0-9]{40}$/i.test(downloadId) ? downloadId.toUpperCase() : downloadId;
     const config = getConfig(type);
     if (!id || !config.base_url || !config.api_key) return Promise.resolve(undefined);
     const key = JSON.stringify([type, id]);
