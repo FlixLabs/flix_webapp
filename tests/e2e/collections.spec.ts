@@ -151,6 +151,35 @@ test('opens the saga from a library movie sheet and preserves the library search
   expect(mutations).toEqual([]);
 });
 
+for (const entry of ['visited collections', 'direct movie link']) {
+  test(`opens the requested collection from a movie after ${entry}`, async ({ page, mutations }) => {
+    const otherMovie = { ...movie, id: 102, tmdbId: 22, title: 'Other movie', collection: { tmdbId: 200, title: 'Other saga' } };
+    await page.route('**/api/v3/movie?*', route => route.fulfill({ json: [
+      { ...movie, collection: { tmdbId: 100, title: 'Example saga' } }, otherMovie,
+    ] }));
+    await page.route('**/api/v3/collection?*', route => route.fulfill({ json: [saga,
+      { ...saga, id: 6, tmdbId: 200, title: 'Other saga', movies: [{ tmdbId: 22, title: otherMovie.title, year: movie.year }] },
+    ] }));
+    await page.goto(entry === 'direct movie link' ? `/library?media=movies&id=${movie.id}` : '/library');
+    if (entry === 'visited collections') {
+      await page.getByRole('button', { name: 'Collections (2)', exact: true }).click();
+      await page.getByRole('button', { name: 'Open collection Other saga', exact: true }).click();
+      await page.getByRole('button', { name: 'Close collection', exact: true }).click();
+      await page.getByRole('button', { name: 'Movies (2)', exact: true }).click();
+      await page.getByRole('button', { name: `Open ${movie.title}`, exact: true }).click();
+    }
+    await page.getByRole('button', { name: 'Collection: Example saga', exact: true }).click();
+    const sheet = page.getByRole('dialog', { name: 'Collection: Example saga', exact: true });
+    await expect(sheet).toBeVisible();
+    await sheet.getByRole('button', { name: 'Close collection', exact: true }).click();
+    await page.getByRole('button', { name: 'Open collection Other saga', exact: true }).click();
+    await page.getByRole('dialog', { name: 'Collection: Other saga', exact: true }).getByRole('button', { name: 'View Other movie', exact: true }).click();
+    await page.getByRole('button', { name: 'Collection: Other saga', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Collection: Other saga', exact: true })).toBeVisible();
+    expect(mutations).toEqual([]);
+  });
+}
+
 test('retries unavailable or malformed collections without showing an empty success', async ({ page, mutations }) => {
   let calls = 0;
   await page.route('**/api/v3/collection?*', route => {
