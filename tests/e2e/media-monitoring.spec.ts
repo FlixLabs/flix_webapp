@@ -2,6 +2,7 @@ import { test, expect, movie, series } from './fixtures';
 
 for (const view of ['library', 'dashboard', 'outings']) {
   test(`${view} updates movie monitoring without a search or deletion`, async ({ page, mutations }) => {
+    await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
     let resource = { ...movie, monitored: true, path: '/movies/Example', qualityProfileId: 4, tags: [3] };
     const writes: unknown[] = [];
     await page.route(/\/api\/v3\/movie\?/, route => route.fulfill({ json: [resource] }));

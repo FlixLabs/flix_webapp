@@ -1,5 +1,9 @@
 import { test, expect, movie, series } from './fixtures';
 
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
+});
+
 test('outings keeps release and premiere dates after library enrichment', async ({ page, mutations }) => {
   await page.route(/\/discover\/(movie|tv)\?/, route => {
     const isMovie = new URL(route.request().url()).pathname.endsWith('/movie');

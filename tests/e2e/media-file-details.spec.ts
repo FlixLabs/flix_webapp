@@ -7,6 +7,7 @@ const file = {
 
 for (const view of ['library', 'dashboard', 'outings']) {
   test(`${view} preserves movie file metadata without additional reads`, async ({ page, mutations }) => {
+    await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
     const reads: string[] = [];
     page.on('request', request => {
       if (request.url().includes('/api/v3/')) reads.push(request.url());

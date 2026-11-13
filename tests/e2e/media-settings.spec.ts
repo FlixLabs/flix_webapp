@@ -19,6 +19,7 @@ async function openSettings(dialog: Locator) {
 
 for (const view of ['library', 'dashboard', 'outings']) {
   test(`${view} saves existing movie profiles and tags without a search or file move`, async ({ page, mutations }) => {
+    await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
     let resource = { ...movie, qualityProfileId: 1, tags: [3], path: '/movies/Example', monitored: true };
     const writes: typeof resource[] = []; const reads: string[] = [];
     await page.route('**/api/v3/movie/1*', route => {

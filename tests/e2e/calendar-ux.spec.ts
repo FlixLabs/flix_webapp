@@ -15,6 +15,18 @@ import { calendarRange } from '../../src/composables/useCalendar';
 test.beforeEach(async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-10-12T12:00:00'));
 });
+for (const date of ['2025-01-15', '2031-08-15']) {
+  test(`default calendar fixtures follow the selected period ${date}, not the host date`, async ({ page, mutations }) => {
+    await page.addInitScript(date => {
+      localStorage.setItem('flix.preferences.calendar.date', JSON.stringify(date));
+      localStorage.setItem('flix.preferences.calendar.layout', JSON.stringify('calendar'));
+    }, date);
+    await page.goto('/calendar');
+    await page.getByText(/\d+ more/).first().click();
+    await expect(page.getByRole('dialog')).toContainText('Calendar movie 7');
+    expect(mutations).toEqual([]);
+  });
+}
 async function events(page: import('@playwright/test').Page, requests: string[]) {
   await page.route(/\/api\/v3\/calendar\?/, route => {
     requests.push(route.request().url());

@@ -23,6 +23,12 @@ download/removal confirmations, request catalog/review dialogs and calendar days
 
 ## Running
 
+Tests with fixed release dates must set the browser date with
+`page.clock.setFixedTime` before navigation. This keeps outings fixtures inside
+their intended rolling discovery window without freezing timers or animations.
+Node route handlers do not share that browser clock: default calendar fixtures
+derive their event dates from the request's `start`/`end`, not the host date.
+
 Run `yarn install --frozen-lockfile`, `yarn playwright install chromium`, then `yarn test:e2e`.
 
 The suite starts a dedicated Vite server and intercepts API requests. No real downloads,

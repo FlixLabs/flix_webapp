@@ -162,6 +162,7 @@ test('verifies an uncertain settings change using only GET, never replaying the 
 });
 
 test('retries a missing series identity without permitting an invalid addition', async ({ page, mutations }) => {
+  await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
   let available = false;
   await page.route(/\/discover\/tv\?/, route => route.fulfill({ json: { results: [{ id: 200, name: 'Upcoming series', first_air_date: '2026-10-20' }], total_pages: 1 } }));
   await page.route(/\/discover\/movie\?/, route => route.fulfill({ json: { results: [], total_pages: 1 } }));
