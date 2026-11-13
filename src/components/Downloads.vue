@@ -488,14 +488,15 @@ watch(serviceContext, () => {
             <DownloadTitle :media-type="mediaType" :key="`${mediaType}-${view}-${item.id}`" :record="item" :source-context="serviceContext()" :resolve-source="sourceLinks.resolveInfo" :queue="view === 'queue'" @open="openDownloadMedia(item, $event)" />
           </template>
           <template #item.status="{ item }">
-            <template v-if="view === 'queue'">
-              <v-chip size="small" :color="item.diagnosis?.color">{{ t(item.diagnosis?.label) }}</v-chip>
+            <div v-if="view === 'queue'" class="download-status">
+              <v-chip class="download-status-chip" size="small" :color="item.diagnosis?.color">{{ t(item.diagnosis?.label) }}</v-chip>
               <template v-for="tracked in [importStatus(item)]" :key="tracked?.key">
-                <div v-if="tracked" class="mt-2"><v-chip size="small" variant="tonal" :color="tracked.error ? 'warning' : importStatusColor(tracked.status)" prepend-icon="mdi-file-import-outline">{{ t('Manual import: {p0}', { p0: tracked.error ? t('Status unavailable') : t(importStatusLabel(tracked.status)) }) }}</v-chip></div>
+                <div v-if="tracked" class="mt-2"><v-chip class="download-status-chip" size="small" variant="tonal" :color="tracked.error ? 'warning' : importStatusColor(tracked.status)" prepend-icon="mdi-file-import-outline">{{ t('Manual import: {p0}', { p0: tracked.error ? t('Status unavailable') : t(importStatusLabel(tracked.status)) }) }}</v-chip></div>
               </template>
               <div v-if="showRawDownloadStatus(item.status, item.diagnosis?.label)" class="text-caption text-medium-emphasis mt-1 text-capitalize">{{ t(item.status) }}</div>
               <p v-if="item.blocked" class="download-warning text-caption mt-2"><v-icon icon="mdi-alert-circle-outline" size="16" class="mr-1" />{{ t(item.messages?.[0]) || t("No details provided by the service.") }}</p>
-            </template>
+              <p v-if="queueImportBlock(item.trackedDownloadState)" class="download-protection text-caption text-warning mt-2">{{ item.trackedDownloadState?.toLowerCase() === 'importpending' ? hasUnsupportedExtension(item) ? t('Automatic import rejected: unsupported file extension. Removal remains protected.') : canManualImport(item) ? t('Automatic import rejected; manual review is available. Removal remains protected.') : t('Automatic import pending; removal is protected.') : t(queueImportBlock(item.trackedDownloadState)) }}</p>
+            </div>
             <span v-else class="text-capitalize">{{ t(item.status) || t("Unavailable") }}</span>
           </template>
           <template #item.progress="{ item }">
@@ -532,7 +533,6 @@ watch(serviceContext, () => {
               :aria-label="t('Remove {p0}', { p0: item.title })"
               @click="openDeleteConfirmationDialog(mediaType, item)"
             >{{ t("Remove") }}</v-btn>
-            <span v-if="queueImportBlock(item.trackedDownloadState)" class="text-caption text-warning">{{ item.trackedDownloadState?.toLowerCase() === 'importpending' ? hasUnsupportedExtension(item) ? t('Automatic import rejected: unsupported file extension. Removal remains protected.') : canManualImport(item) ? t('Automatic import rejected; manual review is available. Removal remains protected.') : t('Automatic import pending; removal is protected.') : t(queueImportBlock(item.trackedDownloadState)) }}</span>
             </div>
           </template>
         </v-data-table>
@@ -542,6 +542,10 @@ watch(serviceContext, () => {
 </template>
 
 <style scoped>
+.download-status { min-width: 0; overflow-wrap: anywhere; }
+.download-status-chip { max-width: 100%; height: auto; min-height: 24px; padding-block: 4px; white-space: normal; }
+.download-status-chip :deep(.v-chip__content) { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+.download-status-chip :deep(.v-chip__prepend) { flex-shrink: 0; }
 .download-warning { color: rgb(var(--v-theme-warning)); overflow-wrap: anywhere; }
 .download-actions { flex-direction: column; align-items: flex-end; }
 .download-actions > .v-btn { max-width: 100%; min-width: 0; height: auto; min-height: 28px; padding-block: 6px; }

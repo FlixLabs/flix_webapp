@@ -946,5 +946,17 @@
   "The instance configuration changed. Start a new verification.": "La configuration de l’instance a changé. Lancez une nouvelle vérification.",
   "Too many file verifications are pending. Wait a few minutes before retrying.": "Trop de vérifications de fichiers sont en attente. Patientez quelques minutes avant de réessayer.",
   "Extension verification timed out. No file was renamed. Start a new verification.": "Le délai de vérification de l’extension est dépassé. Aucun fichier n’a été renommé. Lancez une nouvelle vérification.",
-  "Deluge already reports a supported video extension. No file was renamed. Wait for Radarr/Sonarr to refresh its import status.": "Deluge indique déjà une extension vidéo prise en charge. Aucun fichier n’a été renommé. Attendez que Radarr/Sonarr actualise l’état de l’import."
+  "Deluge already reports a supported video extension. No file was renamed. Wait for Radarr/Sonarr to refresh its import status.": "Deluge indique déjà une extension vidéo prise en charge. Aucun fichier n’a été renommé. Attendez que Radarr/Sonarr actualise l’état de l’import.",
+  "Invalid collection response from TMDB.": "Réponse de collection TMDB invalide.",
+  "Collection search requires TMDB configuration.": "La recherche de collections nécessite une configuration TMDB.",
+  "Unable to load collections from TMDB.": "Impossible de charger les collections depuis TMDB.",
+  "Unable to load movie library.": "Impossible de charger la bibliothèque de films.",
+  "Collection results": "Résultats des collections",
+  "Enter at least 3 characters to search for collections.": "Saisissez au moins 3 caractères pour rechercher des collections.",
+  "Search this movie": "Rechercher ce film",
+  "Add collection {p0}": "Ajouter la collection {p0}",
+  "Add movies ({p0})": "Ajouter des films ({p0})",
+  "All collection movies are already in your library.": "Tous les films de cette collection sont déjà dans votre bibliothèque.",
+  "This movie is already in your library.": "Ce film est déjà dans votre bibliothèque.",
+  "Movie details": "Détails du film"
 }

@@ -5,7 +5,7 @@ import ReadFeedback from '@/components/common/ReadFeedback.vue';
 import { readApiJson, requireList, optionalList } from '@/composables/apiResponse';
 
 
-import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, watch, computed, onMounted, onBeforeUnmount, nextTick, defineAsyncComponent } from 'vue';
 import { rankSearchResults } from '@/composables/useSearchRelevance';
 import { supplementMediaSearch, type MediaSearchResult } from '@/composables/translatedMediaSearch';
 import { useFlixStore } from '@/stores/flixStore';
@@ -44,6 +44,15 @@ const items_per_page = 4;
 const movie_page = ref(1);
 const serie_page = ref(1);
 const mediaType = ref<'movies' | 'series'>(localStorage.getItem('dashboard_media_type') === 'series' ? 'series' : 'movies');
+const showCollections = ref(false);
+const collectionsReady = ref(false);
+const collectionPage = ref(1);
+const collectionTotal = ref<number>();
+const collectionPages = ref(0);
+const DashboardCollections = defineAsyncComponent(() => import('./common/DashboardCollections.vue'));
+function browseCollections() { collectionsReady.value = true; showCollections.value = true; }
+function collectionResults(total: number | undefined, pages: number) { collectionTotal.value = total; collectionPages.value = pages; }
+function searchCollectionMovie(id: number) { showCollections.value = false; mediaType.value = 'movies'; search.value = `tmdb:${id}`; }
 const navigation = ref<InstanceType<typeof PageNavigation> | null>(null);
 const detailDialog = ref(false);
 const selectedItem = ref<any | null>(null);
@@ -57,8 +66,8 @@ function openDetails(type: 'movies' | 'series', item: any, activator: HTMLElemen
   detailDialog.value = true;
 }
 const activePage = computed({
-  get: () => mediaType.value === 'movies' ? movie_page.value : serie_page.value,
-  set: value => { (mediaType.value === 'movies' ? movie_page : serie_page).value = value; },
+  get: () => showCollections.value ? collectionPage.value : mediaType.value === 'movies' ? movie_page.value : serie_page.value,
+  set: value => { (showCollections.value ? collectionPage : mediaType.value === 'movies' ? movie_page : serie_page).value = value; },
 });
 
 const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
@@ -80,7 +89,7 @@ const activeLoading = computed(() => {
   return state.loading || (hasSearchTerm.value && !state.hasData && !state.error);
 });
 watch(mediaType, value => localStorage.setItem('dashboard_media_type', value));
-watch([mediaType, activePage], async () => {
+watch([mediaType, showCollections, activePage], async () => {
   await nextTick();
   navigation.value?.scrollToStart();
 });
@@ -218,6 +227,7 @@ watch(search, (newValue) => {
   cancelSearch();
   movie_page.value = 1;
   serie_page.value = 1;
+  collectionPage.value = 1;
   resetMovieItems();
   resetSerieItems();
   if (newValue && newValue.trim().length >= 3) {
@@ -251,6 +261,7 @@ watch([serviceContext, metadataContext], () => {
   cancelSearch();
   movie_page.value = 1;
   serie_page.value = 1;
+  collectionPage.value = 1;
   resetMovieItems();
   resetSerieItems();
   getQualityProfileList('movies');
@@ -324,11 +335,11 @@ onBeforeUnmount(cancelSearch);
           hide-details
         />
         <div class="d-flex flex-wrap align-center justify-space-between ga-3 mt-3">
-          <MediaTypeToggle v-model="mediaType" :total-movies="total_movies" :total-series="total_series" :movies-pending="(search ?? '').trim().length >= 3 && !requests.movies.state.hasData" :series-pending="(search ?? '').trim().length >= 3 && !requests.series.state.hasData" />
+          <MediaTypeToggle v-model="mediaType" show-collections :collections="showCollections" :total-collections="collectionTotal" :total-movies="total_movies" :total-series="total_series" :movies-pending="(search ?? '').trim().length >= 3 && !requests.movies.state.hasData" :series-pending="(search ?? '').trim().length >= 3 && !requests.series.state.hasData" @collections="browseCollections" @media="showCollections = false" />
           <v-pagination
-            v-if="activeTotal > items_per_page"
+            v-if="showCollections ? collectionPages > 1 : activeTotal > items_per_page"
             v-model="activePage"
-            :length="Math.ceil(activeTotal / items_per_page)"
+            :length="showCollections ? collectionPages : Math.ceil(activeTotal / items_per_page)"
             :total-visible="$vuetify.display.xs ? 3 : 5"
             density="compact"
             :aria-label="t('Search results pages')"
@@ -336,11 +347,16 @@ onBeforeUnmount(cancelSearch);
           />
         </div>
     </PageNavigation>
-    <ReadFeedback :state="requests[mediaType].state" :label="t('Search results')" @retry="getContent(mediaType)" />
-    <ReadFeedback :state="mediaType === 'movies' ? movieLibraryRead : seriesLibraryRead" :label="t('Library status')" @retry="mediaType === 'movies' ? checkMovies() : checkSeries()" />
-    <ReadFeedback :state="qualityReads[mediaType].state" :label="t('Quality profiles')" @retry="getQualityProfileList(mediaType)" />
+    <template v-if="!showCollections">
+      <ReadFeedback :state="requests[mediaType].state" :label="t('Search results')" @retry="getContent(mediaType)" />
+      <ReadFeedback :state="mediaType === 'movies' ? movieLibraryRead : seriesLibraryRead" :label="t('Library status')" @retry="mediaType === 'movies' ? checkMovies() : checkSeries()" />
+      <ReadFeedback :state="qualityReads[mediaType].state" :label="t('Quality profiles')" @retry="getQualityProfileList(mediaType)" />
+    </template>
     <DashboardAttention class="mt-4" />
-    <section :aria-label="mediaType === 'movies' ? t('Movie results') : t('Series results')" :aria-busy="activeLoading">
+    <div v-if="collectionsReady" v-show="showCollections">
+      <DashboardCollections :active="showCollections" :search="search ?? ''" :page="collectionPage" :context="serviceContext()" @results="collectionResults" @search-movie="searchCollectionMovie" @library-updated="checkMovies()" />
+    </div>
+    <section v-show="!showCollections" :aria-label="mediaType === 'movies' ? t('Movie results') : t('Series results')" :aria-busy="activeLoading">
       <MediaList
         :mediaType="mediaType"
         :paginated_items="activeItems"

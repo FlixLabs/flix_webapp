@@ -10,7 +10,7 @@ import { useConnectivity } from '@/composables/useConnectivity';
 
 
 import { RouterView, useRouter } from 'vue-router'
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue';
+import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { useFlixStore } from '@/stores/flixStore';
 import { useResettable } from '@/composables/useResettable';
 import { useAlert } from '@/composables/useAlert';
@@ -27,7 +27,19 @@ const { state: useAPI, reset: resetUseAPI } = useResettable(import.meta.env.VITE
 const { alert, showSuccessAlert, showErrorAlert } = useAlert();
 
 const { state: drawer, reset: resetDrawer } = useResettable(false);
-const { state: drawerSelected, reset: resetDrawerSelected } = useResettable('dashboard');
+
+watch(drawer, async (open) => {
+  const navigation = document.getElementById('navigation-drawer');
+  const restoreFocus = navigation?.contains(document.activeElement);
+  await nextTick();
+  if (open && drawer.value) {
+    const target = navigation?.querySelector<HTMLElement>('[aria-current="page"]')
+      ?? navigation?.querySelector<HTMLElement>('a[href]');
+    target?.focus({ preventScroll: true });
+  } else if (!drawer.value && restoreFocus) {
+    document.getElementById('navigation-toggle')?.focus({ preventScroll: true });
+  }
+});
 
 const store = useFlixStore();
 const isLoadingInstances = ref(false);
@@ -74,13 +86,12 @@ function sessionExpired() {
 window.addEventListener('flix-session-expired', sessionExpired);
 onUnmounted(() => window.removeEventListener('flix-session-expired', sessionExpired));
 
-const drawerSelectOption = async (option: any) => {
+const drawerSelectOption = async (option: string) => {
   if (option == 'signout') {
     try { await signOut(); } catch (error) { showErrorAlert(error); return; }
     router.push('/login');
     resetDrawer();
   } else {
-    drawerSelected.value = option;
     resetDrawer();
   }
 };
@@ -147,8 +158,10 @@ onMounted(async () => {
         v-slot:prepend
         >
         <v-app-bar-nav-icon
+          id="navigation-toggle"
           :aria-label="drawer ? t('Close navigation') : t('Open navigation')"
           :aria-expanded="drawer"
+          aria-controls="navigation-drawer"
           @click.stop="drawer = !drawer"
           />
       </template>
@@ -182,12 +195,17 @@ onMounted(async () => {
       </template>
     </v-app-bar>
 
+    <!-- Overlay at every breakpoint so closing never changes the page width. -->
     <v-navigation-drawer
       v-if="$route.meta.requiresAuth === true"
+      id="navigation-drawer"
       v-model="drawer"
+      temporary
+      retain-focus
       color="surface"
+      @keydown.esc.stop.prevent="resetDrawer"
       >
-      <v-list class="pa-3" nav>
+      <v-list class="pa-3" nav tabindex="0">
         <v-list-item
           v-for="option in filteredDrawerOptions"
           :key="option.value"
@@ -244,5 +262,12 @@ onMounted(async () => {
   top: 50%;
   transform: translate(-50%, -50%);
   margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flix-app :deep(.v-navigation-drawer__scrim) {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 </style>

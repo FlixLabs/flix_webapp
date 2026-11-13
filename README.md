@@ -5,6 +5,31 @@ mode when import protection cannot be verified. The panel displays torrents and
 an explicit warning, without claiming they are untracked. Removal, including
 forced removal, stays disabled until a refresh verifies protection successfully.
 
+## Dashboard Collection Search
+
+The Dashboard's **Collections** tab searches the TMDB catalog, including sagas
+that are not yet in the selected Radarr library. It uses the existing
+`VITE_TMDB_BASE_URL` and `VITE_TMDB_API_KEY` settings and the content language.
+Search starts at three characters; collection results are paginated and retained
+when switching between movie, series and collection tabs.
+
+Opening a collection loads its films in release-year order and checks the selected
+library for local files. Failed library checks show unknown availability, not
+missing files. Film previews offer **Add** with quality selection after a verified
+Radarr lookup. **Add** on a collection opens a selection/quality confirmation for
+its new films. Existing films are excluded, and each selected film is rechecked
+before writing. Released films use the normal add-and-search workflow; upcoming
+films are monitored without an immediate search. Browsing or cancelling never
+adds or downloads anything. Collection reads are cancelled when the query or
+instance changes. **Search this movie** remains available to return to movie
+results. No Flix API update is required.
+
+In Downloads, status chips wrap to keep their complete labels visible. Service
+errors take precedence over repeated release titles, and removal-protection
+reasons live in Status rather than the Actions column. Existing import/removal
+guards remain unchanged. The main navigation uses an overlay drawer at every
+breakpoint, so route changes do not resize the page while the drawer closes.
+
 ## Download Origin
 
 Downloads and history display the indexer next to each release, without expanding
