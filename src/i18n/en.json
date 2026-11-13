@@ -946,5 +946,17 @@
   "The instance configuration changed. Start a new verification.": "The instance configuration changed. Start a new verification.",
   "Too many file verifications are pending. Wait a few minutes before retrying.": "Too many file verifications are pending. Wait a few minutes before retrying.",
   "Extension verification timed out. No file was renamed. Start a new verification.": "Extension verification timed out. No file was renamed. Start a new verification.",
-  "Deluge already reports a supported video extension. No file was renamed. Wait for Radarr/Sonarr to refresh its import status.": "Deluge already reports a supported video extension. No file was renamed. Wait for Radarr/Sonarr to refresh its import status."
+  "Deluge already reports a supported video extension. No file was renamed. Wait for Radarr/Sonarr to refresh its import status.": "Deluge already reports a supported video extension. No file was renamed. Wait for Radarr/Sonarr to refresh its import status.",
+  "Invalid collection response from TMDB.": "Invalid collection response from TMDB.",
+  "Collection search requires TMDB configuration.": "Collection search requires TMDB configuration.",
+  "Unable to load collections from TMDB.": "Unable to load collections from TMDB.",
+  "Unable to load movie library.": "Unable to load movie library.",
+  "Collection results": "Collection results",
+  "Enter at least 3 characters to search for collections.": "Enter at least 3 characters to search for collections.",
+  "Search this movie": "Search this movie",
+  "Add collection {p0}": "Add collection {p0}",
+  "Add movies ({p0})": "Add movies ({p0})",
+  "All collection movies are already in your library.": "All collection movies are already in your library.",
+  "This movie is already in your library.": "This movie is already in your library.",
+  "Movie details": "Movie details"
 }
