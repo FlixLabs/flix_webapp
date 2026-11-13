@@ -55,6 +55,40 @@ test('uncertain rename responses disable resubmission without retrying the write
   expect(calls.filter(call => call.action === 'repair')).toHaveLength(1);
   expect(mutations).toEqual([]);
 });
+for (const [code, message] of [
+  ['PATH_OUTSIDE_DOWNLOADS', 'The Deluge download path is outside downloads_root.'],
+  ['FILE_IDENTITY_CHANGED', 'The file name, size or identity changed.'],
+  ['FILE_EXTENSION_ALREADY_VALID', 'Deluge already reports a supported video extension. No file was renamed.'],
+  ['TORRENT_IDENTITY_CHANGED', 'The torrent is missing, incomplete or present in multiple clients.'],
+  ['REPAIR_VERIFICATION_UNAVAILABLE', 'Extension repair could not be verified.'],
+  ['UNKNOWN_FUTURE_CODE', 'Extension repair could not be verified.'],
+]) {
+  test(`explains review refusal ${code} without offering or requesting a rename`, async ({ page, mutations }) => {
+    const { calls, open, dialog } = await setup(page);
+    let reviews = 0;
+    await page.route('**/download-clients/*/extension-review', route => {
+      reviews++;
+      return route.fulfill({ status: 422, json: { code, error: 'Private backend details must not be displayed' } });
+    });
+    await open();
+    await expect(dialog.getByRole('alert')).toContainText(message);
+    await expect(dialog).not.toContainText('Private backend details');
+    await expect(dialog.getByRole('button', { name: 'Confirm rename', exact: true })).toHaveCount(0);
+    expect(reviews).toBe(1);
+    expect(calls).toEqual([]);
+    expect(mutations).toEqual([]);
+  });
+}
+test('handles a non-JSON review error without exposing its body or requesting a rename', async ({ page, mutations }) => {
+  const { calls, open, dialog } = await setup(page);
+  await page.route('**/download-clients/*/extension-review', route => route.fulfill({ status: 502, contentType: 'text/html', body: '<h1>Private proxy details</h1>' }));
+  await open();
+  await expect(dialog.getByRole('alert')).toContainText('Extension repair could not be verified.');
+  await expect(dialog).not.toContainText('Private proxy details');
+  await expect(dialog.getByRole('button', { name: 'Confirm rename', exact: true })).toHaveCount(0);
+  expect(calls).toEqual([]);
+  expect(mutations).toEqual([]);
+});
 for (const locale of ['en-US', 'fr-FR']) {
   test.describe(`extension action layout ${locale}`, () => {
     test.use({ locale });
@@ -66,11 +100,13 @@ for (const locale of ['en-US', 'fr-FR']) {
         await page.setViewportSize({ width, height: 1000 });
         await expect(button).toBeVisible();
         await expect.poll(() => button.evaluate(element => {
-          const label = element.querySelector('.v-btn__content')!;
+          const label = element.querySelector('.v-btn__content');
+          const parent = element.closest('td');
+          if (!element.isConnected || !label || !parent) return false;
           const range = document.createRange(); range.selectNodeContents(label);
           const text = range.getBoundingClientRect();
           const bounds = element.getBoundingClientRect();
-          const cell = element.closest('td')!.getBoundingClientRect();
+          const cell = parent.getBoundingClientRect();
           return text.left >= bounds.left && text.right <= bounds.right
             && text.top >= bounds.top && text.bottom <= bounds.bottom
             && bounds.left >= cell.left && bounds.right <= cell.right
@@ -92,6 +128,16 @@ test('older or unconfigured API instances do not offer extension repair', async 
 
 test.describe('French extension repair', () => {
   test.use({ locale: 'fr-FR' });
+  test('explains an incorrect downloads_root mapping in French without renaming', async ({ page, mutations }) => {
+    const { calls } = await setup(page);
+    await page.route('**/download-clients/*/extension-review', route => route.fulfill({ status: 422, json: { code: 'PATH_OUTSIDE_DOWNLOADS' } }));
+    await page.getByRole('button', { name: `Corriger l’extension du fichier pour ${filename}`, exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Corriger l’extension du fichier', exact: true });
+    await expect(dialog.getByRole('alert')).toContainText('Le chemin de téléchargement Deluge est en dehors de downloads_root.');
+    await expect(dialog.getByRole('button', { name: 'Confirmer le renommage', exact: true })).toHaveCount(0);
+    expect(calls).toEqual([]);
+    expect(mutations).toEqual([]);
+  });
   test('translates verification, confirmation and successful rename', async ({ page, mutations }) => {
     const { calls } = await setup(page);
     await page.getByRole('button', { name: `Corriger l’extension du fichier pour ${filename}`, exact: true }).click();

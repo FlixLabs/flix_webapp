@@ -31,13 +31,23 @@ const messages: Record<string, string> = {
   FILE_FORMAT_UNSUPPORTED: 'Only a verified single Matroska file can be corrected.',
   SINGLE_FILE_REQUIRED: 'Only a verified single Matroska file can be corrected.',
   IMPORT_PROTECTED: 'An import may be active or the rejection changed. No file was renamed.',
+  PATH_OUTSIDE_DOWNLOADS: 'The Deluge download path is outside downloads_root. Configure downloads_root using the path seen by Deluge, not the host path.',
+  FILE_IDENTITY_CHANGED: 'The file name, size or identity changed. Check Deluge, then start a new verification.',
+  FILE_EXTENSION_ALREADY_VALID: 'Deluge already reports a supported video extension. No file was renamed. Wait for Radarr/Sonarr to refresh its import status.',
+  TORRENT_IDENTITY_CHANGED: 'The torrent is missing, incomplete or present in multiple clients. Check Deluge before retrying.',
+  CLIENT_BUSY: 'Another operation is using this download client. Wait for it to finish, then start a new verification.',
+  REVIEW_EXPIRED: 'This verification expired or was already used. Start a new verification.',
+  CONFIGURATION_CHANGED: 'The instance configuration changed. Start a new verification.',
+  TOO_MANY_REVIEWS: 'Too many file verifications are pending. Wait a few minutes before retrying.',
+  REPAIR_VERIFICATION_UNAVAILABLE: 'Extension repair could not be verified. Check Deluge, then start a new verification.',
   RENAME_UNCERTAIN: 'The rename could not be confirmed. Check Deluge before another attempt. No automatic retry was made.',
 };
+const verificationFallback = 'Extension repair could not be verified. Check Deluge, then start a new verification.';
 async function request(action: string, body: unknown) {
   const response = await apiFetch(endpoint(action), { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body), signal: controller?.signal });
-  const data = await response.json();
-  if (!response.ok) throw new Error(messages[data?.code] ?? 'Extension repair could not be verified. Check Deluge, then start a new verification.');
+  const data = await response.json().catch(() => { throw new Error(verificationFallback); });
+  if (!response.ok) throw new Error(messages[data?.code] ?? verificationFallback);
   return data;
 }
 async function open(mediaType: MediaType, item: { title: string; downloadId?: string }, element?: HTMLElement) {
@@ -46,13 +56,14 @@ async function open(mediaType: MediaType, item: { title: string; downloadId?: st
   const abort = new AbortController(); controller = abort;
   type = mediaType; title.value = item.title; review.value = null; error.value = ''; success.value = false;
   activator.value = element ?? null; loading.value = true; visible.value = true;
-  const timeout = setTimeout(() => abort.abort(), 15000);
+  const timeout = setTimeout(() => abort.abort(), 60000);
   try {
     const data = parseExtensionReview(await request('review', { mediaType, downloadId: item.downloadId }));
     if (current === generation) review.value = data;
   } catch (cause) {
-    if (current === generation) error.value = cause instanceof Error && Object.values(messages).includes(cause.message)
-      ? cause.message : 'Extension verification failed.';
+    if (current === generation) error.value = abort.signal.aborted
+      ? 'Extension verification timed out. No file was renamed. Start a new verification.'
+      : cause instanceof Error && Object.values(messages).includes(cause.message) ? cause.message : verificationFallback;
   } finally { clearTimeout(timeout); if (current === generation) loading.value = false; }
 }
 async function confirm() {

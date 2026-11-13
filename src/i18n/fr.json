@@ -937,5 +937,14 @@
   "An import may be active or the rejection changed. No file was renamed.": "Un import est peut-être actif ou le motif de rejet a changé. Aucun fichier n’a été renommé.",
   "The rename could not be confirmed. Check Deluge before another attempt. No automatic retry was made.": "Le renommage n’a pas pu être confirmé. Vérifiez Deluge avant toute nouvelle tentative. Aucune nouvelle tentative automatique n’a été effectuée.",
   "Extension repair could not be verified. Check Deluge, then start a new verification.": "La correction d’extension n’a pas pu être vérifiée. Vérifiez Deluge, puis lancez une nouvelle vérification.",
-  "Extension verification failed.": "Échec de la vérification de l’extension."
+  "Extension verification failed.": "Échec de la vérification de l’extension.",
+  "The Deluge download path is outside downloads_root. Configure downloads_root using the path seen by Deluge, not the host path.": "Le chemin de téléchargement Deluge est en dehors de downloads_root. Configurez downloads_root avec le chemin vu par Deluge, et non celui de l’hôte.",
+  "The file name, size or identity changed. Check Deluge, then start a new verification.": "Le nom, la taille ou l’identité du fichier a changé. Vérifiez Deluge, puis lancez une nouvelle vérification.",
+  "The torrent is missing, incomplete or present in multiple clients. Check Deluge before retrying.": "Le torrent est absent, incomplet ou présent dans plusieurs clients. Vérifiez Deluge avant de réessayer.",
+  "Another operation is using this download client. Wait for it to finish, then start a new verification.": "Une autre opération utilise ce client de téléchargement. Attendez sa fin, puis lancez une nouvelle vérification.",
+  "This verification expired or was already used. Start a new verification.": "Cette vérification a expiré ou a déjà été utilisée. Lancez une nouvelle vérification.",
+  "The instance configuration changed. Start a new verification.": "La configuration de l’instance a changé. Lancez une nouvelle vérification.",
+  "Too many file verifications are pending. Wait a few minutes before retrying.": "Trop de vérifications de fichiers sont en attente. Patientez quelques minutes avant de réessayer.",
+  "Extension verification timed out. No file was renamed. Start a new verification.": "Le délai de vérification de l’extension est dépassé. Aucun fichier n’a été renommé. Lancez une nouvelle vérification.",
+  "Deluge already reports a supported video extension. No file was renamed. Wait for Radarr/Sonarr to refresh its import status.": "Deluge indique déjà une extension vidéo prise en charge. Aucun fichier n’a été renommé. Attendez que Radarr/Sonarr actualise l’état de l’import."
 }
