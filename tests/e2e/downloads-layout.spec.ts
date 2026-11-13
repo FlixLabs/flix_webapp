@@ -40,7 +40,7 @@ test('download cards keep warnings and actions visible without horizontal scroll
     await expect(page.getByRole('button', { name: /^Remove / })).toBeVisible();
     const row = page.locator('.downloads-table tbody .v-data-table__tr');
     const geometry = await row.evaluate(el => ({ display: getComputedStyle(el).display, radius: getComputedStyle(el).borderRadius }));
-    if (width < 600) { expect(geometry.display).toBe('grid'); expect(geometry.radius).toBe('12px'); }
+    if (width < 960) { expect(geometry.display).toBe('grid'); expect(geometry.radius).toBe('12px'); }
     else {
       const tops = await row.evaluate(el => ['.download-heading', '.v-chip', '.download-progress', '.download-actions'].map(selector => el.querySelector(selector)!.getBoundingClientRect().top));
       expect(Math.max(...tops) - Math.min(...tops)).toBeLessThanOrEqual(1);

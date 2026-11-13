@@ -55,6 +55,33 @@ test('uncertain rename responses disable resubmission without retrying the write
   expect(calls.filter(call => call.action === 'repair')).toHaveLength(1);
   expect(mutations).toEqual([]);
 });
+for (const locale of ['en-US', 'fr-FR']) {
+  test.describe(`extension action layout ${locale}`, () => {
+    test.use({ locale });
+    test('keeps the full action label inside its button and table cell at every breakpoint', async ({ page, mutations }) => {
+      const { calls } = await setup(page);
+      const button = page.getByRole('button', { name: locale === 'fr-FR'
+        ? `Corriger l’extension du fichier pour ${filename}` : `Correct file extension for ${filename}`, exact: true });
+      for (const width of [1440, 1024, 768, 600, 390]) {
+        await page.setViewportSize({ width, height: 1000 });
+        await expect(button).toBeVisible();
+        await expect.poll(() => button.evaluate(element => {
+          const label = element.querySelector('.v-btn__content')!;
+          const range = document.createRange(); range.selectNodeContents(label);
+          const text = range.getBoundingClientRect();
+          const bounds = element.getBoundingClientRect();
+          const cell = element.closest('td')!.getBoundingClientRect();
+          return text.left >= bounds.left && text.right <= bounds.right
+            && text.top >= bounds.top && text.bottom <= bounds.bottom
+            && bounds.left >= cell.left && bounds.right <= cell.right
+            && document.documentElement.scrollWidth <= window.innerWidth;
+        })).toBe(true);
+      }
+      expect(calls).toEqual([]);
+      expect(mutations).toEqual([]);
+    });
+  });
+}
 test('older or unconfigured API instances do not offer extension repair', async ({ page, mutations }) => {
   const { calls } = await setup(page, 200, false);
   await expect(page.getByText('Automatic import rejected: unsupported file extension. Removal remains protected.', { exact: true })).toBeVisible();
