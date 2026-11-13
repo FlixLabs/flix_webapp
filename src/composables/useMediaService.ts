@@ -12,6 +12,7 @@ export interface MediaInstance {
   name: string;
   has_storage_agent?: boolean;
   has_download_clients?: boolean;
+  has_download_extension_repair?: boolean;
   radarr: MediaServiceConfig;
   sonarr: MediaServiceConfig;
 }
