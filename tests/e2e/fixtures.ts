@@ -51,8 +51,10 @@ export const test = base.extend<{ mutations: { method: string; path: string; bod
       else if (path === '/api/v3/history') json = { records: [] };
       else if (path.toLowerCase() === '/api/v3/qualityprofile') json = [{ id: 1, name: 'Any' }];
       else if (path === '/api/v3/calendar') {
-        const date = new Date(); date.setDate(15);
-        const release = date.toISOString();
+        // Node's wall clock is independent of the browser's fixed clock and selected month.
+        const start = Date.parse(url.searchParams.get('start') ?? '');
+        const end = Date.parse(url.searchParams.get('end') ?? '');
+        const release = new Date(start + (end - start) / 2).toISOString();
         json = url.hostname === 'radarr.test' ? Array.from({ length: 7 }, (_, i) => ({ ...movie, id: i + 1, title: `Calendar movie ${i + 1} with a long title`, digitalRelease: release })) : [];
       }
       else if (path === '/api/v3/wanted/missing') json = { totalRecords: 1, records: [{ id: 21, seriesId: 2, seasonNumber: 1, episodeNumber: 1, title: 'Pilot', series: { title: series.title } }] };

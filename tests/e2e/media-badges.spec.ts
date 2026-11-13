@@ -46,6 +46,7 @@ test('movie, series and collection gallery badges stay side by side at every bre
 });
 
 test('outings uses the same inline movie badges without losing its release label', async ({ page, mutations }) => {
+  await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
   await page.route(/\/discover\/(movie|tv)\?/, route => route.fulfill({ json: {
     results: [{ id: movie.tmdbId, title: movie.title, name: series.title, release_date: '2026-10-01', first_air_date: '2026-10-01' }], total_pages: 1,
   } }));

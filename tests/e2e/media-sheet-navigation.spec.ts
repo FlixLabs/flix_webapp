@@ -2,6 +2,7 @@ import { test, expect, movie, series } from './fixtures';
 
 for (const view of ['library', 'outings', 'dashboard']) {
   test(`${view} navigates the displayed movie page without writes or lost search`, async ({ page, mutations }) => {
+    await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
     const movies = Array.from({ length: 3 }, (_, i) => ({ ...movie, id: i + 1, tmdbId: 10 + i, title: `Example movie ${i + 1}` }));
     await page.route(/\/api\/v3\/movie(?:\?|\/lookup\?)/, route => route.fulfill({ json: movies }));
     await page.route(/\/discover\/movie\?/, route => route.fulfill({ json: { results: movies.map(item => ({ id: item.tmdbId, title: item.title, release_date: '2026-10-20' })), total_pages: 1 } }));

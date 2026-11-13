@@ -39,6 +39,7 @@ test('declares the UI language and supports the skip link with the keyboard', as
 for (const path of ['/library', '/outings']) {
   for (const key of ['Enter', 'Space']) {
     test(`${path} opens cards with ${key}, traps focus and returns it after Escape`, async ({ page, mutations }) => {
+      await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
       await page.route(/\/discover\/(movie|tv)\?/, route => route.fulfill({ json: { results: [{ ...movie, id: 10, release_date: '2026-10-01', first_air_date: '2026-10-01', name: movie.title }], total_pages: 1 } }));
       await page.goto(path);
       const card = page.getByRole('button', { name: 'Open Example movie', exact: true });

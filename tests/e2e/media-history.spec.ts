@@ -2,6 +2,7 @@ import { test, expect, movie, series } from './fixtures';
 
 for (const view of ['library', 'dashboard', 'outings']) {
   test(`${view} loads media history only when expanded and shows service failure details`, async ({ page, mutations }) => {
+    await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
     const reads: string[] = [];
     await page.route(/\/api\/v3\/history\?/, route => {
       reads.push(route.request().url());

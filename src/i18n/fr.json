@@ -920,5 +920,22 @@
   "Open on YouTube": "Ouvrir sur YouTube",
   "If playback is unavailable, open the trailer on YouTube.": "Si la lecture est indisponible, ouvrez la bande-annonce sur YouTube.",
   "Unable to load trailers. Check TMDB and retry.": "Impossible de charger les bandes-annonces. Vérifiez TMDB et réessayez.",
-  "Read-only inspection: import protection is unavailable. Removal is disabled. Refresh clients to retry.": "Consultation seule : la protection des imports est indisponible. La suppression est désactivée. Actualisez les clients pour réessayer."
+  "Read-only inspection: import protection is unavailable. Removal is disabled. Refresh clients to retry.": "Consultation seule : la protection des imports est indisponible. La suppression est désactivée. Actualisez les clients pour réessayer.",
+  "Correct file extension": "Corriger l’extension du fichier",
+  "Correct file extension for {p0}": "Corriger l’extension du fichier pour {p0}",
+  "Checking file format": "Vérification du format du fichier",
+  "The storage agent detected a Matroska container. This does not validate the video content.": "L’agent de stockage a détecté un conteneur Matroska. Cela ne valide pas le contenu vidéo.",
+  "Current filename": "Nom actuel du fichier",
+  "Proposed filename": "Nom proposé pour le fichier",
+  "After confirmation, Deluge will rename this file and keep tracking the torrent. No import is forced and no files are deleted.": "Après confirmation, Deluge renommera ce fichier et conservera le suivi du torrent. Aucun import ne sera forcé et aucun fichier ne sera supprimé.",
+  "Filename corrected in Deluge. Radarr/Sonarr may retry automatic import on its next check. No import was forced.": "Nom de fichier corrigé dans Deluge. Radarr/Sonarr pourra retenter l’import automatique lors de sa prochaine vérification. Aucun import n’a été forcé.",
+  "Confirm rename": "Confirmer le renommage",
+  "Automatic import rejected: unsupported file extension. Removal remains protected.": "Import automatique rejeté : extension de fichier non prise en charge. La suppression reste protégée.",
+  "Extension repair requires a storage agent and an explicit Deluge downloads path mapping.": "La correction d’extension nécessite un agent de stockage et une correspondance explicite du dossier de téléchargement Deluge.",
+  "The storage agent could not inspect the file safely. Check its version, paths and whether the target already exists.": "L’agent de stockage n’a pas pu vérifier le fichier de manière sûre. Vérifiez sa version, les chemins et si le fichier cible existe déjà.",
+  "Only a verified single Matroska file can be corrected.": "Seul un torrent contenant un unique fichier Matroska vérifié peut être corrigé.",
+  "An import may be active or the rejection changed. No file was renamed.": "Un import est peut-être actif ou le motif de rejet a changé. Aucun fichier n’a été renommé.",
+  "The rename could not be confirmed. Check Deluge before another attempt. No automatic retry was made.": "Le renommage n’a pas pu être confirmé. Vérifiez Deluge avant toute nouvelle tentative. Aucune nouvelle tentative automatique n’a été effectuée.",
+  "Extension repair could not be verified. Check Deluge, then start a new verification.": "La correction d’extension n’a pas pu être vérifiée. Vérifiez Deluge, puis lancez une nouvelle vérification.",
+  "Extension verification failed.": "Échec de la vérification de l’extension."
 }

@@ -15,6 +15,7 @@ test('closing a media sheet keeps its refresh error until the fade has finished'
 
 for (const view of ['library', 'dashboard', 'outings', 'downloads']) {
   test(`${view} refreshes an open movie in place on return and stops after closing`, async ({ page, mutations }) => {
+    await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
     let updated = false;
     let reads = 0;
     await page.route('**/api/v3/movie/1', route => {

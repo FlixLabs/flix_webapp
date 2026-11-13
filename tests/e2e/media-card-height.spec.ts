@@ -4,6 +4,7 @@ const longTitle = 'A very long movie title with enough words to span several lin
 
 for (const path of ['/outings', '/library']) {
   test(`${path} keeps short and long title cards the same height`, async ({ page, mutations }) => {
+    await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
     const items = [
       { ...movie, id: 101, tmdbId: 101, title: 'Short' },
       { ...movie, id: 102, tmdbId: 102, title: longTitle },

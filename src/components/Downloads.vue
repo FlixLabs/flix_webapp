@@ -26,6 +26,8 @@ import { useDownloadSourceLinks } from '@/composables/useDownloadSourceLinks';
 import ManualImportDialog from '@/components/common/ManualImportDialog.vue';
 import ManualImportActivity from '@/components/common/ManualImportActivity.vue';
 import DownloadClientsDialog from '@/components/common/DownloadClientsDialog.vue';
+import DownloadExtensionDialog from '@/components/common/DownloadExtensionDialog.vue';
+import { hasUnsupportedExtension } from '@/composables/downloadExtensionRepair';
 import { canManualImport } from '@/composables/useManualImport';
 import { latestTrackedImport, importStatusLabel, importStatusColor } from '@/composables/manualImportTracking';
 import MediaTypeToggle from '@/components/common/MediaTypeToggle.vue';
@@ -34,6 +36,8 @@ import { usePersistentPreference, isMediaType } from '@/composables/usePersisten
 
 const store = useFlixStore();
 const clientsDialog = ref(false);
+const extensionDialog = ref<InstanceType<typeof DownloadExtensionDialog> | null>(null);
+function extensionRepaired(type: 'movies' | 'series') { getDownload(type); }
 
 const selectedInstance = computed(() => store.selectedInstance);
 const selectedInstanceData = computed(() => store.selectedInstanceData);
@@ -406,6 +410,7 @@ watch(serviceContext, () => {
     </template>
   </MediaDialog>
   <ManualImportDialog ref="importDialog" :options="importOptions" @requested="refreshImport" @finished="refreshImport" />
+  <DownloadExtensionDialog v-if="useAPI && selectedInstanceData?.has_download_extension_repair" ref="extensionDialog" :instance="selectedInstance" @repaired="extensionRepaired" />
   <DeleteConfirmationDialog
     v-model="deleteConfirmationDialog"
     :message="`Remove '${itemToDelete.item?.title ?? ''}' from the queue and download client? Downloaded files may be deleted. The media will remain in your library.`"
@@ -504,6 +509,10 @@ watch(serviceContext, () => {
           </template>
           <template #item.actions="{ item }">
             <div class="download-actions d-flex flex-wrap justify-end ga-1">
+            <v-btn v-if="useAPI && selectedInstanceData?.has_download_extension_repair && hasUnsupportedExtension(item) && item.downloadId"
+              color="primary" variant="text" size="small" prepend-icon="mdi-file-check-outline"
+              :disabled="isRemoving || actionsDisabled" :aria-label="t('Correct file extension for {p0}', { p0: item.title })"
+              @click="extensionDialog?.open(mediaType, item, $event.currentTarget as HTMLElement)">{{ t('Correct file extension') }}</v-btn>
             <v-btn
               v-if="canManualImport(item)"
               color="primary"
@@ -523,7 +532,7 @@ watch(serviceContext, () => {
               :aria-label="t('Remove {p0}', { p0: item.title })"
               @click="openDeleteConfirmationDialog(mediaType, item)"
             >{{ t("Remove") }}</v-btn>
-            <span v-if="queueImportBlock(item.trackedDownloadState)" class="text-caption text-warning">{{ item.trackedDownloadState?.toLowerCase() === 'importpending' ? canManualImport(item) ? t('Automatic import rejected; manual review is available. Removal remains protected.') : t('Automatic import pending; removal is protected.') : t(queueImportBlock(item.trackedDownloadState)) }}</span>
+            <span v-if="queueImportBlock(item.trackedDownloadState)" class="text-caption text-warning">{{ item.trackedDownloadState?.toLowerCase() === 'importpending' ? hasUnsupportedExtension(item) ? t('Automatic import rejected: unsupported file extension. Removal remains protected.') : canManualImport(item) ? t('Automatic import rejected; manual review is available. Removal remains protected.') : t('Automatic import pending; removal is protected.') : t(queueImportBlock(item.trackedDownloadState)) }}</span>
             </div>
           </template>
         </v-data-table>

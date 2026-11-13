@@ -1,5 +1,9 @@
 import { test, expect } from './fixtures';
 
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
+});
+
 test('cancelling quality selection preserves its selected value while closing', async ({ page, mutations }) => {
   await page.route(/\/discover\/movie\?/, route => route.fulfill({ json: {
     results: [{ id: 100, title: 'Upcoming movie', release_date: '2026-10-20' }], total_pages: 1,

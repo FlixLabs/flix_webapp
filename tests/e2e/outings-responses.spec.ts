@@ -1,5 +1,9 @@
 import { test, expect } from './fixtures';
 
+test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-20T12:00:00'));
+});
+
 for (const failure of ['invalid first page', 'invalid second page', 'HTTP 429']) {
   test(`outings handles ${failure} and recovers after reload`, async ({ page, mutations }) => {
     let fail = true;
