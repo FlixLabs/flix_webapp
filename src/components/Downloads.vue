@@ -479,7 +479,7 @@ watch(serviceContext, () => {
           :items="filteredRecords"
           :items-per-page="itemsPerPage"
           :loading="activeLoading ? 'primary' : false"
-          :mobile-breakpoint="600"
+          :mobile-breakpoint="960"
           hide-default-footer
           class="downloads-table mt-4"
           :no-data-text="activeRead.error ? t('Data unavailable. Retry to load this view.') : search || (view === 'queue' && queueFilter !== 'all') ? t('No matching items found') : view === 'queue' ? t('No download information found') : t('No history information found')"
@@ -544,9 +544,12 @@ watch(serviceContext, () => {
 <style scoped>
 .download-warning { color: rgb(var(--v-theme-warning)); overflow-wrap: anywhere; }
 .download-actions { flex-direction: column; align-items: flex-end; }
+.download-actions > .v-btn { max-width: 100%; min-width: 0; height: auto; min-height: 28px; padding-block: 6px; }
+.download-actions :deep(.v-btn__prepend) { flex-shrink: 0; }
+.download-actions :deep(.v-btn__content) { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
 .downloads-table :deep(table) { table-layout: fixed; }
 .downloads-table :deep(.v-data-table__td) { padding-block: 12px; vertical-align: top; }
-@media (max-width: 599px) {
+@media (max-width: 959px) {
   .download-actions { flex-direction: row; justify-content: flex-start !important; align-items: center; }
   .downloads-table :deep(table), .downloads-table :deep(tbody) { display: block; width: 100%; }
   .downloads-table :deep(thead), .downloads-table :deep(thead tr) { display: block; width: 100%; }
