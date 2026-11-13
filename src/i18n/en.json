@@ -937,5 +937,14 @@
   "An import may be active or the rejection changed. No file was renamed.": "An import may be active or the rejection changed. No file was renamed.",
   "The rename could not be confirmed. Check Deluge before another attempt. No automatic retry was made.": "The rename could not be confirmed. Check Deluge before another attempt. No automatic retry was made.",
   "Extension repair could not be verified. Check Deluge, then start a new verification.": "Extension repair could not be verified. Check Deluge, then start a new verification.",
-  "Extension verification failed.": "Extension verification failed."
+  "Extension verification failed.": "Extension verification failed.",
+  "The Deluge download path is outside downloads_root. Configure downloads_root using the path seen by Deluge, not the host path.": "The Deluge download path is outside downloads_root. Configure downloads_root using the path seen by Deluge, not the host path.",
+  "The file name, size or identity changed. Check Deluge, then start a new verification.": "The file name, size or identity changed. Check Deluge, then start a new verification.",
+  "The torrent is missing, incomplete or present in multiple clients. Check Deluge before retrying.": "The torrent is missing, incomplete or present in multiple clients. Check Deluge before retrying.",
+  "Another operation is using this download client. Wait for it to finish, then start a new verification.": "Another operation is using this download client. Wait for it to finish, then start a new verification.",
+  "This verification expired or was already used. Start a new verification.": "This verification expired or was already used. Start a new verification.",
+  "The instance configuration changed. Start a new verification.": "The instance configuration changed. Start a new verification.",
+  "Too many file verifications are pending. Wait a few minutes before retrying.": "Too many file verifications are pending. Wait a few minutes before retrying.",
+  "Extension verification timed out. No file was renamed. Start a new verification.": "Extension verification timed out. No file was renamed. Start a new verification.",
+  "Deluge already reports a supported video extension. No file was renamed. Wait for Radarr/Sonarr to refresh its import status.": "Deluge already reports a supported video extension. No file was renamed. Wait for Radarr/Sonarr to refresh its import status."
 }
