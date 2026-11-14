@@ -24,6 +24,13 @@ adds or downloads anything. Collection reads are cancelled when the query or
 instance changes. **Search this movie** remains available to return to movie
 results. No Flix API update is required.
 
+In Library, the same persistent search applies to Movies, Series and Collections,
+including each tab's result count. A collection opened from a movie is displayed
+above that movie rather than navigating to the Collections tab. Closing it returns
+focus to the movie link; closing the movie then restores the original media list,
+search, filters, page and scroll position. Unavailable collection data is reported
+inside the linked sheet, with retry/close available without leaving the movie.
+
 In Downloads, status chips wrap to keep their complete labels visible. Service
 errors take precedence over repeated release titles, and removal-protection
 reasons live in Status rather than the Actions column. Existing import/removal
