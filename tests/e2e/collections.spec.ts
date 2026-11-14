@@ -146,7 +146,10 @@ test('opens the saga from a library movie sheet and preserves the library search
   const sheet = page.getByRole('dialog', { name: 'Collection: Example saga', exact: true });
   await expect(sheet).toBeVisible();
   await sheet.getByRole('button', { name: 'Close collection', exact: true }).click();
-  await page.getByRole('button', { name: 'Movies (1)', exact: true }).click();
+  const film = page.getByRole('dialog', { name: `Movie: ${movie.title}`, exact: true });
+  await expect(film).toBeVisible();
+  await film.getByRole('button', { name: 'Close', exact: true }).click();
+  await expect(page.getByRole('button', { name: `Open ${movie.title}`, exact: true })).toBeVisible();
   await expect(page.getByRole('textbox', { name: 'Search', exact: true })).toHaveValue('Example');
   expect(mutations).toEqual([]);
 });
@@ -172,6 +175,8 @@ for (const entry of ['visited collections', 'direct movie link']) {
     const sheet = page.getByRole('dialog', { name: 'Collection: Example saga', exact: true });
     await expect(sheet).toBeVisible();
     await sheet.getByRole('button', { name: 'Close collection', exact: true }).click();
+    await page.getByRole('dialog', { name: `Movie: ${movie.title}`, exact: true }).getByRole('button', { name: 'Close', exact: true }).click();
+    await page.getByRole('button', { name: 'Collections (2)', exact: true }).click();
     await page.getByRole('button', { name: 'Open collection Other saga', exact: true }).click();
     await page.getByRole('dialog', { name: 'Collection: Other saga', exact: true }).getByRole('button', { name: 'View Other movie', exact: true }).click();
     await page.getByRole('button', { name: 'Collection: Other saga', exact: true }).click();

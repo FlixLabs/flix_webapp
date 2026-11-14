@@ -37,16 +37,19 @@ import { useEpisodeSummary } from '@/composables/useEpisodeSummary';
 
 const LibraryCollections = defineAsyncComponent(() => import('./common/LibraryCollections.vue'));
 const showCollections = ref(false);
-const collectionSearch = ref<string | null>('');
 const collectionPage = ref(1);
 const requestedCollection = ref<{ tmdbId: number }>();
 function browseCollections(id?: number) {
   if (bulkPending.value) return;
-  selected_view.value = 'movies';
   selectionMode.value = false;
   requestedCollection.value = id ? { tmdbId: id } : undefined;
+  if (id) {
+    if (showCollections.value) resetMovieDialog();
+    return;
+  }
   showCollections.value = true;
   resetMovieDialog();
+  resetSerieDialog();
 }
 
 const store = useFlixStore();
@@ -76,14 +79,14 @@ const activePage = computed({
   set: value => { (selected_view.value === 'movies' ? movie_page : serie_page).value = value; },
 });
 const browserSearch = computed({
-  get: () => showCollections.value ? collectionSearch.value : search.value,
-  set: value => { if (showCollections.value) collectionSearch.value = value; else search.value = value ?? ''; },
+  get: () => search.value,
+  set: value => { search.value = value ?? ''; },
 });
 const browserPage = computed({
   get: () => showCollections.value ? collectionPage.value : activePage.value,
   set: value => { if (showCollections.value) collectionPage.value = value; else activePage.value = value; },
 });
-watch(collectionSearch, () => { collectionPage.value = 1; });
+watch(search, () => { collectionPage.value = 1; });
 
 const { state: isLoadingMovie, reset: resetIsLoadingMovie } = useResettable(false);
 const { state: movieItems, reset: resetMovieItems } = useResettable<any[]>([]);
@@ -117,10 +120,11 @@ const libraryReads = {
 const collectionSource = ref<MovieCollection[]>([]);
 const collectionRead = useReadRequest(serviceContext);
 const connectedCollections = computed(() => libraryCollections(collectionSource.value, movieItems.value));
+const filteredCollections = computed(() => connectedCollections.value.filter(collection =>
+  collection.title.toLocaleLowerCase().includes(search.value.trim().toLocaleLowerCase())));
 const totalCollections = computed(() => collectionRead.state.hasData && libraryReads.movies.state.hasData
-  ? connectedCollections.value.length : undefined);
-const collectionPages = computed(() => Math.ceil(connectedCollections.value.filter(collection =>
-  collection.title.toLocaleLowerCase().includes((collectionSearch.value ?? '').trim().toLocaleLowerCase())).length / items_per_page));
+  ? filteredCollections.value.length : undefined);
+const collectionPages = computed(() => Math.ceil(filteredCollections.value.length / items_per_page));
 async function loadCollections() {
   const request = collectionRead.begin();
   try {
@@ -282,6 +286,7 @@ const { openLink } = useMediaSheetRoute({
 });
 function handleMovieClick(id: number) { openLink('movies', id); }
 function handleSerieClick(id: number) { openLink('series', id); }
+watch(movieDialog, open => { if (!open && !showCollections.value) requestedCollection.value = undefined; });
 
 const { grouped_episodes, totalSerieSizeOnDisk } = useEpisodeSummary(serieEpisodes);
 
@@ -383,6 +388,7 @@ onMounted(() => {
 
 watch(serviceContext, () => {
   collectionSource.value = [];
+  requestedCollection.value = undefined;
   resetMovieDialog(); resetSerieDialog(); resetSelectedMovie(); resetSelectedSerie();
   episodeRequest++;
   getContent('movies');
@@ -433,7 +439,7 @@ watch(serviceContext, () => {
       </div>
       </template>
     </MediaBrowserToolbar>
-    <LibraryCollections v-if="showCollections" v-model:page="collectionPage" :search="collectionSearch" :movies="movieItems" :source="collectionSource" :collection-state="collectionRead.state" :context="serviceContext()" :library-state="libraryReads.movies.state" :initial-collection="requestedCollection" @retry-collections="loadCollections" @open-movie="handleMovieClick" @retry-library="getContent('movies')" @refreshed="applyCollectionUpdate" />
+    <LibraryCollections v-if="showCollections || requestedCollection" v-model:page="collectionPage" :sheet-only="!showCollections" :search="search" :movies="movieItems" :source="collectionSource" :collection-state="collectionRead.state" :context="serviceContext()" :library-state="libraryReads.movies.state" :initial-collection="requestedCollection" @closed="requestedCollection = undefined" @retry-collections="loadCollections" @open-movie="handleMovieClick" @retry-library="getContent('movies')" @refreshed="applyCollectionUpdate" />
     <ReadFeedback v-if="!showCollections" :state="libraryReads[selected_view].state" :label="selected_view === 'movies' ? t('Movie library') : t('Series library')" :disabled="bulkPending" @retry="getContent(selected_view)" />
     <LibraryFilters v-show="!showCollections" v-model="filters" :statuses="statuses" :qualities="qualities" :years="years" />
     <LibraryBulkActions
@@ -516,6 +522,7 @@ watch(serviceContext, () => {
       v-else-if="selected_view == 'series'"
       >
       <MediaBrowserResults
+        v-if="!showCollections"
         :items="paginated_series"
         :total="total_series"
         :is-loading="isLoadingSerie || seriesTranslationLoading"

@@ -20,8 +20,8 @@ import MediaDialog from './MediaDialog.vue';
 import ReadFeedback from './ReadFeedback.vue';
 import Loading from './Loading.vue';
 
-const props = defineProps<{ search: string | null; movies: LibraryMovie[]; source: MovieCollection[]; collectionState: ReadState; context: string; libraryState: ReadState; initialCollection?: { tmdbId: number } }>();
-const emit = defineEmits<{ 'open-movie': [id: number]; 'retry-library': []; 'retry-collections': []; refreshed: [update: CollectionSheetUpdate] }>();
+const props = defineProps<{ search: string | null; movies: LibraryMovie[]; source: MovieCollection[]; collectionState: ReadState; context: string; libraryState: ReadState; initialCollection?: { tmdbId: number }; sheetOnly?: boolean }>();
+const emit = defineEmits<{ 'open-movie': [id: number]; 'retry-library': []; 'retry-collections': []; refreshed: [update: CollectionSheetUpdate]; closed: [] }>();
 const search = computed(() => props.search ?? '');
 const page = defineModel<number>('page', { required: true });
 const selectedId = ref<number | null>(null);
@@ -62,7 +62,7 @@ const updates = useCollectionSheetRefresh({
   useAPI: ref(import.meta.env.VITE_FLIX_API_USE === 'true'), selectedInstanceData: computed(() => store.selectedInstanceData),
   open: () => dialog.value, collection: () => selected.value,
   blocked: () => sourceUnavailable.value || downloadDialog.value || removalDialog.value || missingDialog.value
-    || document.querySelectorAll('.v-dialog.v-overlay--active').length > 1,
+    || document.querySelectorAll('.v-dialog.v-overlay--active').length > (props.sheetOnly ? 2 : 1),
   refreshed: update => emit('refreshed', update),
 });
 const disabled = computed(() => sourceUnavailable.value || !!updates.state.error);
@@ -78,31 +78,39 @@ function openCollection(id: number) {
 }
 function openMember(movie: (typeof members.value)[number]) {
   if (disabled.value) return;
-  if (movie.localId) emit('open-movie', movie.localId);
+  if (movie.localId) {
+    if (props.sheetOnly) dialog.value = false;
+    emit('open-movie', movie.localId);
+  }
   else {
     preview.value = { ...movie, prependAvatar: movie.poster, runTime: movie.runtime };
     missingDialog.value = true;
   }
 }
 watch(search, () => { page.value = 1; });
-watch(pages, value => { page.value = Math.min(page.value, Math.max(1, value)); });
+watch(pages, value => { if (!props.sheetOnly) page.value = Math.min(page.value, Math.max(1, value)); });
 watch(memberPages, value => { memberPage.value = Math.min(memberPage.value, Math.max(1, value)); });
 watch(() => props.context, (_value, previous) => {
   dialog.value = false; missingDialog.value = false; downloadDialog.value = false; removalDialog.value = false; selectedId.value = null;
   if (previous !== undefined) initialPending.value = undefined;
   page.value = 1;
 }, { immediate: true, flush: 'sync' });
-watch(() => props.initialCollection, value => { initialPending.value = value?.tmdbId; });
+watch(() => props.initialCollection, value => {
+  initialPending.value = value?.tmdbId;
+  if (props.sheetOnly && value) { selectedId.value = value.tmdbId; dialog.value = true; }
+}, { immediate: true });
 watch([collections, disabled, initialPending], () => {
-  if (disabled.value || !initialPending.value) return;
+  if (disabled.value || !initialPending.value || (props.sheetOnly && !dialog.value)) return;
   if (collections.value.some(collection => collection.tmdbId === initialPending.value)) {
     openCollection(initialPending.value); initialPending.value = undefined;
   }
 }, { immediate: true });
-watch(selected, value => { if (!value && props.collectionState.hasData) { dialog.value = false; missingDialog.value = false; } });
+watch(selected, value => { if (!value && !props.sheetOnly && props.collectionState.hasData) { dialog.value = false; missingDialog.value = false; } });
+function closed() { if (!dialog.value) { renderCollection.value = false; emit('closed'); } }
 </script>
 
 <template>
+  <template v-if="!sheetOnly">
   <ReadFeedback :state="collectionState" :label="t('Collections')" @retry="emit('retry-collections')" />
   <ReadFeedback :state="libraryState" :label="t('Movie library')" @retry="emit('retry-library')" />
   <Loading :is-loading="collectionState.loading || libraryState.loading" :sentence="t('Loading collections...')" />
@@ -116,7 +124,14 @@ watch(selected, value => { if (!value && props.collectionState.hasData) { dialog
   </v-row>
   <v-alert v-if="!filtered.length && !disabled" type="info" class="mt-4">{{ search.trim() ? t("No collections match your search") : t("No automatic movie collections in this library") }}</v-alert>
   <v-alert v-if="initialPending && !disabled && !collections.some(collection => collection.tmdbId === initialPending)" type="info" class="mt-4">{{ t("This collection is not available in the selected instance.") }}</v-alert>
-  <DialogSheet v-if="selected" v-model="dialog" :title="t('Collection')" :label="t('Collection: {p0}', { p0: localizedCollection?.title ?? selected.title })" :context="`${selectedId}:${memberPage}:${memberPageSize}`" :activator="activator" :close-label="t('Close collection')" @closed="!dialog && (renderCollection = false)">
+  </template>
+  <DialogSheet v-if="sheetOnly && !selected && initialPending" v-model="dialog" :title="t('Collection')" :label="t('Collection')" :context="initialPending" :activator="activator" :close-label="t('Close collection')" @closed="closed">
+    <ReadFeedback :state="collectionState" :active="dialog" :label="t('Collections')" @retry="emit('retry-collections')" />
+    <ReadFeedback :state="libraryState" :active="dialog" :label="t('Movie library')" @retry="emit('retry-library')" />
+    <Loading :is-loading="collectionState.loading || libraryState.loading" :sentence="t('Loading collections...')" />
+    <v-alert v-if="!sourceUnavailable" type="info">{{ t('This collection is not available in the selected instance.') }}</v-alert>
+  </DialogSheet>
+  <DialogSheet v-if="selected" v-model="dialog" :title="t('Collection')" :label="t('Collection: {p0}', { p0: localizedCollection?.title ?? selected.title })" :context="`${selectedId}:${memberPage}:${memberPageSize}`" :activator="activator" :close-label="t('Close collection')" @closed="closed">
     <ReadFeedback :state="updates.state" :active="dialog" :label="t('Collection updates')" @retry="updates.refresh" />
     <ReadFeedback :state="collectionState" :active="dialog" :label="t('Collections')" @retry="emit('retry-collections')" />
     <ReadFeedback :state="libraryState" :active="dialog" :label="t('Movie library')" @retry="emit('retry-library')" />
